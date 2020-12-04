@@ -1,4 +1,7 @@
 {
     "module": "library",
-    "srcs": ["s1.cpp"]
+
+    "srcs": [
+		"s1.cpp"
+	]
 }

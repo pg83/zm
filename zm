@@ -261,6 +261,29 @@ class Module(object):
             'cmd': self.compiler.ar_command(srcs, o),
         }
 
+    def calc_commands(self):
+        # compile
+        cc = sum([self.build_command(s) for s in self.srcs], [])
+
+        def iter_ss():
+            for l in cc:
+                for o in l['out']:
+                    if o.endswith('.o'):
+                        yield o
+
+        ss = list(iter_ss())
+
+        def iter_depends():
+            yield from self.depends
+
+            for l in cc:
+                yield from l.get('depends', [])
+
+        # libs
+        dc = sum([self.parser.parse_module(d).commands() for d in iter_depends()], [])
+
+        return cc, ss, dc
+
 
 class SystemCompiler(object):
     def compiler(self, src):
@@ -286,35 +309,17 @@ class Program(Module):
         Module.__init__(self, data, parser, prefix)
 
     def commands(self):
-        # compile
-        cc = sum([self.build_command(s) for s in self.srcs], [])
-
-        def iter_ss():
-            for l in cc:
-                for o in l['out']:
-                    if o.endswith('.o'):
-                        yield o
-
-        ss = list(iter_ss())
-
-        def iter_depends():
-            yield from self.depends
-
-            for l in cc:
-                yield from l.get('depends', [])
-
-        # libs
-        lc = sum([self.parser.parse_module(d).commands() for d in iter_depends()], [])
+        cc, ss, dc = self.calc_commands()
 
         def iter_ls():
-            for l in lc:
+            for l in dc:
                 for o in l['out']:
                     if o.endswith('.a'):
                         yield o
 
         ls = list(iter_ls())
 
-        return cc + lc + [self.link_command(ss + ls, self.name)]
+        return cc + dc + [self.link_command(ss + ls, self.name)]
 
 
 class Library(Module):
@@ -322,11 +327,9 @@ class Library(Module):
         Module.__init__(self, data, parser, prefix)
 
     def commands(self):
-        cc = sum([self.build_command(s) for s in self.srcs], [])
-        ss = sum([x['out'] for x in cc], [])
-        ds = sum([self.parser.parse_module(d).commands() for d in self.depends], [])
+        cc, ss, dc = self.calc_commands()
 
-        return cc + [self.ar_command(ss, 'lib' + self.name + '.a')] + ds
+        return cc + dc + [self.ar_command(ss, 'lib' + self.name + '.a')]
 
 
 class Recurse(object):

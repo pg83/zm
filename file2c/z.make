@@ -1,4 +1,7 @@
 {
     "module": "program",
-    "srcs": ["file2c.c"]
+
+    "srcs": [
+		"file2c.c"
+	]
 }
