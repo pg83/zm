@@ -36,6 +36,12 @@ def get_target(t):
     return os.path.normpath(os.path.abspath(path))
 
 
+def strip_prefix(s, p):
+    assert s.startswith(p)
+
+    return s[len(p) + 1:]
+
+
 cpp_excludes = {
     '$(B)/stdio.h',
     '$(B)/stdlib.h',
@@ -526,6 +532,21 @@ class SimpleBuilder(object):
 
                     raise
 
+
+def main(args):
+    p = Parser(find_root(), SystemCompiler())
+    t = strip_prefix(get_target(args.target), p.root)
+    m = p.parse_module(t)
+    g = build_uids(m.commands())
+
+    if args.verbose:
+        print(json.dumps(g, indent=4, sort_keys=True))
+
+    build_dir = os.path.join(os.path.expanduser('~'), 'zbuild')
+
+    SimpleBuilder(g, p, build_dir).build()
+
+
 if __name__ == '__main__':
     argp = argparse.ArgumentParser()
 
@@ -534,14 +555,10 @@ if __name__ == '__main__':
 
     args = argp.parse_args(sys.argv[1:])
 
-    p = Parser(find_root(), SystemCompiler())
-    t = get_target(args.target)[len(p.root) + 1:]
-    m = p.parse_module(t)
-    g = build_uids(m.commands())
-
     if args.verbose:
-        print(json.dumps(g, indent=4, sort_keys=True))
-
-    b = SimpleBuilder(g, p, os.path.join(os.path.expanduser('~'), 'zbuild'))
-
-    b.build()
+        main(args)
+    else:
+        try:
+            main(args)
+        except Exception as e:
+            print(str(type(e)) + ': ' + str(e))
