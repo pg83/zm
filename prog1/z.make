@@ -1,12 +1,8 @@
-{
-    "module": "program",
+module: program
 
-    "srcs": [
-		"main.cpp"
-	],
+srcs:
+ - main.cpp
 
-    "depends": [
-		"lib1",
-		"lib2"
-	]
-}
+depends:
+ - lib1
+ - lib2

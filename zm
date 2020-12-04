@@ -3,6 +3,7 @@
 import os
 import sys
 import json
+import yaml
 import hashlib
 import argparse
 import subprocess
@@ -393,7 +394,7 @@ class Parser(object):
         print('[T] ' + target)
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = json.loads(f.read())
+            d = yaml.load(f.read(), Loader=yaml.Loader)
 
         if 'recurse' in d:
             return Recurse(d, self)

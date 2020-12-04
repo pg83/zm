@@ -1,11 +1,7 @@
-{
-    "module": "library",
+module: library
 
-    "srcs": [
-		"s2.cpp"
-	],
+srcs:
+ - s2.cpp
 
-    "depends": [
-		"lib3"
-	]
-}
+depends:
+ - lib3
