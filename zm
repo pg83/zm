@@ -1,0 +1,544 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import json
+import hashlib
+import argparse
+import subprocess
+import shutil
+
+
+def singleton(f):
+    def wrapper():
+        try:
+            wrapper.__res__
+        except AttributeError:
+            wrapper.__res__ = f()
+
+        return wrapper.__res__
+
+    return wrapper
+
+
+@singleton
+def find_root():
+    res = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+
+    print('[R] ' + res)
+
+    return res
+
+
+def get_target(t):
+    path = os.path.join(os.getcwd(), t)
+
+    return os.path.normpath(os.path.abspath(path))
+
+
+cpp_excludes = {
+    '$(B)/stdio.h',
+    '$(B)/stdlib.h',
+    '$(B)/string.h',
+    '$(B)/iostream',
+}
+
+
+def parse_cpp_includes(p):
+    try:
+        with open(p, 'r') as f:
+            data = f.read()
+
+        print('[P] ' + p)
+    except FileNotFoundError:
+        print('[U] ' + p)
+
+        raise
+
+    for l in data.splitlines():
+        l = l.strip()
+
+        if not l:
+            continue
+
+        if l[0] != '#':
+            continue
+
+        if 'include' not in l:
+            continue
+
+        p1 = l.find('<')
+
+        if p1 > 0:
+            l = l[p1 + 1:]
+
+            yield '<' + l[:l.find('>')] + '>'
+        else:
+            p1 = l.find('"')
+            l = l[p1 + 1:]
+
+            yield '"' + l[:l.find('"')] + '"'
+
+
+class IncParser(object):
+    def __init__(self):
+        self._c = {}
+
+    def parse_cpp_includes(self, p):
+        if p not in self._c:
+            self._c[p] = list(parse_cpp_includes(p))
+
+        return self._c[p]
+
+
+def to_bd(p):
+    return p.replace('$(S)', '$(B)')
+
+
+def to_sd(p):
+    return p.replace('$(B)', '$(S)')
+
+
+def fext(p):
+    return os.path.basename(p).split('.')[-1]
+
+
+def strip_ext(p):
+    return p[:-1 - len(fext(p))]
+
+
+class Module(object):
+    def __init__(self, data, parser, prefix):
+        self._d = data
+        self._p = prefix
+        self._s = [('$(S)/' + self.prefix + '/' + x) for x in data['srcs']]
+        self._parser = parser
+
+    @property
+    def name(self):
+        return self._d['name']
+
+    @property
+    def depends(self):
+        return self._d.get('depends', [])
+
+    @property
+    def parser(self):
+        return self._parser
+
+    @property
+    def prefix(self):
+        return self._p
+
+    @property
+    def srcs(self):
+        return self._s
+
+    @property
+    def compiler(self):
+        return self.parser.compiler
+
+    def src_path(self, p):
+        return self.parser.replace_path(p)
+
+    def parse_includes(self, pp):
+        v = set()
+
+        def do(p):
+            if p in v:
+                return
+
+            print(p)
+            v.add(p)
+
+            sp = self.src_path(p)
+
+            try:
+                for i in self.parser.inc_parser.parse_cpp_includes(sp):
+                    if i[0] == '<':
+                        yield from do('$(S)/' + i[1:-1])
+                    else:
+                        yield from do('$(S)/' + self.prefix + '/' + i[1:-1])
+
+                yield p
+            except FileNotFoundError:
+                yield to_bd(p)
+
+        yield from do(pp)
+
+    def parse_includes_md5(self, p):
+        def it():
+            for i in self.parse_includes(p):
+                if from_bd(i):
+                    yield {
+                        'path': i,
+                    }
+                else:
+                    with open(self.src_path(i)) as f:
+                        yield {
+                            'path': i,
+                            'md5': struct_hash(f.read()),
+                        }
+
+        return list(it())
+
+    def build_command_1(self, src):
+        by_ext = {
+            'cpp': self.compile_command,
+            'c': self.compile_command,
+            'file2c': self.file2c_command,
+        }
+
+        def nope(src):
+            return []
+
+        return by_ext.get(fext(src), nope)(src)
+
+    def build_command(self, src):
+        to_v = [src]
+        v = set()
+        res = []
+
+        while to_v:
+            s = to_v.pop()
+
+            if s in v:
+                continue
+
+            v.add(s)
+
+            for c in self.build_command_1(s):
+                res.append(c)
+
+                for o in c['out']:
+                    to_v.append(o)
+
+        return res
+
+    def file2c_command(self, src):
+        o = to_bd(strip_ext(src) + '.h')
+
+        return [
+            {
+                'in': [src, '$(B)/file2c/file2c'],
+                'out': [o],
+                'cmd': [
+                    ['/bin/sh', '-c', '$(B)/file2c/file2c < ' + src + ' > ' + o],
+                ],
+                'depends': ['file2c'],
+            },
+        ]
+
+    def compile_command(self, src):
+        o = to_bd(src + '.o')
+
+        return [
+            {
+                'in': [src],
+                'out': [o],
+                'cmd': self.compiler.compile_command(src, o, ['$(S)', '$(B)']),
+                'inc': self.parse_includes_md5(src),
+            },
+        ]
+
+    def link_command(self, srcs, out):
+        o = '$(B)/' + self.prefix + '/' + out
+
+        return {
+            'in': srcs,
+            'out': [o],
+            'cmd': self.compiler.link_command(srcs, o) + [
+                ['ln', '-fs', o, to_sd(o)],
+            ],
+        }
+
+    def ar_command(self, srcs, out):
+        o = '$(B)/' + self.prefix + '/' + out
+
+        return {
+            'in': srcs,
+            'out': [o],
+            'cmd': self.compiler.ar_command(srcs, o),
+        }
+
+
+class SystemCompiler(object):
+    def compiler(self, src):
+        if '.cpp' in src:
+            return 'clang++'
+
+        return 'clang'
+
+    def compile_command(self, src, out, inc):
+        return [
+            [self.compiler(src)] + ['-I' + x for x in inc] + ['-c', '-o', out, src],
+        ]
+
+    def link_command(self, srcs, out):
+        return [['clang++', '-o', out] + srcs]
+
+    def ar_command(self, srcs, out):
+        return [['ar', 'q', out] + srcs]
+
+
+class Program(Module):
+    def __init__(self, data, parser, prefix):
+        Module.__init__(self, data, parser, prefix)
+
+    def commands(self):
+        # compile
+        cc = sum([self.build_command(s) for s in self.srcs], [])
+
+        def iter_ss():
+            for l in cc:
+                for o in l['out']:
+                    if o.endswith('.o'):
+                        yield o
+
+        ss = list(iter_ss())
+
+        def iter_depends():
+            yield from self.depends
+
+            for l in cc:
+                yield from l.get('depends', [])
+
+        # libs
+        lc = sum([self.parser.parse_module(d).commands() for d in iter_depends()], [])
+
+        def iter_ls():
+            for l in lc:
+                for o in l['out']:
+                    if o.endswith('.a'):
+                        yield o
+
+        ls = list(iter_ls())
+
+        return cc + lc + [self.link_command(ss + ls, self.name)]
+
+
+class Library(Module):
+    def __init__(self, data, parser, prefix):
+        Module.__init__(self, data, parser, prefix)
+
+    def commands(self):
+        cc = sum([self.build_command(s) for s in self.srcs], [])
+        ss = sum([x['out'] for x in cc], [])
+        ds = sum([self.parser.parse_module(d).commands() for d in self.depends], [])
+
+        return cc + [self.ar_command(ss, 'lib' + self.name + '.a')] + ds
+
+
+class Recurse(object):
+    def __init__(self, data, parser):
+        self._d = data['recurse']
+        self._parser = parser
+
+    def commands(self):
+        return sum([self._parser.parse_module(d).commands() for d in self._d], [])
+
+
+class Parser(object):
+    def __init__(self, root, compiler):
+        self._r = root
+        self._p = {}
+        self._c = compiler
+        self._i = IncParser()
+
+    @property
+    def inc_parser(self):
+        return self._i
+
+    @property
+    def compiler(self):
+        return self._c
+
+    @property
+    def root(self):
+        return self._r
+
+    def replace_path(self, p):
+        return p.replace('$(S)', self.root)
+
+    def do_parse_module(self, target):
+        print('[T] ' + target)
+
+        with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
+            d = json.loads(f.read())
+
+        if 'recurse' in d:
+            return Recurse(d, self)
+
+        m = d['module']
+
+        if m == 'recurse':
+            return Recurse(d, self)
+
+        if 'name' not in d:
+            d['name'] = os.path.basename(target)
+
+        if m == 'program':
+            return Program(d, self, target)
+
+        if m == 'library':
+            return Library(d, self, target)
+
+        raise Exception('unsupported module ' + m)
+
+    def parse_module(self, target):
+        if target not in self._p:
+            self._p[target] = self.do_parse_module(target)
+
+        return self._p[target]
+
+
+def from_bd(i):
+    return i[2] == 'B'
+
+
+def from_sd(i):
+    return i[2] == 'S'
+
+
+def struct_hash(s):
+    return hashlib.md5(json.dumps(s, sort_keys=True).encode('utf-8')).hexdigest()[:8]
+
+
+def build_uids(g):
+    by_out = {}
+
+    for n in g:
+        for o in n['out']:
+            by_out[o] = n
+
+    def uid(n):
+        if 'uid' not in n:
+            deps = []
+
+            def iter_in():
+                for i in n['in']:
+                    if from_bd(i):
+                        yield i
+
+                for f in n.get('inc', []):
+                    if 'md5' not in f:
+                        yield f['path']
+
+
+            for i in iter_in():
+                if i in by_out:
+                    deps.append(uid(by_out[i]))
+                else:
+                    if i in cpp_excludes:
+                        pass
+                    else:
+                        raise Exception('no build file ' + i)
+
+            n['deps'] = deps
+            n['uid'] = struct_hash(n)
+
+        return n['uid']
+
+    by_uid = {}
+    res = []
+
+    for n in g:
+        u = uid(n)
+
+        if u not in by_uid:
+            by_uid[u] = n
+            res.append(n)
+
+    return res
+
+
+def prepare_dir(ro):
+    try:
+        os.makedirs(os.path.dirname(ro))
+    except OSError:
+        try:
+            os.unlink(ro)
+        except FileNotFoundError:
+            pass
+
+
+class SimpleBuilder(object):
+    def __init__(self, g, parser, build_dir):
+        self._g = g
+        self._p = parser
+        self._bd = build_dir
+        self._bu = {}
+
+        for n in self._g:
+            self._bu[n['uid']] = n
+
+    def visit(self):
+        v = set()
+
+        def visit(n):
+            u = n['uid']
+
+            if u not in v:
+                v.add(u)
+
+                for d in n['deps']:
+                    yield from visit(self._bu[d])
+
+                yield n
+
+        for n in self._g:
+            yield from visit(n)
+
+    def replace_path(self, p, n):
+        bp = p.replace('$(B)', self._bd + '/' + n['uid'][:2] + '/' + n['uid'][2:])
+
+        return self._p.replace_path(bp)
+
+    def build(self):
+        for n in self.visit():
+            where = self.replace_path('$(B)', n)
+
+            if os.path.exists(where):
+                print('[C] ' + n['uid'])
+
+                continue
+
+            for o in n['out']:
+                prepare_dir(self.replace_path(o, n))
+
+            for d in n['deps']:
+                dn = self._bu[d]
+
+                shutil.copytree(self.replace_path('$(B)', dn), where, dirs_exist_ok=True)
+
+            for c in n['cmd']:
+                cmd = [self.replace_path(x, n) for x in c]
+
+                print('[B] ' + ' '.join(cmd))
+
+                try:
+                    subprocess.check_call(cmd, shell=False)
+                except:
+                    shutil.rmtree(where)
+
+                    raise
+
+if __name__ == '__main__':
+    argp = argparse.ArgumentParser()
+
+    argp.add_argument('target', nargs='?', default='.')
+    argp.add_argument('-v', '--verbose', help='verbose mode', default=False, action='store_const', const=True)
+
+    args = argp.parse_args(sys.argv[1:])
+
+    p = Parser(find_root(), SystemCompiler())
+    t = get_target(args.target)[len(p.root) + 1:]
+    m = p.parse_module(t)
+    g = build_uids(m.commands())
+
+    if args.verbose:
+        print(json.dumps(g, indent=4, sort_keys=True))
+
+    b = SimpleBuilder(g, p, os.path.join(os.path.expanduser('~'), 'zbuild'))
+
+    b.build()
