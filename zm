@@ -21,6 +21,24 @@ def singleton(f):
     return wrapper
 
 
+def cached_method(meth):
+    def wrapper(self, *args, **kwargs):
+        try:
+            self.__cache__
+        except Exception:
+            self.__cache__ = {}
+
+        d = self.__cache__
+        k = struct_hash([args, kwargs, meth.__name__])
+
+        if k not in d:
+            d[k] = meth(self, *args, **kwargs)
+
+        return d[k]
+
+    return wrapper
+
+
 @singleton
 def find_root():
     res = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
@@ -51,15 +69,10 @@ cpp_excludes = {
 
 
 def parse_cpp_includes(p):
-    try:
-        with open(p, 'r') as f:
-            data = f.read()
+    print('[P] ' + p)
 
-        print('[P] ' + p)
-    except FileNotFoundError:
-        print('[U] ' + p)
-
-        raise
+    with open(p, 'r') as f:
+        data = f.read()
 
     for l in data.splitlines():
         l = l.strip()
@@ -158,15 +171,17 @@ class Module(object):
 
             sp = self.src_path(p)
 
-            try:
+            if os.path.exists(sp):
+                yield p
+
                 for i in self.parser.inc_parser.parse_cpp_includes(sp):
                     if i[0] == '<':
                         yield from do('$(S)/' + i[1:-1])
                     else:
                         yield from do('$(S)/' + self.prefix + '/' + i[1:-1])
+            else:
+                print('[U] ' + sp)
 
-                yield p
-            except FileNotFoundError:
                 yield to_bd(p)
 
         yield from do(pp)
@@ -191,6 +206,8 @@ class Module(object):
         by_ext = {
             'cpp': self.compile_command,
             'c': self.compile_command,
+            'S': self.compile_command,
+            's': self.compile_command,
             'file2c': self.file2c_command,
         }
 
@@ -314,6 +331,7 @@ class Program(Module):
     def __init__(self, data, parser, prefix):
         Module.__init__(self, data, parser, prefix)
 
+    @cached_method
     def commands(self):
         cc, ss, dc = self.calc_commands()
 
@@ -332,6 +350,7 @@ class Library(Module):
     def __init__(self, data, parser, prefix):
         Module.__init__(self, data, parser, prefix)
 
+    @cached_method
     def commands(self):
         cc, ss, dc = self.calc_commands()
 
@@ -343,6 +362,7 @@ class Recurse(object):
         self._d = data['recurse']
         self._parser = parser
 
+    @cached_method
     def commands(self):
         return sum([self._parser.parse_module(d).commands() for d in self._d], [])
 
@@ -432,7 +452,6 @@ def build_uids(g):
                 for f in n.get('inc', []):
                     if 'md5' not in f:
                         yield f['path']
-
 
             for i in iter_in():
                 if i in by_out:
@@ -542,7 +561,7 @@ def main(args):
     if args.verbose:
         print(json.dumps(g, indent=4, sort_keys=True))
 
-    build_dir = os.path.join(os.path.expanduser('~'), 'zbuild')
+    build_dir = os.path.join(os.path.expanduser('~'), '.zbuild')
 
     SimpleBuilder(g, p, build_dir).build()
 
