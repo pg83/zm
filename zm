@@ -148,7 +148,6 @@ class Module(object):
             if p in v:
                 return
 
-            print(p)
             v.add(p)
 
             sp = self.src_path(p)
@@ -226,6 +225,7 @@ class Module(object):
                     ['/bin/sh', '-c', '$(B)/file2c/file2c < ' + src + ' > ' + o],
                 ],
                 'depends': ['file2c'],
+                'inc': self.parse_includes_md5(src),
             },
         ]
 
