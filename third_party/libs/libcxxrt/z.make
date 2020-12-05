@@ -2,12 +2,14 @@ module: library
 
 depends:
 - third_party/libs/libunwind
+- third_party/libs/libfakedemangle
 
 inc_dirs:
 - third_party/libs/libcxxrt
 
 cxx_flags:
 - -nostdinc++
+- -w
 
 srcs:
 - memory.cc

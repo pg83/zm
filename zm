@@ -140,10 +140,19 @@ def colorize(text, color):
     return get_color(color) + text + get_color('')
 
 
+MM = set()
+
+
 def msg(l, c, msg):
     m = colorize('[' + l + '] ', c) + msg.replace('$(S)', colorize('$(S)', 'bg')).replace('$(B)', colorize('$(B)', 'by'))
 
+    if m in MM:
+        return
+
+    MM.add(m)
+
     print(m)
+
 
 ## end color
 
@@ -262,14 +271,9 @@ def parse_cpp_includes(p):
 
 
 class IncParser(object):
-    def __init__(self):
-        self._c = {}
-
+    @cached_method
     def parse_cpp_includes(self, p):
-        if p not in self._c:
-            self._c[p] = list(parse_cpp_includes(p))
-
-        return self._c[p]
+        return list(parse_cpp_includes(p))
 
 
 def to_bd(p):
@@ -306,6 +310,18 @@ class Module(object):
     @property
     def inc_dirs(self):
         return self._d.get('inc_dirs', [])
+
+    @property
+    def c_flags(self):
+        return self._d.get('c_flags', []) + self._d.get('c_only_flags', [])
+
+    @property
+    def cxx_flags(self):
+        return self._d.get('c_flags', []) + self._d.get('cxx_flags', [])
+
+    @property
+    def ld_flags(self):
+        return self._d.get('ld_flags', [])
 
     @property
     def parser(self):
@@ -442,7 +458,7 @@ class Module(object):
             {
                 'in': [src],
                 'out': [o],
-                'cmd': self.compiler.c_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)']),
+                'cmd': self.compiler.c_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.c_flags),
                 'inc': self.parse_includes_md5(src),
             },
         ]
@@ -454,7 +470,7 @@ class Module(object):
             {
                 'in': [src],
                 'out': [o],
-                'cmd': self.compiler.cxx_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)']),
+                'cmd': self.compiler.cxx_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.cxx_flags),
                 'inc': self.parse_includes_md5(src),
             },
         ]
@@ -465,7 +481,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.link_command(srcs, o) + [
+            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [
                 ['ln', '-fs', o, to_sd(o)],
             ],
         }
@@ -504,18 +520,19 @@ class Module(object):
 
 
 class SystemCompiler(object):
-    def c_compile_command(self, src, out, inc):
+    def compile_command(self, cxx, src, out, inc, flags):
         return [
-            ['clang'] + ['-I' + x for x in inc] + ['-c', '-o', out, src],
+            cxx + ['-I' + x for x in inc] + flags + ['-c', '-o', out, src],
         ]
 
-    def cxx_compile_command(self, src, out, inc):
-        return [
-            ['clang++', '-std=c++17'] + ['-I' + x for x in inc] + ['-c', '-o', out, src],
-        ]
+    def c_compile_command(self, src, out, inc, flags):
+        return self.compile_command(['clang'], src, out, inc, flags)
 
-    def link_command(self, srcs, out):
-        return [['clang++', '-o', out] + srcs]
+    def cxx_compile_command(self, src, out, inc, flags):
+        return self.compile_command(['clang++'], src, out, inc, ['-std=c++17'] + flags)
+
+    def link_command(self, srcs, out, flags):
+        return [['clang++', '-o', out] + flags + srcs]
 
     def ar_command(self, srcs, out):
         return [['ar', 'q', out] + srcs]
@@ -565,7 +582,6 @@ class Recurse(object):
 class Parser(object):
     def __init__(self, root, compiler):
         self._r = root
-        self._p = {}
         self._c = compiler
         self._i = IncParser()
 
@@ -584,7 +600,8 @@ class Parser(object):
     def replace_path(self, p):
         return p.replace('$(S)', self.root)
 
-    def do_parse_module(self, target):
+    @cached_method
+    def parse_module(self, target):
         msg('T', 'bc', '$(S)/' + target)
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
@@ -608,12 +625,6 @@ class Parser(object):
             return Library(d, self, target)
 
         raise Exception('unsupported module ' + m)
-
-    def parse_module(self, target):
-        if target not in self._p:
-            self._p[target] = self.do_parse_module(target)
-
-        return self._p[target]
 
 
 def from_bd(i):

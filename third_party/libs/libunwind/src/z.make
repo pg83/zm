@@ -4,7 +4,12 @@ inc_dirs:
 - third_party/libs/libunwind/include
 - third_party/libs/libunwind/src
 
-c_flags: -D_LIBUNWIND_IS_NATIVE_ONLY -fno-exceptions -fno-rtti -funwind-tables
+c_flags:
+- -D_LIBUNWIND_IS_NATIVE_ONLY
+- -fno-exceptions
+- -fno-rtti
+- -funwind-tables
+- -w
 
 srcs:
 - Unwind-EHABI.cpp
