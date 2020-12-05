@@ -1,7 +1,9 @@
 module: library
 
-inc_dirs:
+global_inc_dirs:
 - third_party/libs/libunwind/include
+
+inc_dirs:
 - third_party/libs/libunwind/src
 
 c_flags:

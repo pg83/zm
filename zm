@@ -157,6 +157,33 @@ def msg(l, c, msg):
 ## end color
 
 
+def filter_cmd_out(o):
+    def iter_lines():
+        for l in o.split('\n'):
+            if 'creating archive' in l:
+                continue
+
+            if 'has no symbols' in l:
+                continue
+
+            yield l
+
+    return '\n'.join(iter_lines()).strip()
+
+
+def run_cmd(cmd):
+    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    out, err = p.communicate()
+    code = p.wait()
+    out = filter_cmd_out(out.decode('utf-8'))
+
+    if out:
+        print(out)
+
+    if code:
+        raise Exception(' '.join(cmd) + ' exit code ' + str(code))
+
+
 def join_path(a, b):
     if not a:
         return b
@@ -389,9 +416,11 @@ class Module(object):
             yield from self.iter_inc_dirs()
             yield '$(S)/' + self.prefix
 
-        for x in it():
+        for x in iter_uniq_list(it()):
             pp = p.replace('$(S)', x)
             spp = self.src_path(pp)
+
+            print(p, pp, spp)
 
             if os.path.exists(spp):
                 return pp
@@ -825,9 +854,11 @@ class SimpleBuilder(object):
         msg('B', 'bg', ' '.join(n['out']))
 
         for c in n['cmd']:
-            print(colorize(' '.join(c), 'dw'))
+            cmd = [self.replace_path(x, n, 't') for x in c]
 
-            subprocess.check_call([self.replace_path(x, n, 't') for x in c], shell=False)
+            print(colorize(' '.join(cmd), 'dw'))
+
+            run_cmd(cmd)
 
         shutil.move(where_t, where_c)
 

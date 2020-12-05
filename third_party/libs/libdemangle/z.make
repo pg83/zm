@@ -10,4 +10,5 @@ depends:
 - third_party/libs/libcxx/include
 
 inc_dirs:
-- third_party/libs/libdemange/demangle
+- third_party/libs/libdemangle/demangle
+- third_party/libs/libdemangle
