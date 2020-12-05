@@ -1,4 +1,3 @@
 #pragma once
 
-
-int f3();
+#define X 2

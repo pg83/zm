@@ -280,6 +280,10 @@ class Module(object):
         return self._d.get('depends', [])
 
     @property
+    def inc_dirs(self):
+        return self._d.get('inc_dirs', [])
+
+    @property
     def parser(self):
         return self._parser
 
@@ -307,22 +311,36 @@ class Module(object):
 
             v.add(p)
 
-            sp = self.src_path(p)
+            p = self.find_location(p)
 
-            if os.path.exists(sp):
-                yield p
+            yield p
 
-                for i in self.parser.inc_parser.parse_cpp_includes(sp):
+            if from_sd(p):
+                for i in self.parser.inc_parser.parse_cpp_includes(self.src_path(p)):
                     if i[0] == '<':
                         yield from do('$(S)/' + i[1:-1])
                     else:
                         yield from do('$(S)/' + self.prefix + '/' + i[1:-1])
             else:
-                msg('U', 'br', sp)
-
-                yield to_bd(p)
+                msg('U', 'br', p)
 
         yield from do(pp)
+
+    def find_location(self, p):
+        for x in self.iter_inc_dirs():
+            pp = p.replace('$(S)', x)
+            spp = self.src_path(pp)
+
+            if os.path.exists(spp):
+                return pp
+
+        return to_bd(p)
+
+    def iter_inc_dirs(self):
+        yield '$(S)'
+
+        for x in self.inc_dirs:
+            yield '$(S)/' + x
 
     def parse_includes_md5(self, p):
         def it():
@@ -397,7 +415,7 @@ class Module(object):
             {
                 'in': [src],
                 'out': [o],
-                'cmd': self.compiler.compile_command(src, o, ['$(S)', '$(B)']),
+                'cmd': self.compiler.compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)']),
                 'inc': self.parse_includes_md5(src),
             },
         ]
@@ -533,8 +551,6 @@ class Parser(object):
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
             d = yaml.load(f.read(), Loader=yaml.Loader)
-
-            #print(yaml.dump(d))
 
         if 'recurse' in d:
             return Recurse(d, self, target)
