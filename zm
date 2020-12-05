@@ -156,6 +156,21 @@ def msg(l, c, msg):
 
 ## end color
 
+
+def iter_uniq_list(l):
+    v = set()
+
+    for x in l:
+        if x not in v:
+            v.add(x)
+
+            yield x
+
+
+def uniq_list(l):
+    return list(iter_uniq_list(l))
+
+
 def singleton(f):
     def wrapper():
         try:
@@ -281,17 +296,23 @@ class Module(object):
         self._s = [('$(S)/' + self.prefix + '/' + x) for x in data.get('srcs', [])]
         self._parser = parser
 
+    def extra_depends(self):
+        return []
+
+    def extra_inc_dirs(self):
+        return []
+
     @property
     def name(self):
         return self._d['name']
 
     @property
     def depends(self):
-        return self._d.get('depends', [])
+        return uniq_list(self._d.get('depends', []) + self.extra_depends())
 
     @property
     def inc_dirs(self):
-        return self._d.get('inc_dirs', [])
+        return uniq_list(self._d.get('inc_dirs', []) + self.extra_inc_dirs())
 
     @property
     def c_flags(self):
@@ -463,7 +484,7 @@ class Module(object):
             'in': srcs,
             'out': [o],
             'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [
-                ['ln', '-fs', o, to_sd(o)],
+                ['ln', '-f', o, to_sd(o)],
             ],
         }
 
@@ -536,6 +557,12 @@ class Program(Module):
         ls = list(iter_ls())
 
         return cc + dc + [self.link_command(ss + ls, self.name)]
+
+    def extra_depends(self):
+        return ['third_party/libs/libcxx']
+
+    def extra_inc_dirs(self):
+        return ['third_party/libs/libcxx/include']
 
 
 class Library(Module):
@@ -672,10 +699,7 @@ def prepare_dir(ro):
     try:
         os.makedirs(os.path.dirname(ro))
     except OSError:
-        try:
-            os.unlink(ro)
-        except FileNotFoundError:
-            pass
+        pass
 
 
 class SimpleBuilder(object):
@@ -705,37 +729,39 @@ class SimpleBuilder(object):
         for n in self._g:
             yield from visit(n)
 
-    def replace_path(self, p, n):
-        bp = p.replace('$(B)', self._bd + '/' + n['uid'][:2] + '/' + n['uid'][2:])
+    def replace_path(self, p, n, w):
+        bp = p.replace('$(B)', self._bd + '/$(W)/' + n['uid'][:2] + '/' + n['uid'][2:]).replace('$(W)', w)
 
         return self._p.replace_path(bp)
 
     def build(self):
         for n in self.visit():
-            where = self.replace_path('$(B)', n)
+            self.build_command(n)
 
-            if os.path.exists(where):
-                msg('C', 'bb', n['uid'])
+    def build_command(self, n):
+        where_c = self.replace_path('$(B)', n, 'c')
+        where_t = self.replace_path('$(B)', n, 't')
 
-                continue
+        if os.path.exists(where_c):
+            msg('C', 'bb', n['uid'])
 
-            for o in n['out']:
-                prepare_dir(self.replace_path(o, n))
+            return
 
-            for d in n['deps']:
-                dn = self._bu[d]
+        shutil.rmtree(where_t, ignore_errors=True)
 
-                shutil.copytree(self.replace_path('$(B)', dn), where, dirs_exist_ok=True)
+        for o in n['out']:
+            prepare_dir(self.replace_path(o, n, 't'))
 
-            for c in n['cmd']:
-                msg('B', 'bg', ' '.join(c))
+        for d in n['deps']:
+            dn = self._bu[d]
 
-                try:
-                    subprocess.check_call([self.replace_path(x, n) for x in c], shell=False)
-                except:
-                    shutil.rmtree(where)
+            shutil.copytree(self.replace_path('$(B)', dn, 'c'), where_t, dirs_exist_ok=True)
 
-                    raise
+        for c in n['cmd']:
+            msg('B', 'bg', ' '.join(c))
+            subprocess.check_call([self.replace_path(x, n, 't') for x in c], shell=False)
+
+        shutil.move(where_t, where_c)
 
 
 def main(args):

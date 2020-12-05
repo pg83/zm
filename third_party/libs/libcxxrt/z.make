@@ -8,7 +8,6 @@ inc_dirs:
 - third_party/libs/libcxxrt
 
 cxx_flags:
-- -nostdinc++
 - -w
 
 srcs:

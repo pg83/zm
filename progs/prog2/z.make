@@ -6,4 +6,3 @@ srcs:
 
 depends:
 - libs/lib1
-- third_party/libs/libcxxrt
