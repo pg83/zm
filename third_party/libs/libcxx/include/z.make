@@ -5,6 +5,3 @@ inc_dirs:
 
 srcs:
 - all.cpp
-
-cxx_flags:
-- -nostdinc++

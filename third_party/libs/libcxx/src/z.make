@@ -10,7 +10,6 @@ depends:
 
 cxx_flags:
 - -D_LIBCPP_BUILDING_LIBRARY
-- -nostdinc++
 - -DLIBCXXRT=1
 
 srcs:

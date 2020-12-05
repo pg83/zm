@@ -109,3 +109,6 @@
 #include "version"
 #include "wchar.h"
 #include "wctype.h"
+
+void XXX() {
+}

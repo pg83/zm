@@ -207,61 +207,6 @@ def strip_prefix(s, p):
     return s[len(p) + 1:]
 
 
-cpp_excludes = {
-    '$(B)/stdio.h',
-    '$(B)/stdlib.h',
-    '$(B)/string.h',
-    '$(B)/iostream',
-    '$(B)/Availability.h',
-    '$(B)/AvailabilityMacros.h',
-    '$(B)/System/pthread_machdep.h',
-    '$(B)/assert.h',
-    '$(B)/dlfcn.h',
-    '$(B)/excpt.h',
-    '$(B)/inttypes.h',
-    '$(B)/link.h',
-    '$(B)/mach-o/dyld.h',
-    '$(B)/mach-o/getsect.h',
-    '$(B)/ntstatus.h',
-    '$(B)/ntverp.h',
-    '$(B)/psapi.h',
-    '$(B)/pthread.h',
-    '$(B)/stdbool.h',
-    '$(B)/stddef.h',
-    '$(B)/stdint.h',
-    '$(B)/stdio.h',
-    '$(B)/stdlib.h',
-    '$(B)/string.h',
-    '$(B)/sys/mman.h',
-    '$(B)/windef.h',
-    '$(B)/windows.h',
-    '$(B)/winnt.h',
-    '$(B)/Availability.h',
-    '$(B)/__external_threading',
-    '$(B)/android/api-level.h',
-    '$(B)/android/ndk-version.h',
-    '$(B)/endian.h',
-    '$(B)/features.h',
-    '$(B)/intrin.h',
-    '$(B)/nl_types.h',
-    '$(B)/osreldate.h',
-    '$(B)/pthread.h',
-    '$(B)/sched.h',
-    '$(B)/stdarg.h',
-    '$(B)/sys/endian.h',
-    '$(B)/sys/isa_defs.h',
-    '$(B)/threads.h',
-    '$(B)/time.h',
-    '$(B)/vcruntime_exception.h',
-    '$(B)/vcruntime_new.h',
-    '$(B)/vcruntime_typeinfo.h',
-    '$(B)/winapifamily.h',
-    '$(B)/xlocale.h',
-    '$(B)/xlocinfo.h',
-    '$(B)/yvals.h',
-}
-
-
 def get_substr(s, b, e):
     p = s.find(b)
 
@@ -394,12 +339,7 @@ class Module(object):
 
             if from_sd(p):
                 for i in self.parser.inc_parser.parse_cpp_includes(self.src_path(p)):
-                    #if i[0] == '<':
                     yield from do('$(S)/' + i[1:-1])
-                    #else:
-                        #yield from do(os.path.dirname(p) + '/' + i[1:-1])
-            else:
-                msg('U', 'br', p)
 
         yield from do(pp)
 
@@ -411,8 +351,6 @@ class Module(object):
         for x in it():
             pp = p.replace('$(S)', x)
             spp = self.src_path(pp)
-
-            print(x, pp, spp)
 
             if os.path.exists(spp):
                 return pp
@@ -572,7 +510,7 @@ class SystemCompiler(object):
         return self.compile_command(['clang'], src, out, inc, flags)
 
     def cxx_compile_command(self, src, out, inc, flags):
-        return self.compile_command(['clang++'], src, out, inc, ['-std=c++17'] + flags)
+        return self.compile_command(['clang++'], src, out, inc, ['-std=c++17', '-nostdinc++'] + flags)
 
     def link_command(self, srcs, out, flags):
         return [['clang++', '-o', out] + flags + srcs]
@@ -658,13 +596,16 @@ class Parser(object):
         if m == 'recurse':
             return Recurse(d, self, target)
 
-        if 'name' not in d:
-            d['name'] = os.path.basename(target)
-
         if m == 'program':
+            if 'name' not in d:
+                d['name'] = os.path.basename(target)
+
             return Program(d, self, target)
 
         if m == 'library':
+            if 'name' not in d:
+                d['name'] = target.replace('/', '_').replace('-', '_').replace('_', '')
+
             return Library(d, self, target)
 
         raise Exception('unsupported module ' + m)
@@ -706,11 +647,8 @@ def build_uids(g):
                 if i in by_out:
                     deps.append(uid(by_out[i]))
                 else:
-                    if i in cpp_excludes:
-                        pass
-                    else:
-                        pass
-                        #raise Exception('no build file ' + i)
+                    msg('U', 'br', i)
+
 
             n['deps'] = deps
             n['uid'] = struct_hash(n)
