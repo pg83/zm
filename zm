@@ -420,8 +420,6 @@ class Module(object):
             pp = p.replace('$(S)', x)
             spp = self.src_path(pp)
 
-            print(p, pp, spp)
-
             if os.path.exists(spp):
                 return pp
 
@@ -650,6 +648,14 @@ class Program(Module):
 
 
 class Library(Module):
+    exclude = frozenset([
+        'thirdpartycxxinclude',
+        'thirdpartycxxsrc',
+        'thirdpartycxxrt',
+        'thirdpartyunwindsrc',
+        'thirdpartydemangle',
+    ])
+
     def __init__(self, data, parser, prefix):
         Module.__init__(self, data, parser, prefix)
 
@@ -658,6 +664,12 @@ class Library(Module):
         cc, ss, dc = self.calc_commands()
 
         return cc + dc + [self.ar_command(ss, 'lib' + self.name + '.a')]
+
+    def extra_depends(self):
+        if self.name not in self.exclude:
+            return ['third_party/libs/libcxx']
+
+        return []
 
 
 class Recurse(Module):
