@@ -298,9 +298,6 @@ class Module(object):
     def extra_depends(self):
         return []
 
-    def extra_inc_dirs(self):
-        return []
-
     @property
     def name(self):
         return self._d['name']
@@ -311,7 +308,21 @@ class Module(object):
 
     @property
     def inc_dirs(self):
-        return uniq_list(self._d.get('inc_dirs', []) + self.extra_inc_dirs())
+        return uniq_list(self.global_inc_dirs() + self._d.get('inc_dirs', []))
+
+    @cached_method
+    def global_inc_dirs(self):
+        def iter_dirs():
+            yield from self._d.get('global_inc_dirs', [])
+
+            for sm in self.iter_sub_modules(self.depends):
+                yield from sm.global_inc_dirs()
+
+        res = uniq_list(iter_dirs())
+
+        print(self.prefix, self.depends, res)
+
+        return res
 
     @property
     def c_flags(self):
@@ -530,6 +541,10 @@ class Module(object):
             for o in cmd['out']:
                 yield from self.build_command(o)
 
+    def iter_sub_modules(self, deps):
+        for d in deps:
+            yield self.parser.parse_module(d)
+
     def calc_commands(self):
         # compile
         cc = list(self.iter_simple_commands())
@@ -549,7 +564,7 @@ class Module(object):
                 yield from l.get('depends', [])
 
         # libs
-        dc = sum([self.parser.parse_module(d).commands() for d in iter_depends()], [])
+        dc = sum([d.commands() for d in self.iter_sub_modules(iter_depends())], [])
 
         return cc, ss, dc
 
@@ -594,9 +609,6 @@ class Program(Module):
     def extra_depends(self):
         return ['third_party/libs/libcxx']
 
-    def extra_inc_dirs(self):
-        return ['third_party/libs/libcxx/include']
-
 
 class Library(Module):
     def __init__(self, data, parser, prefix):
@@ -609,15 +621,25 @@ class Library(Module):
         return cc + dc + [self.ar_command(ss, 'lib' + self.name + '.a')]
 
 
-class Recurse(object):
+class Recurse(Module):
     def __init__(self, data, parser, prefix):
-        self._d = data['recurse']
-        self._parser = parser
-        self._prefix = prefix
+        Module.__init__(self, data, parser, prefix)
+
+    @property
+    def recurse(self):
+        return self._d['recurse']
+
+    @property
+    def depends(self):
+        def iter_deps():
+            for d in self.recurse:
+                yield self.prefix + '/' + d
+
+        return list(iter_deps())
 
     @cached_method
     def commands(self):
-        return sum([self._parser.parse_module(os.path.join(self._prefix, d)).commands() for d in self._d], [])
+        return sum([d.commands() for d in self.iter_sub_modules(self.depends)], [])
 
 
 class Parser(object):

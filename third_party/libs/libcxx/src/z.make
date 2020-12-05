@@ -1,7 +1,6 @@
 module: library
 
 inc_dirs:
-- third_party/libs/libcxx/include
 - third_party/libs/libcxxrt
 
 depends:

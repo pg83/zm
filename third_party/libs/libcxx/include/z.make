@@ -1,6 +1,6 @@
 module: library
 
-inc_dirs:
+global_inc_dirs:
 - third_party/libs/libcxx/include
 
 srcs:
