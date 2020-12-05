@@ -1,2 +1,3 @@
 recurse:
 - tools
+- libs

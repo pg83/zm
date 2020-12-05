@@ -203,6 +203,30 @@ cpp_excludes = {
     '$(B)/stdlib.h',
     '$(B)/string.h',
     '$(B)/iostream',
+    '$(B)/Availability.h',
+    '$(B)/AvailabilityMacros.h',
+    '$(B)/System/pthread_machdep.h',
+    '$(B)/assert.h',
+    '$(B)/dlfcn.h',
+    '$(B)/excpt.h',
+    '$(B)/inttypes.h',
+    '$(B)/link.h',
+    '$(B)/mach-o/dyld.h',
+    '$(B)/mach-o/getsect.h',
+    '$(B)/ntstatus.h',
+    '$(B)/ntverp.h',
+    '$(B)/psapi.h',
+    '$(B)/pthread.h',
+    '$(B)/stdbool.h',
+    '$(B)/stddef.h',
+    '$(B)/stdint.h',
+    '$(B)/stdio.h',
+    '$(B)/stdlib.h',
+    '$(B)/string.h',
+    '$(B)/sys/mman.h',
+    '$(B)/windef.h',
+    '$(B)/windows.h',
+    '$(B)/winnt.h',
 }
 
 
@@ -268,7 +292,7 @@ class Module(object):
     def __init__(self, data, parser, prefix):
         self._d = data
         self._p = prefix
-        self._s = [('$(S)/' + self.prefix + '/' + x) for x in data['srcs']]
+        self._s = [('$(S)/' + self.prefix + '/' + x) for x in data.get('srcs', [])]
         self._parser = parser
 
     @property
@@ -320,7 +344,7 @@ class Module(object):
                     if i[0] == '<':
                         yield from do('$(S)/' + i[1:-1])
                     else:
-                        yield from do('$(S)/' + self.prefix + '/' + i[1:-1])
+                        yield from do(os.path.dirname(p) + '/' + i[1:-1])
             else:
                 msg('U', 'br', p)
 
@@ -360,10 +384,13 @@ class Module(object):
 
     def build_command_1(self, src):
         by_ext = {
-            'cpp': self.compile_command,
-            'c': self.compile_command,
-            'S': self.compile_command,
-            's': self.compile_command,
+            'C': self.cxx_compile_command,
+            'cc': self.cxx_compile_command,
+            'cxx': self.cxx_compile_command,
+            'cpp': self.cxx_compile_command,
+            'c': self.c_compile_command,
+            'S': self.c_compile_command,
+            's': self.c_compile_command,
             'file2c': self.file2c_command,
         }
 
@@ -408,14 +435,26 @@ class Module(object):
             },
         ]
 
-    def compile_command(self, src):
+    def c_compile_command(self, src):
         o = to_bd(src + '.o')
 
         return [
             {
                 'in': [src],
                 'out': [o],
-                'cmd': self.compiler.compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)']),
+                'cmd': self.compiler.c_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)']),
+                'inc': self.parse_includes_md5(src),
+            },
+        ]
+
+    def cxx_compile_command(self, src):
+        o = to_bd(src + '.o')
+
+        return [
+            {
+                'in': [src],
+                'out': [o],
+                'cmd': self.compiler.cxx_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)']),
                 'inc': self.parse_includes_md5(src),
             },
         ]
@@ -465,15 +504,14 @@ class Module(object):
 
 
 class SystemCompiler(object):
-    def compiler(self, src):
-        if '.cpp' in src:
-            return 'clang++'
-
-        return 'clang'
-
-    def compile_command(self, src, out, inc):
+    def c_compile_command(self, src, out, inc):
         return [
-            [self.compiler(src)] + ['-I' + x for x in inc] + ['-c', '-o', out, src],
+            ['clang'] + ['-I' + x for x in inc] + ['-c', '-o', out, src],
+        ]
+
+    def cxx_compile_command(self, src, out, inc):
+        return [
+            ['clang++', '-std=c++17'] + ['-I' + x for x in inc] + ['-c', '-o', out, src],
         ]
 
     def link_command(self, srcs, out):
