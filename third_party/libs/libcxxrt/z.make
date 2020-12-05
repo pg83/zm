@@ -2,7 +2,7 @@ module: library
 
 depends:
 - third_party/libs/libunwind
-- third_party/libs/libfakedemangle
+- third_party/libs/libdemangle
 
 inc_dirs:
 - third_party/libs/libcxxrt

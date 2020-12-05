@@ -3,3 +3,4 @@ recurse:
 - libfakedemangle
 - libcxxrt
 - libcxx
+- libdemangle

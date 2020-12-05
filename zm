@@ -513,7 +513,7 @@ class SystemCompiler(object):
         return self.compile_command(['clang++'], src, out, inc, ['-std=c++17', '-nostdinc++'] + flags)
 
     def link_command(self, srcs, out, flags):
-        return [['clang++', '-o', out] + flags + srcs]
+        return [['clang++', '-nostdlib++', '-o', out] + flags + srcs]
 
     def ar_command(self, srcs, out):
         return [['ar', 'q', out] + srcs]
@@ -604,7 +604,7 @@ class Parser(object):
 
         if m == 'library':
             if 'name' not in d:
-                d['name'] = target.replace('/', '_').replace('-', '_').replace('_', '')
+                d['name'] = target.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
 
             return Library(d, self, target)
 
