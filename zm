@@ -157,6 +157,16 @@ def msg(l, c, msg):
 ## end color
 
 
+def join_path(a, b):
+    if not a:
+        return b
+
+    if not b:
+        return a
+
+    return a + '/' + b
+
+
 def iter_uniq_list(l):
     v = set()
 
@@ -318,11 +328,7 @@ class Module(object):
             for sm in self.iter_sub_modules(self.depends):
                 yield from sm.global_inc_dirs()
 
-        res = uniq_list(iter_dirs())
-
-        print(self.prefix, self.depends, res)
-
-        return res
+        return uniq_list(iter_dirs())
 
     @property
     def c_flags(self):
@@ -545,6 +551,10 @@ class Module(object):
         for d in deps:
             yield self.parser.parse_module(d)
 
+    def iter_sub_commands(self, deps):
+        for d in self.iter_sub_modules(deps):
+            yield from d.commands()
+
     def calc_commands(self):
         # compile
         cc = list(self.iter_simple_commands())
@@ -564,7 +574,7 @@ class Module(object):
                 yield from l.get('depends', [])
 
         # libs
-        dc = sum([d.commands() for d in self.iter_sub_modules(iter_depends())], [])
+        dc = list(self.iter_sub_commands(iter_depends()))
 
         return cc, ss, dc
 
@@ -604,7 +614,7 @@ class Program(Module):
 
         ls = list(iter_ls())
 
-        return cc + dc + [self.link_command(ss + ls, self.name)]
+        return cc + dc + [self.link_command(uniq_list(ss + ls), self.name)]
 
     def extra_depends(self):
         return ['third_party/libs/libcxx']
@@ -633,7 +643,7 @@ class Recurse(Module):
     def depends(self):
         def iter_deps():
             for d in self.recurse:
-                yield self.prefix + '/' + d
+                yield join_path(self.prefix, d)
 
         return list(iter_deps())
 
@@ -812,8 +822,11 @@ class SimpleBuilder(object):
 
             shutil.copytree(self.replace_path('$(B)', dn, 'c'), where_t, dirs_exist_ok=True)
 
+        msg('B', 'bg', ' '.join(n['out']))
+
         for c in n['cmd']:
-            msg('B', 'bg', ' '.join(c))
+            print(colorize(' '.join(c), 'dw'))
+
             subprocess.check_call([self.replace_path(x, n, 't') for x in c], shell=False)
 
         shutil.move(where_t, where_c)
