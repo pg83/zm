@@ -397,6 +397,8 @@ class Parser(object):
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
             d = yaml.load(f.read(), Loader=yaml.Loader)
 
+            #print(yaml.dump(d))
+
         if 'recurse' in d:
             return Recurse(d, self, target)
 

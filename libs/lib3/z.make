@@ -1,4 +1,4 @@
 module: library
 
 srcs:
- - s3.cpp
+- s3.cpp

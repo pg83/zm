@@ -1,4 +1,4 @@
 recurse:
- - libs
- - progs
- - third_party
+- libs
+- progs
+- third_party

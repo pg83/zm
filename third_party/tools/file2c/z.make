@@ -1,4 +1,4 @@
 module: program
 
 srcs:
- - file2c.c
+- file2c.c

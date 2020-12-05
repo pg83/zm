@@ -1,2 +1,2 @@
 recurse:
- - file2c
+- file2c

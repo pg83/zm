@@ -1,8 +1,8 @@
 module: program
 
 srcs:
- - main.cpp
- - data.file2c
+- main.cpp
+- data.file2c
 
 depends:
- - libs/lib1
+- libs/lib1

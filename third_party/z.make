@@ -1,2 +1,2 @@
 recurse:
- - tools
+- tools

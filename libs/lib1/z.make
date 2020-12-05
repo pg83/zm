@@ -1,4 +1,4 @@
 module: library
 
 srcs:
- - s1.cpp
+- s1.cpp
