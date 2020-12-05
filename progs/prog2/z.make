@@ -5,8 +5,7 @@ srcs:
 - data.file2c
 
 ld_flags:
-- -nostdlib
-- -lSystem
+- -nostdlib++
 
 depends:
 - libs/lib1
