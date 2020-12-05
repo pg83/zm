@@ -236,7 +236,46 @@ cpp_excludes = {
     '$(B)/windef.h',
     '$(B)/windows.h',
     '$(B)/winnt.h',
+    '$(B)/Availability.h',
+    '$(B)/__external_threading',
+    '$(B)/android/api-level.h',
+    '$(B)/android/ndk-version.h',
+    '$(B)/endian.h',
+    '$(B)/features.h',
+    '$(B)/intrin.h',
+    '$(B)/nl_types.h',
+    '$(B)/osreldate.h',
+    '$(B)/pthread.h',
+    '$(B)/sched.h',
+    '$(B)/stdarg.h',
+    '$(B)/sys/endian.h',
+    '$(B)/sys/isa_defs.h',
+    '$(B)/threads.h',
+    '$(B)/time.h',
+    '$(B)/vcruntime_exception.h',
+    '$(B)/vcruntime_new.h',
+    '$(B)/vcruntime_typeinfo.h',
+    '$(B)/winapifamily.h',
+    '$(B)/xlocale.h',
+    '$(B)/xlocinfo.h',
+    '$(B)/yvals.h',
 }
+
+
+def get_substr(s, b, e):
+    p = s.find(b)
+
+    if p < 0:
+        return None
+
+    s = s[p + len(b):]
+    p = s.find(e)
+
+    assert p > 0
+
+    s = s[:p]
+
+    return b + s + e
 
 
 def parse_cpp_includes(p):
@@ -251,23 +290,21 @@ def parse_cpp_includes(p):
         if not l:
             continue
 
-        if l[0] != '#':
+        ll = l.replace(' ', '').replace('\t', '')
+
+        if not ll.startswith('#include'):
             continue
 
-        if 'include' not in l:
-            continue
+        ll = ll.replace('_LIBCPP_EXTERNAL_THREADING', '<__external_threading>')
 
-        p1 = l.find('<')
-
-        if p1 > 0:
-            l = l[p1 + 1:]
-
-            yield '<' + l[:l.find('>')] + '>'
+        if res := get_substr(ll, '<', '>'):
+            yield res
+        elif res := get_substr(ll, '"', '"'):
+            yield res
+        elif res := get_substr(ll, '(', ')'):
+            yield res
         else:
-            p1 = l.find('"')
-            l = l[p1 + 1:]
-
-            yield '"' + l[:l.find('"')] + '"'
+            raise Exception('unparsed include ' + l)
 
 
 class IncParser(object):
@@ -340,7 +377,7 @@ class Module(object):
         return self.parser.compiler
 
     def src_path(self, p):
-        return self.parser.replace_path(p)
+        return os.path.normpath(self.parser.replace_path(p))
 
     def parse_includes(self, pp):
         v = set()
@@ -357,19 +394,25 @@ class Module(object):
 
             if from_sd(p):
                 for i in self.parser.inc_parser.parse_cpp_includes(self.src_path(p)):
-                    if i[0] == '<':
-                        yield from do('$(S)/' + i[1:-1])
-                    else:
-                        yield from do(os.path.dirname(p) + '/' + i[1:-1])
+                    #if i[0] == '<':
+                    yield from do('$(S)/' + i[1:-1])
+                    #else:
+                        #yield from do(os.path.dirname(p) + '/' + i[1:-1])
             else:
                 msg('U', 'br', p)
 
         yield from do(pp)
 
     def find_location(self, p):
-        for x in self.iter_inc_dirs():
+        def it():
+            yield from self.iter_inc_dirs()
+            yield '$(S)/' + self.prefix
+
+        for x in it():
             pp = p.replace('$(S)', x)
             spp = self.src_path(pp)
+
+            print(x, pp, spp)
 
             if os.path.exists(spp):
                 return pp
@@ -666,7 +709,8 @@ def build_uids(g):
                     if i in cpp_excludes:
                         pass
                     else:
-                        raise Exception('no build file ' + i)
+                        pass
+                        #raise Exception('no build file ' + i)
 
             n['deps'] = deps
             n['uid'] = struct_hash(n)

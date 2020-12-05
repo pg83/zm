@@ -1,0 +1,3 @@
+recurse:
+- include
+- src
