@@ -4,4 +4,4 @@ srcs:
  - s2.cpp
 
 depends:
- - lib3
+ - libs/lib3

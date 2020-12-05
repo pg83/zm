@@ -4,5 +4,5 @@ srcs:
  - main.cpp
 
 depends:
- - lib1
- - lib2
+ - libs/lib1
+ - libs/lib2

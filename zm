@@ -431,7 +431,7 @@ def from_sd(i):
 
 
 def struct_hash(s):
-    return hashlib.md5(json.dumps(s, sort_keys=True).encode('utf-8')).hexdigest()[:8]
+    return hashlib.md5(json.dumps(s, sort_keys=True).encode('utf-8')).hexdigest()[:10]
 
 
 def build_uids(g):

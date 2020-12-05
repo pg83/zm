@@ -5,4 +5,4 @@ srcs:
  - data.file2c
 
 depends:
- - lib1
+ - libs/lib1
