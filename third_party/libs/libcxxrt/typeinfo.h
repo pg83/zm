@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright 2010-2011 PathScale, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -10,7 +10,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS ``AS
  * IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
@@ -117,7 +117,7 @@ namespace ABI_NAMESPACE
 		virtual ~__fundamental_type_info();
 	};
 	/**
-	 * Type info for arrays.  
+	 * Type info for arrays.
 	 */
 	struct __array_type_info : public std::type_info
 	{
@@ -231,7 +231,7 @@ namespace ABI_NAMESPACE
 		unsigned int __flags;
 		/** The number of base classes. */
 		unsigned int __base_count;
-		/** 
+		/**
 		 * Array of base classes - this actually has __base_count elements, not
 		 * 1.
 		 */

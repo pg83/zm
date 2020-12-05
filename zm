@@ -293,7 +293,6 @@ class Module(object):
     def __init__(self, data, parser, prefix):
         self._d = data
         self._p = prefix
-        self._s = [('$(S)/' + self.prefix + '/' + x) for x in data.get('srcs', [])]
         self._parser = parser
 
     def extra_depends(self):
@@ -336,7 +335,11 @@ class Module(object):
 
     @property
     def srcs(self):
-        return self._s
+        return [('$(S)/' + self.prefix + '/' + x) for x in self._d.get('srcs', [])]
+
+    @property
+    def join_srcs(self):
+        return [('$(S)/' + self.prefix + '/' + x) for x in self._d.get('join_srcs', [])]
 
     @property
     def compiler(self):
@@ -438,6 +441,22 @@ class Module(object):
     def build_command(self, src):
         return list(self.build_command_0(src))
 
+    def join_srcs_command(self, srcs):
+        o = '$(B)/' + self.prefix + '/' + struct_hash('_'.join(srcs)) + '.' + fext(srcs[0])
+
+        def iter_inc():
+            for s in srcs:
+                yield from self.parse_includes_md5(s)
+
+        return {
+            'in': srcs,
+            'out': [o],
+            'cmd': [
+                ['/bin/sh', '-c', 'cat ' + ' '.join(srcs) + ' > ' + o],
+            ],
+            'inc': list(iter_inc()),
+        }
+
     def file2c_command(self, src):
         o = to_bd(strip_ext(src) + '.h')
 
@@ -497,9 +516,23 @@ class Module(object):
             'cmd': self.compiler.ar_command(srcs, o),
         }
 
+    def iter_simple_commands(self):
+        for s in self.srcs:
+            yield from self.build_command(s)
+
+        js = self.join_srcs
+
+        if js:
+            cmd = self.join_srcs_command(js)
+
+            yield cmd
+
+            for o in cmd['out']:
+                yield from self.build_command(o)
+
     def calc_commands(self):
         # compile
-        cc = sum([self.build_command(s) for s in self.srcs], [])
+        cc = list(self.iter_simple_commands())
 
         def iter_ss():
             for l in cc:

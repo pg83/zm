@@ -3,10 +3,10 @@ module: program
 inc_dirs:
 - third_party/tools/gperf
 
-cxx_flags:
+c_flags:
 - -w
 
-srcs:
+join_srcs:
 - getline.cpp
 - hash.cpp
 - keyword.cpp
@@ -20,5 +20,7 @@ srcs:
 - input.cpp
 - keyword-list.cpp
 - positions.cpp
+
+srcs:
 - getopt.c
 - getopt1.c

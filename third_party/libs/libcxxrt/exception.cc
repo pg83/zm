@@ -207,7 +207,6 @@ namespace std
 			virtual ~exception();
 			virtual const char* what() const noexcept;
 	};
-
 }
 
 /**
