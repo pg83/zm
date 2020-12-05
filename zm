@@ -565,6 +565,9 @@ def main(args):
 
     build_dir = os.path.join(os.path.expanduser('~'), '.zbuild')
 
+    if args.clear:
+        shutil.rmtree(build_dir)
+
     SimpleBuilder(g, p, build_dir).build()
 
 
@@ -573,6 +576,7 @@ if __name__ == '__main__':
 
     argp.add_argument('target', nargs='?', default='.')
     argp.add_argument('-v', '--verbose', help='verbose mode', default=False, action='store_const', const=True)
+    argp.add_argument('--clear', help='clear cache', default=False, action='store_const', const=True)
 
     args = argp.parse_args(sys.argv[1:])
 
