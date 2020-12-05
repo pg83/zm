@@ -1,10 +1,10 @@
 module: library
 
 global_inc_dirs:
-- third_party/libs/libunwind/include
+- tp/libs/libunwind/include
 
 inc_dirs:
-- third_party/libs/libunwind/src
+- tp/libs/libunwind/src
 
 c_flags:
 - -D_LIBUNWIND_IS_NATIVE_ONLY

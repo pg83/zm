@@ -1,7 +1,7 @@
 module: program
 
 inc_dirs:
-- third_party/tools/gperf
+- tp/tools/gperf
 
 c_flags:
 - -w

@@ -508,12 +508,12 @@ class Module(object):
 
         return [
             {
-                'in': [src, '$(B)/third_party/tools/file2c/file2c'],
+                'in': [src, '$(B)/tp/tools/file2c/file2c'],
                 'out': [o],
                 'cmd': [
-                    ['/bin/sh', '-c', '$(B)/third_party/tools/file2c/file2c < ' + src + ' > ' + o],
+                    ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
                 ],
-                'depends': ['third_party/tools/file2c'],
+                'depends': ['tp/tools/file2c'],
                 'inc': self.parse_includes_md5(src),
             },
         ]
@@ -523,15 +523,15 @@ class Module(object):
 
         return [
             {
-                'in': [src, '$(B)/third_party/tools/yasm/yasm'],
+                'in': [src, '$(B)/tp/tools/yasm/yasm'],
                 'out': [o],
                 'cmd': [
                     [
-                        '$(B)/third_party/tools/yasm/yasm', '-f', 'macho64', '-D', 'DARWIN', '-D', 'UNIX',
+                        '$(B)/tp/tools/yasm/yasm', '-f', 'macho64', '-D', 'DARWIN', '-D', 'UNIX',
                         '-D', '_x86_64_', '-D', '_YASM_', '-I', '$(S)', '-o', o, src
                     ],
                 ],
-                'depends': ['third_party/tools/yasm'],
+                'depends': ['tp/tools/yasm'],
             },
         ]
 
@@ -663,10 +663,10 @@ class Program(Module):
         return cc + dc + [self.link_command(uniq_list(ss + ls), self.name)]
 
     def iter_extra_deps(self):
-        yield 'third_party/libs/libcxx'
+        yield 'tp/libs/libcxx'
 
         if self.name not in ['yasm']:
-            yield 'third_party/libs/libasmlib'
+            yield 'tp/libs/libasmlib'
 
     def extra_depends(self):
         return list(self.iter_extra_deps())
@@ -674,11 +674,11 @@ class Program(Module):
 
 class Library(Module):
     exclude = frozenset([
-        'thirdpartycxxinclude',
-        'thirdpartycxxsrc',
-        'thirdpartycxxrt',
-        'thirdpartyunwindsrc',
-        'thirdpartydemangle',
+        'tpcxxinclude',
+        'tpcxxsrc',
+        'tpcxxrt',
+        'tpunwindsrc',
+        'tpdemangle',
     ])
 
     def __init__(self, data, parser, prefix):
@@ -692,7 +692,7 @@ class Library(Module):
 
     def extra_depends(self):
         if self.name not in self.exclude:
-            return ['third_party/libs/libcxx']
+            return ['tp/libs/libcxx']
 
         return []
 

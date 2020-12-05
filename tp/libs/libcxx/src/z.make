@@ -1,11 +1,11 @@
 module: library
 
 inc_dirs:
-- third_party/libs/libcxxrt
+- tp/libs/libcxxrt
 
 depends:
-- third_party/libs/libcxx/include
-- third_party/libs/libcxxrt
+- tp/libs/libcxx/include
+- tp/libs/libcxxrt
 
 cxx_flags:
 - -D_LIBCPP_BUILDING_LIBRARY

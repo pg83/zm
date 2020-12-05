@@ -1,9 +1,9 @@
 module: program
 
 inc_dirs:
-- third_party/tools/yasm
-- third_party/tools/yasm/frontends/yasm
-- third_party/tools/yasm/modules
+- tp/tools/yasm
+- tp/tools/yasm/frontends/yasm
+- tp/tools/yasm/modules
 
 c_flags:
 - -DHAVE_CONFIG_H

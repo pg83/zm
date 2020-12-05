@@ -1,11 +1,11 @@
 module: library
 
 depends:
-- third_party/libs/libunwind
-- third_party/libs/libdemangle
+- tp/libs/libunwind
+- tp/libs/libdemangle
 
 inc_dirs:
-- third_party/libs/libcxxrt
+- tp/libs/libcxxrt
 
 cxx_flags:
 - -w

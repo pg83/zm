@@ -7,8 +7,8 @@ srcs:
 - cxa_demangle.cpp
 
 depends:
-- third_party/libs/libcxx/include
+- tp/libs/libcxx/include
 
 inc_dirs:
-- third_party/libs/libdemangle/demangle
-- third_party/libs/libdemangle
+- tp/libs/libdemangle/demangle
+- tp/libs/libdemangle
