@@ -1,4 +1,4 @@
 recurse:
  - libs
  - progs
- - file2c
+ - third_party

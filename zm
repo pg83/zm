@@ -243,12 +243,12 @@ class Module(object):
 
         return [
             {
-                'in': [src, '$(B)/file2c/file2c'],
+                'in': [src, '$(B)/third_party/tools/file2c/file2c'],
                 'out': [o],
                 'cmd': [
-                    ['/bin/sh', '-c', '$(B)/file2c/file2c < ' + src + ' > ' + o],
+                    ['/bin/sh', '-c', '$(B)/third_party/tools/file2c/file2c < ' + src + ' > ' + o],
                 ],
-                'depends': ['file2c'],
+                'depends': ['third_party/tools/file2c'],
                 'inc': self.parse_includes_md5(src),
             },
         ]
@@ -359,13 +359,14 @@ class Library(Module):
 
 
 class Recurse(object):
-    def __init__(self, data, parser):
+    def __init__(self, data, parser, prefix):
         self._d = data['recurse']
         self._parser = parser
+        self._prefix = prefix
 
     @cached_method
     def commands(self):
-        return sum([self._parser.parse_module(d).commands() for d in self._d], [])
+        return sum([self._parser.parse_module(os.path.join(self._prefix, d)).commands() for d in self._d], [])
 
 
 class Parser(object):
@@ -397,12 +398,12 @@ class Parser(object):
             d = yaml.load(f.read(), Loader=yaml.Loader)
 
         if 'recurse' in d:
-            return Recurse(d, self)
+            return Recurse(d, self, target)
 
         m = d['module']
 
         if m == 'recurse':
-            return Recurse(d, self)
+            return Recurse(d, self, target)
 
         if 'name' not in d:
             d['name'] = os.path.basename(target)

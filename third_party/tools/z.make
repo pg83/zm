@@ -1,0 +1,2 @@
+recurse:
+ - file2c

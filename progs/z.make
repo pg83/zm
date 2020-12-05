@@ -1,3 +1,3 @@
 recurse:
- - progs/prog1
- - progs/prog2
+ - prog1
+ - prog2
