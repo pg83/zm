@@ -231,6 +231,7 @@ def cached_method(meth):
         k = struct_hash([args, kwargs, meth.__name__])
 
         if k not in d:
+            d[k] = object()
             d[k] = meth(self, *args, **kwargs)
 
         return d[k]
@@ -457,6 +458,7 @@ class Module(object):
             'S': self.c_compile_command,
             's': self.c_compile_command,
             'file2c': self.file2c_command,
+            'asm': self.yasm_command,
         }
 
         def nope(src):
@@ -513,6 +515,23 @@ class Module(object):
                 ],
                 'depends': ['third_party/tools/file2c'],
                 'inc': self.parse_includes_md5(src),
+            },
+        ]
+
+    def yasm_command(self, src):
+        o = to_bd(strip_ext(src) + '.o')
+
+        return [
+            {
+                'in': [src, '$(B)/third_party/tools/yasm/yasm'],
+                'out': [o],
+                'cmd': [
+                    [
+                        '$(B)/third_party/tools/yasm/yasm', '-f', 'macho64', '-D', 'DARWIN', '-D', 'UNIX',
+                        '-D', '_x86_64_', '-D', '_YASM_', '-I', '$(S)', '-o', o, src
+                    ],
+                ],
+                'depends': ['third_party/tools/yasm'],
             },
         ]
 
@@ -643,8 +662,14 @@ class Program(Module):
 
         return cc + dc + [self.link_command(uniq_list(ss + ls), self.name)]
 
+    def iter_extra_deps(self):
+        yield 'third_party/libs/libcxx'
+
+        if self.name not in ['yasm']:
+            yield 'third_party/libs/libasmlib'
+
     def extra_depends(self):
-        return ['third_party/libs/libcxx']
+        return list(self.iter_extra_deps())
 
 
 class Library(Module):
