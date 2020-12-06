@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import yaml
+import base64
 import hashlib
 import argparse
 import platform
@@ -250,9 +251,7 @@ def find_root():
 
 
 def get_target(t):
-    path = os.path.join(os.getcwd(), t)
-
-    return os.path.normpath(os.path.abspath(path))
+    return os.path.normpath(os.path.abspath(os.path.join(os.getcwd(), t)))
 
 
 def strip_prefix(s, p):
@@ -495,12 +494,14 @@ class Module(object):
             for s in srcs:
                 yield from self.parse_includes_md5(s)
 
+        def iter_cmds():
+            for l in srcs:
+                yield ['/bin/sh', '-c', 'echo "#include \\"' + l + '\\"" >> ' + o]
+
         return {
             'in': srcs,
             'out': [o],
-            'cmd': [
-                ['/bin/sh', '-c', 'cat ' + ' '.join(srcs) + ' > ' + o],
-            ],
+            'cmd': list(iter_cmds()),
             'inc': list(iter_inc()),
         }
 
@@ -762,9 +763,6 @@ class Parser(object):
 
         m = d['module']
 
-        if m == 'recurse':
-            return Recurse(d, self, target)
-
         if m == 'program':
             if 'name' not in d:
                 d['name'] = os.path.basename(target)
@@ -817,7 +815,6 @@ def build_uids(g):
                     deps.append(uid(by_out[i]))
                 else:
                     msg('U', 'br', i)
-
 
             n['deps'] = deps
             n['uid'] = struct_hash(n)
@@ -885,7 +882,7 @@ class SimpleBuilder(object):
         where_t = self.replace_path('$(B)', n, 't')
 
         if os.path.exists(where_c):
-            msg('C', 'bb', n['uid'])
+            msg('C', 'bb', ' '.join(n['out']))
 
             return
 
@@ -899,14 +896,14 @@ class SimpleBuilder(object):
 
             shutil.copytree(self.replace_path('$(B)', dn, 'c'), where_t, dirs_exist_ok=True)
 
-        msg('B', 'bg', ' '.join(n['out']))
+        m = [' '.join(n['out'])]
 
         for c in n['cmd']:
             cmd = [self.replace_path(x, n, 't') for x in c]
-
-            print(colorize(' '.join(cmd), 'dw'))
-
+            m.append(colorize(' '.join(cmd), 'dw'))
             run_cmd(cmd)
+
+        msg('B', 'bg', '\n'.join(m))
 
         shutil.move(where_t, where_c)
 
@@ -917,6 +914,7 @@ class Target(object):
         self.arch = arch
 
     @property
+    @cached_method
     def bits(self):
         if 'ARCH_X86_64' in self.flags:
             return 64
@@ -927,24 +925,45 @@ class Target(object):
         return 32
 
     @property
-    def flags(self):
-        return ['OS_' + self.os.upper(), 'ARCH_' + self.arch.upper(), 'OS_UNIX']
+    @cached_method
+    def is_unix(self):
+        return self.os in ['darwin', 'linux', 'freebsd']
 
     @property
-    def defines(self):
+    @cached_method
+    def flags(self):
         def iter_flags_0():
-            yield self.os
-            yield self.arch
-            yield 'unix'
+            yield 'os_' + self.os
+            yield 'arch_' + self.arch
+
+            if self.is_unix:
+                yield 'os_unix'
 
         def iter_flags_1():
             for f in iter_flags_0():
                 yield f.upper()
-                yield '_' + f + '_'
 
         return list(iter_flags_1())
 
     @property
+    @cached_method
+    def defines(self):
+        def iter_defines_0():
+            yield self.os
+            yield self.arch
+
+            if self.is_unix:
+                yield 'unix'
+
+        def iter_defines_1():
+            for f in iter_defines_0():
+                yield f.upper()
+                yield '_' + f + '_'
+
+        return list(iter_defines_1())
+
+    @property
+    @cached_method
     def exe_format(self):
         if 'OS_DARWIN' in self.flags:
             return 'macho'
@@ -952,10 +971,12 @@ class Target(object):
         return 'elf'
 
     @property
+    @cached_method
     def complete_exe_format(self):
         return self.exe_format + str(self.bits)
 
 
+@singleton
 def run_target():
     return Target(platform.system().lower(), platform.machine().lower())
 

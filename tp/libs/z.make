@@ -4,3 +4,5 @@ recurse:
 - libcxxrt
 - libcxx
 - libdemangle
+- libasmlib
+- libz

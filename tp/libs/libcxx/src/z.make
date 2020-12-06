@@ -18,18 +18,14 @@ srcs:
 - charconv.cpp
 - chrono.cpp
 - condition_variable.cpp
-- condition_variable_destructor.cpp
-- debug.cpp
 - exception.cpp
 - functional.cpp
 - future.cpp
 - hash.cpp
 - ios.cpp
-- iostream.cpp
 - locale.cpp
 - memory.cpp
 - mutex.cpp
-- mutex_destructor.cpp
 - optional.cpp
 - random.cpp
 - regex.cpp
@@ -45,3 +41,7 @@ srcs:
 - variant.cpp
 - vector.cpp
 - new.cpp
+- debug.cpp
+- condition_variable_destructor.cpp
+- iostream.cpp
+- mutex_destructor.cpp
