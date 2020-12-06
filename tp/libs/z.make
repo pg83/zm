@@ -9,3 +9,4 @@ recurse:
 - libbz2
 - libsqlite3
 - libiconv
+- libaapl

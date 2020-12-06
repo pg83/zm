@@ -15,15 +15,18 @@ import platform
 import threading
 import subprocess
 import collections
+import multiprocessing
 
 
 if __name__ == '__main__':
     argp = argparse.ArgumentParser()
 
     argp.add_argument('target', nargs='?', default='.')
+
     argp.add_argument('-v', '--verbose', help='verbose mode', default=False, action='store_const', const=True)
-    argp.add_argument('--clear', help='clear cache', default=False, action='store_const', const=True)
-    argp.add_argument('--profile', help='run profiler', default=False, action='store_const', const=True)
+    argp.add_argument('-c', '--clear', help='clear cache', default=False, action='store_const', const=True)
+    argp.add_argument('-p', '--profile', help='run profiler', default=False, action='store_const', const=True)
+    argp.add_argument('-j', '--threads', help='thread count', default=0)
 
     args = argp.parse_args(sys.argv[1:])
 
@@ -883,7 +886,7 @@ def prepare_dir(ro):
         pass
 
 
-def simple_engine(it):
+def simple_engine(it, key=lambda x: x):
     by_dep = collections.defaultdict(set)
     by_rdep = collections.defaultdict(set)
 
@@ -897,7 +900,7 @@ def simple_engine(it):
 
     def iter_ready():
         while ready:
-            tmp = list(sorted(ready))
+            tmp = list(sorted(ready, key=key))
 
             ready.clear()
 
@@ -920,7 +923,7 @@ def simple_engine(it):
     return iter_ready, cb
 
 
-class SimpleBuilder(object):
+class Builder(object):
     def __init__(self, g, parser, build_dir):
         self._g = g
         self._p = parser
@@ -930,27 +933,18 @@ class SimpleBuilder(object):
         for n in self._g:
             self._bu[n['uid']] = n
 
-    def visit(self):
-        v = set()
-
-        def visit(n):
-            u = n['uid']
-
-            if u not in v:
-                v.add(u)
-
-                for d in n['deps']:
-                    yield from visit(self._bu[d])
-
-                yield n
-
-        for n in self._g:
-            yield from visit(n)
-
     def replace_path(self, p, n, w):
         bp = p.replace('$(B)', self._bd + '/$(W)/' + n['uid'][:2] + '/' + n['uid'][2:]).replace('$(W)', w)
 
         return self._p.replace_path(bp)
+
+    def visit(self):
+        r, w = self.engine()
+
+        while tmp := list(r()):
+            for i in tmp:
+                yield self._bu[i]
+                w(i)
 
     def build(self):
         for n in self.visit():
@@ -961,13 +955,17 @@ class SimpleBuilder(object):
             for d in n['deps']:
                 yield n['uid'], d
 
+    def engine(self):
+        def sort_key(x):
+            return ' '.join(self._bu[x]['out'])
+
+        return simple_engine(self.iter_deps(), key=sort_key)
+
     def build_parallel(self, th):
-        r, w = simple_engine(self.iter_deps())
+        r, w = self.engine()
 
         qi = queue.SimpleQueue()
         qo = queue.SimpleQueue()
-
-        v = set()
 
         def make_func(d):
             def func():
@@ -996,6 +994,8 @@ class SimpleBuilder(object):
             t = threading.Thread(target=run_thr)
             t.daemon = True
             t.start()
+
+        v = set()
 
         while True:
             for i in r():
@@ -1043,7 +1043,7 @@ class SimpleBuilder(object):
 
             app_msg(run_cmd(cmd))
 
-        msg('B', 'bg', '\n'.join(m).strip())
+        msg('B', 'g', '\n'.join(m).strip())
 
         shutil.move(where_t, where_c)
 
@@ -1210,7 +1210,18 @@ def main():
     if args.verbose:
         print(json.dumps(g, indent=4, sort_keys=True))
 
-    SimpleBuilder(g, p, build_dir).build_parallel(16)
+    bl = Builder(g, p, build_dir)
+    tc = int(args.threads)
+
+    if tc == 0:
+        tc = multiprocessing.cpu_count()
+
+    if tc < 2:
+        bl.build()
+    else:
+        bl.build_parallel(tc)
+
+    msg('F', 'bg', 'complete')
 
 
 if __name__ == '__main__':
@@ -1221,7 +1232,10 @@ if __name__ == '__main__':
             try:
                 main()
             except Exception as e:
-                print(e)
+                msg('F', 'br', str(e))
+            except KeyboardInterrupt:
+                print('')
+                msg('F', 'br', 'sigint')
 
     if args.profile:
         profile.run('run()')
