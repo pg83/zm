@@ -8,3 +8,4 @@ recurse:
 - libz
 - libbz2
 - libsqlite3
+- libiconv
