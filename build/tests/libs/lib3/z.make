@@ -4,4 +4,4 @@ srcs:
 - s3.cpp
 
 inc_dirs:
-- libs/lib3/includes
+- build/tests/libs/lib3/includes

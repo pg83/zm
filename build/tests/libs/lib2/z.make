@@ -4,4 +4,4 @@ srcs:
 - s2.cpp
 
 depends:
-- libs/lib3
+- build/tests/libs/lib3

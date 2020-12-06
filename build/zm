@@ -283,7 +283,7 @@ def cached_method(meth):
 
 @singleton
 def find_root():
-    res = os.path.dirname(os.path.normpath(os.path.abspath(__file__)))
+    res = os.path.dirname(os.path.dirname(os.path.normpath(os.path.abspath(__file__))))
 
     msg('R', 'by', res)
 

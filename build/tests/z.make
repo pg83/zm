@@ -1,0 +1,3 @@
+recurse:
+- libs
+- progs

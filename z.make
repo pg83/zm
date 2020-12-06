@@ -1,4 +1,3 @@
 recurse:
-- libs
-- progs
+- build
 - tp
