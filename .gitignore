@@ -1,7 +1,8 @@
-progs/prog1/prog1
-progs/prog2/prog2
-progs/prog3/prog3
+build/tests/progs/prog1/prog1
+build/tests/progs/prog2/prog2
+build/tests/progs/prog3/prog3
 tp/tools/file2c/file2c
 tp/tools/gperf/gperf
 tp/tools/yasm/yasm
+tp/tools/ragel/ragel
 *~
