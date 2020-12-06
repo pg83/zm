@@ -5,11 +5,13 @@ import sys
 import json
 import yaml
 import base64
+import shutil
+import pickle
 import hashlib
+import profile
 import argparse
 import platform
 import subprocess
-import shutil
 
 
 ## colors
@@ -196,14 +198,33 @@ def join_path(a, b):
     return a + '/' + b
 
 
+def iter_uniq_list_slow(l):
+    v = set()
+
+    for x in l:
+        k = struct_hash(x)
+
+        if k not in v:
+            v.add(k)
+
+            yield x
+
+
 def iter_uniq_list(l):
     v = set()
 
     for x in l:
-        if x not in v:
-            v.add(x)
+        try:
+            if x in v:
+                continue
+        except Exception:
+            yield from iter_uniq_list_slow(l)
 
-            yield x
+            return
+
+        v.add(x)
+
+        yield x
 
 
 def uniq_list(l):
@@ -276,12 +297,7 @@ def get_substr(s, b, e):
     return b + s + e
 
 
-def parse_cpp_includes(p):
-    msg('P', 'bm' ,p)
-
-    with open(p, 'r') as f:
-        data = f.read()
-
+def parse_cpp_includes(data):
     for l in data.splitlines():
         l = l.strip()
 
@@ -303,12 +319,6 @@ def parse_cpp_includes(p):
             yield res
         else:
             raise Exception('unparsed include ' + l)
-
-
-class IncParser(object):
-    @cached_method
-    def parse_cpp_includes(self, p):
-        return list(parse_cpp_includes(p))
 
 
 def to_bd(p):
@@ -341,10 +351,12 @@ class Module(object):
         return self._d['name']
 
     @property
+    @cached_method
     def depends(self):
         return uniq_list(self._d.get('depends', []) + self.extra_depends())
 
     @property
+    @cached_method
     def inc_dirs(self):
         return uniq_list(self.global_inc_dirs() + self._d.get('inc_dirs', []))
 
@@ -421,7 +433,7 @@ class Module(object):
             pp = p.replace('$(S)', x)
             spp = self.src_path(pp)
 
-            if os.path.exists(spp):
+            if self.parser.loader.exists(spp):
                 return pp
 
         return to_bd(p)
@@ -440,11 +452,10 @@ class Module(object):
                         'path': i,
                     }
                 else:
-                    with open(self.src_path(i)) as f:
-                        yield {
-                            'path': i,
-                            'md5': struct_hash(f.read()),
-                        }
+                    yield {
+                        'path': i,
+                        'md5': self.parser.md5_calcer.get_md5(self.src_path(i)),
+                    }
 
         return list(it())
 
@@ -605,8 +616,11 @@ class Module(object):
             yield self.parser.parse_module(d)
 
     def iter_sub_commands(self, deps):
-        for d in self.iter_sub_modules(deps):
-            yield from d.commands()
+        def do():
+            for d in self.iter_sub_modules(deps):
+                yield from d.commands()
+
+        return do()
 
     def calc_commands(self):
         # compile
@@ -722,15 +736,23 @@ class Recurse(Module):
 
     @cached_method
     def commands(self):
-        return sum([d.commands() for d in self.iter_sub_modules(self.depends)], [])
+        def iter_cc():
+            for d in self.iter_sub_modules(self.depends):
+                yield from d.commands()
+
+        return list(iter_cc())
 
 
 class Parser(object):
-    def __init__(self, root, compiler, target):
+    def __init__(self, root, compiler, target, inc_parser):
         self._r = root
         self._c = compiler
-        self._i = IncParser()
+        self._i = inc_parser
         self._t = target
+
+    @property
+    def md5_calcer(self):
+        return self._i.md5_calcer
 
     @property
     def target(self):
@@ -739,6 +761,10 @@ class Parser(object):
     @property
     def inc_parser(self):
         return self._i
+
+    @property
+    def loader(self):
+        return self.inc_parser.loader
 
     @property
     def compiler(self):
@@ -882,7 +908,7 @@ class SimpleBuilder(object):
         where_t = self.replace_path('$(B)', n, 't')
 
         if os.path.exists(where_c):
-            msg('C', 'bb', ' '.join(n['out']))
+            #msg('C', 'bb', ' '.join(n['out']))
 
             return
 
@@ -981,19 +1007,96 @@ def run_target():
     return Target(platform.system().lower(), platform.machine().lower())
 
 
+class FileLoader(object):
+    @cached_method
+    def get_data(self, p):
+        msg('L', 'by', p)
+
+        with open(p, 'r') as f:
+            return f.read()
+
+    @cached_method
+    def get_mtime(self, p):
+        return os.stat(p).st_mtime
+
+    @cached_method
+    def exists(self, p):
+        try:
+            self.get_mtime(p)
+
+            return True
+        except Exception:
+            return False
+
+
+class MD5Calcer(object):
+    LOADER = FileLoader()
+
+    def get_md5(self, p):
+        return self.calc_md5(p, self.loader.get_mtime(p))
+
+    @cached_method
+    def calc_md5(self, p, mt):
+        return struct_hash(self.loader.get_data(p))
+
+    @property
+    def loader(self):
+        return self.LOADER
+
+
+class IncParser(object):
+    def __init__(self, md5_calcer):
+        self._m = md5_calcer
+
+    def parse_cpp_includes(self, p):
+        return self.parse_cpp_includes_0(p, self._m.get_md5(p))
+
+    @cached_method
+    def parse_cpp_includes_0(self, p, md5):
+        msg('P', 'bm', p)
+
+        return list(parse_cpp_includes(self.loader.get_data(p)))
+
+    @property
+    def loader(self):
+        return self.md5_calcer.loader
+
+    @property
+    def md5_calcer(self):
+        return self._m
+
+
 def main(args):
-    p = Parser(find_root(), SystemCompiler(), run_target())
+    build_dir = os.path.join(os.path.expanduser('~'), '.zbuild')
+
+    if args.clear:
+        shutil.rmtree(build_dir, ignore_errors=True)
+
+    try:
+        os.makedirs(build_dir)
+    except OSError:
+        pass
+
+    cache = os.path.join(build_dir, 'cache')
+
+    try:
+        with open(cache, 'rb') as f:
+            inc = pickle.loads(f.read())
+    except Exception as e:
+        print(e)
+
+        inc = IncParser(MD5Calcer())
+
+    p = Parser(find_root(), SystemCompiler(), run_target(), inc)
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t)
     g = build_uids(m.commands())
 
+    with open(cache, 'wb') as f:
+        f.write(pickle.dumps(inc))
+
     if args.verbose:
         print(json.dumps(g, indent=4, sort_keys=True))
-
-    build_dir = os.path.join(os.path.expanduser('~'), '.zbuild')
-
-    if args.clear:
-        shutil.rmtree(build_dir)
 
     SimpleBuilder(g, p, build_dir).build()
 
@@ -1004,13 +1107,20 @@ if __name__ == '__main__':
     argp.add_argument('target', nargs='?', default='.')
     argp.add_argument('-v', '--verbose', help='verbose mode', default=False, action='store_const', const=True)
     argp.add_argument('--clear', help='clear cache', default=False, action='store_const', const=True)
+    argp.add_argument('--profile', help='run profiler', default=False, action='store_const', const=True)
 
     args = argp.parse_args(sys.argv[1:])
 
-    if args.verbose:
-        main(args)
-    else:
-        try:
+    def run():
+        if args.verbose:
             main(args)
-        except Exception as e:
-            print(e)
+        else:
+            try:
+                main(args)
+            except Exception as e:
+                print(e)
+
+    if args.profile:
+        profile.run('run()')
+    else:
+        run()
