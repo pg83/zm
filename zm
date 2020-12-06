@@ -16,6 +16,18 @@ import threading
 import subprocess
 import collections
 
+
+if __name__ == '__main__':
+    argp = argparse.ArgumentParser()
+
+    argp.add_argument('target', nargs='?', default='.')
+    argp.add_argument('-v', '--verbose', help='verbose mode', default=False, action='store_const', const=True)
+    argp.add_argument('--clear', help='clear cache', default=False, action='store_const', const=True)
+    argp.add_argument('--profile', help='run profiler', default=False, action='store_const', const=True)
+
+    args = argp.parse_args(sys.argv[1:])
+
+
 ## colors
 
 ATTRIBUTES = dict(
@@ -1026,7 +1038,9 @@ class SimpleBuilder(object):
         for c in n['cmd']:
             cmd = [self.replace_path(x, n, 't') for x in c]
 
-            app_msg(colorize(' '.join(cmd), 'dw'))
+            if args.verbose:
+                app_msg(colorize(' '.join(cmd), 'dw'))
+
             app_msg(run_cmd(cmd))
 
         msg('B', 'bg', '\n'.join(m).strip())
@@ -1166,7 +1180,7 @@ class IncParser(object):
         return self._m
 
 
-def main(args):
+def main():
     build_dir = os.path.join(os.path.expanduser('~'), '.zbuild')
 
     if args.clear:
@@ -1200,21 +1214,12 @@ def main(args):
 
 
 if __name__ == '__main__':
-    argp = argparse.ArgumentParser()
-
-    argp.add_argument('target', nargs='?', default='.')
-    argp.add_argument('-v', '--verbose', help='verbose mode', default=False, action='store_const', const=True)
-    argp.add_argument('--clear', help='clear cache', default=False, action='store_const', const=True)
-    argp.add_argument('--profile', help='run profiler', default=False, action='store_const', const=True)
-
-    args = argp.parse_args(sys.argv[1:])
-
     def run():
         if args.verbose:
-            main(args)
+            main()
         else:
             try:
-                main(args)
+                main()
             except Exception as e:
                 print(e)
 
