@@ -1,9 +1,2 @@
-build/tests/progs/prog1/prog1
-build/tests/progs/prog2/prog2
-build/tests/progs/prog3/prog3
-build/tests/progs/prog4/prog4
-tp/tools/file2c/file2c
-tp/tools/gperf/gperf
-tp/tools/yasm/yasm
-tp/tools/ragel/ragel
+*.exe
 *~

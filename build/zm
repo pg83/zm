@@ -603,7 +603,7 @@ class Module(object):
             'in': srcs,
             'out': [o],
             'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [
-                ['ln', '-f', o, to_sd(o)],
+                ['ln', '-f', o, to_sd(o) + '.exe'],
             ],
         }
 
