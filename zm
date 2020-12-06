@@ -6,6 +6,7 @@ import json
 import yaml
 import hashlib
 import argparse
+import platform
 import subprocess
 import shutil
 
@@ -402,7 +403,7 @@ class Module(object):
 
             v.add(p)
 
-            p = self.find_location(p)
+            p = self.find_location(p, os.path.dirname(pp))
 
             yield p
 
@@ -412,10 +413,10 @@ class Module(object):
 
         yield from do(pp)
 
-    def find_location(self, p):
+    def find_location(self, p, w):
         def it():
+            yield w
             yield from self.iter_inc_dirs()
-            yield '$(S)/' + self.prefix
 
         for x in iter_uniq_list(it()):
             pp = p.replace('$(S)', x)
@@ -520,6 +521,12 @@ class Module(object):
 
     def yasm_command(self, src):
         o = to_bd(strip_ext(src) + '.o')
+        t = self.parser.target
+
+        def iter_flags():
+            for f in t.defines:
+                yield '-D'
+                yield f
 
         return [
             {
@@ -527,8 +534,7 @@ class Module(object):
                 'out': [o],
                 'cmd': [
                     [
-                        '$(B)/tp/tools/yasm/yasm', '-f', 'macho64', '-D', 'DARWIN', '-D', 'UNIX',
-                        '-D', '_x86_64_', '-D', '_YASM_', '-I', '$(S)', '-o', o, src
+                        '$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src
                     ],
                 ],
                 'depends': ['tp/tools/yasm'],
@@ -719,10 +725,15 @@ class Recurse(Module):
 
 
 class Parser(object):
-    def __init__(self, root, compiler):
+    def __init__(self, root, compiler, target):
         self._r = root
         self._c = compiler
         self._i = IncParser()
+        self._t = target
+
+    @property
+    def target(self):
+        return self._t
 
     @property
     def inc_parser(self):
@@ -900,8 +911,57 @@ class SimpleBuilder(object):
         shutil.move(where_t, where_c)
 
 
+class Target(object):
+    def __init__(self, os, arch):
+        self.os = os
+        self.arch = arch
+
+    @property
+    def bits(self):
+        if 'ARCH_X86_64' in self.flags:
+            return 64
+
+        if 'ARCH_AARCH64' in self.flags:
+            return 64
+
+        return 32
+
+    @property
+    def flags(self):
+        return ['OS_' + self.os.upper(), 'ARCH_' + self.arch.upper(), 'OS_UNIX']
+
+    @property
+    def defines(self):
+        def iter_flags_0():
+            yield self.os
+            yield self.arch
+            yield 'unix'
+
+        def iter_flags_1():
+            for f in iter_flags_0():
+                yield f.upper()
+                yield '_' + f + '_'
+
+        return list(iter_flags_1())
+
+    @property
+    def exe_format(self):
+        if 'OS_DARWIN' in self.flags:
+            return 'macho'
+
+        return 'elf'
+
+    @property
+    def complete_exe_format(self):
+        return self.exe_format + str(self.bits)
+
+
+def run_target():
+    return Target(platform.system().lower(), platform.machine().lower())
+
+
 def main(args):
-    p = Parser(find_root(), SystemCompiler())
+    p = Parser(find_root(), SystemCompiler(), run_target())
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t)
     g = build_uids(m.commands())
