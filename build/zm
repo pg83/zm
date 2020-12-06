@@ -607,6 +607,15 @@ class Module(object):
             ],
         }
 
+    def fatobj_command(self, srcs, out):
+        o = '$(B)/' + self.prefix + '/' + out
+
+        return {
+            'in': srcs,
+            'out': [o],
+            'cmd': self.compiler.fatobj_command(srcs, o),
+        }
+
     def ar_command(self, srcs, out):
         o = '$(B)/' + self.prefix + '/' + out
 
@@ -683,6 +692,9 @@ class SystemCompiler(object):
     def ar_command(self, srcs, out):
         return [['ar', 'q', out] + srcs]
 
+    def fatobj_command(self, srcs, out):
+        return [['ld', '-r', '-o', out] + srcs]
+
 
 class Program(Module):
     def __init__(self, data, parser, prefix):
@@ -696,6 +708,8 @@ class Program(Module):
             for l in dc:
                 for o in l['out']:
                     if o.endswith('.a'):
+                        yield o
+                    elif o.endswith('.global.o'):
                         yield o
 
         ls = list(iter_ls())
@@ -735,6 +749,20 @@ class Library(Module):
             return ['tp/libs/libcxx']
 
         return []
+
+
+class FatObj(Module):
+    def __init__(self, data, parser, prefix):
+        Module.__init__(self, data, parser, prefix)
+
+    @cached_method
+    def commands(self):
+        cc, ss, dc = self.calc_commands()
+
+        return cc + dc + [self.fatobj_command(ss, self.name + '.global.o')]
+
+    def extra_depends(self):
+        return ['tp/libs/libcxx']
 
 
 class Recurse(Module):
@@ -814,11 +842,14 @@ class Parser(object):
 
             return Program(d, self, target)
 
-        if m == 'library':
-            if 'name' not in d:
-                d['name'] = target.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
+        if 'name' not in d:
+            d['name'] = target.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
 
+        if m == 'library':
             return Library(d, self, target)
+
+        if m == 'object':
+            return FatObj(d, self, target)
 
         raise Exception('unsupported module ' + m)
 
