@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import yaml
+import queue
 import base64
 import shutil
 import pickle
@@ -11,8 +12,9 @@ import hashlib
 import profile
 import argparse
 import platform
+import threading
 import subprocess
-
+import collections
 
 ## colors
 
@@ -145,17 +147,20 @@ def colorize(text, color):
 
 
 MM = set()
-
+ML = threading.Lock()
 
 def msg(l, c, msg):
-    m = colorize('[' + l + '] ', c) + msg.replace('$(S)', colorize('$(S)', 'bg')).replace('$(B)', colorize('$(B)', 'by'))
+    m  = colorize('[' + l + '] ', c)
+    m += colorize('(' + struct_hash(threading.get_ident())[:5] + ') ', 'bb')
+    m += msg.replace('$(S)', colorize('$(S)', 'bg')).replace('$(B)', colorize('$(B)', 'by'))
 
-    if m in MM:
-        return
+    with ML:
+        if m in MM:
+            return
 
-    MM.add(m)
+        MM.add(m)
 
-    print(m)
+        print(m)
 
 
 ## end color
@@ -181,11 +186,10 @@ def run_cmd(cmd):
     code = p.wait()
     out = filter_cmd_out(out.decode('utf-8'))
 
-    if out:
-        print(out)
-
     if code:
-        raise Exception(' '.join(cmd) + ' exit code ' + str(code))
+        raise Exception((' '.join(cmd) + ' with exit code ' + str(code) + '\n' + out).strip())
+
+    return out
 
 
 def join_path(a, b):
@@ -649,7 +653,7 @@ class Module(object):
 class SystemCompiler(object):
     def compile_command(self, cxx, src, out, inc, flags):
         return [
-            cxx + ['-I' + x for x in inc] + flags + ['-c', '-o', out, src],
+            cxx + ['-I' + x for x in inc] + ['-fcolor-diagnostics'] + flags + ['-c', '-o', out, src],
         ]
 
     def c_compile_command(self, src, out, inc, flags):
@@ -659,7 +663,7 @@ class SystemCompiler(object):
         return self.compile_command(['clang++'], src, out, inc, ['-std=c++17', '-nostdinc++'] + flags)
 
     def link_command(self, srcs, out, flags):
-        return [['clang++', '-nostdlib++', '-o', out] + flags + srcs]
+        return [['clang++', '-o', out] + ['-nostdlib++', '-fcolor-diagnostics'] + flags + srcs]
 
     def ar_command(self, srcs, out):
         return [['ar', 'q', out] + srcs]
@@ -867,6 +871,43 @@ def prepare_dir(ro):
         pass
 
 
+def simple_engine(it):
+    by_dep = collections.defaultdict(set)
+    by_rdep = collections.defaultdict(set)
+
+    for k, v in it:
+        by_dep[k].add(v)
+        by_rdep[v].add(k)
+
+    deps = set(by_dep.keys())
+    rdeps = set(by_rdep.keys())
+    ready = rdeps - deps
+
+    def iter_ready():
+        while ready:
+            tmp = list(sorted(ready))
+
+            ready.clear()
+
+            for t in tmp:
+                if t is not None:
+                    yield t
+                else:
+                    cb(None)
+
+    def cb(item):
+        for k in by_rdep[item]:
+            el = by_dep[k]
+
+            el.remove(item)
+
+            if not el:
+                by_dep.pop(k)
+                ready.add(k)
+
+    return iter_ready, cb
+
+
 class SimpleBuilder(object):
     def __init__(self, g, parser, build_dir):
         self._g = g
@@ -903,13 +944,65 @@ class SimpleBuilder(object):
         for n in self.visit():
             self.build_command(n)
 
+    def iter_deps(self):
+        for n in self._g:
+            for d in n['deps']:
+                yield n['uid'], d
+
+    def build_parallel(self, th):
+        r, w = simple_engine(self.iter_deps())
+
+        qi = queue.SimpleQueue()
+        qo = queue.SimpleQueue()
+
+        v = set()
+
+        def make_func(d):
+            def func():
+                return d
+
+            return func
+
+        def make_err(n, e):
+            def func():
+                raise Exception('while build ' + ' '.join(n['out']) + ': ' + str(e))
+
+            return func
+
+        def run_thr():
+            while True:
+                d = qi.get()
+                n = self._bu[d]
+
+                try:
+                    self.build_command(n)
+                    qo.put(make_func(d))
+                except Exception as e:
+                    qo.put(make_err(n, e))
+
+        for i in range(0, th):
+            t = threading.Thread(target=run_thr)
+            t.daemon = True
+            t.start()
+
+        while True:
+            for i in r():
+                qi.put(i)
+                v.add(i)
+
+            if not v:
+                return
+
+            res = qo.get()()
+
+            w(res)
+            v.remove(res)
+
     def build_command(self, n):
         where_c = self.replace_path('$(B)', n, 'c')
         where_t = self.replace_path('$(B)', n, 't')
 
         if os.path.exists(where_c):
-            #msg('C', 'bb', ' '.join(n['out']))
-
             return
 
         shutil.rmtree(where_t, ignore_errors=True)
@@ -922,14 +1015,21 @@ class SimpleBuilder(object):
 
             shutil.copytree(self.replace_path('$(B)', dn, 'c'), where_t, dirs_exist_ok=True)
 
-        m = [' '.join(n['out'])]
+        m = []
+
+        def app_msg(ms):
+            if ms:
+                m.append(ms)
+
+        app_msg(' '.join(n['out']))
 
         for c in n['cmd']:
             cmd = [self.replace_path(x, n, 't') for x in c]
-            m.append(colorize(' '.join(cmd), 'dw'))
-            run_cmd(cmd)
 
-        msg('B', 'bg', '\n'.join(m))
+            app_msg(colorize(' '.join(cmd), 'dw'))
+            app_msg(run_cmd(cmd))
+
+        msg('B', 'bg', '\n'.join(m).strip())
 
         shutil.move(where_t, where_c)
 
@@ -1083,8 +1183,6 @@ def main(args):
         with open(cache, 'rb') as f:
             inc = pickle.loads(f.read())
     except Exception as e:
-        print(e)
-
         inc = IncParser(MD5Calcer())
 
     p = Parser(find_root(), SystemCompiler(), run_target(), inc)
@@ -1098,7 +1196,7 @@ def main(args):
     if args.verbose:
         print(json.dumps(g, indent=4, sort_keys=True))
 
-    SimpleBuilder(g, p, build_dir).build()
+    SimpleBuilder(g, p, build_dir).build_parallel(16)
 
 
 if __name__ == '__main__':
