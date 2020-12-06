@@ -11,3 +11,4 @@ recurse:
 - libiconv
 - libaapl
 - libcares
+- libmimalloc

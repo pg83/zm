@@ -18,10 +18,10 @@ terms of the MIT license. A copy of the license can be found in the file
    Override system malloc on macOS
    This is done through the malloc zone interface.
    It seems we also need to interpose (see `alloc-override.c`)
-   or otherwise we get zone errors as there are usually 
-   already allocations done by the time we take over the 
+   or otherwise we get zone errors as there are usually
+   already allocations done by the time we take over the
    zone. Unfortunately, that means we need to replace
-   the `free` with a checked free (`cfree`) impacting 
+   the `free` with a checked free (`cfree`) impacting
    performance.
 ------------------------------------------------------ */
 
@@ -44,7 +44,7 @@ static size_t zone_size(malloc_zone_t* zone, const void* p) {
   UNUSED(zone);
   if (!mi_is_in_heap_region(p))
     return 0; // not our pointer, bail out
-  
+
   return mi_usable_size(p);
 }
 
