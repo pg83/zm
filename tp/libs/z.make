@@ -7,3 +7,4 @@ recurse:
 - libasmlib
 - libz
 - libbz2
+- libsqlite3
