@@ -10,3 +10,4 @@ recurse:
 - libsqlite3
 - libiconv
 - libaapl
+- libcares
