@@ -6,3 +6,4 @@ recurse:
 - libdemangle
 - libasmlib
 - libz
+- libbz2
