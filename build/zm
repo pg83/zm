@@ -676,15 +676,12 @@ class Module(object):
                 yield from self.build_command(o)
 
     def iter_sub_modules(self, deps):
-        for d in deps:
+        for d in iter_uniq_list(deps):
             yield self.parser.parse_module(d)
 
     def iter_sub_commands(self, deps):
-        def do():
-            for d in self.iter_sub_modules(deps):
-                yield from d.commands()
-
-        return do()
+        for d in self.iter_sub_modules(deps):
+            yield from d.commands()
 
     def calc_commands(self):
         # compile
