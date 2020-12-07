@@ -27,6 +27,7 @@ if __name__ == '__main__':
     argp.add_argument('-v', '--verbose', help='verbose mode', default=False, action='store_const', const=True)
     argp.add_argument('-c', '--clear', help='clear cache', default=False, action='store_const', const=True)
     argp.add_argument('-p', '--profile', help='run profiler', default=False, action='store_const', const=True)
+    argp.add_argument('-G', '--dump-graph', help='dump graph', default=False, action='store_const', const=True)
     argp.add_argument('-j', '--threads', help='thread count', default=0)
 
     args = argp.parse_args(sys.argv[1:])
@@ -1333,7 +1334,7 @@ def main():
     with open(cache, 'wb') as f:
         f.write(pickle.dumps(inc))
 
-    if args.verbose:
+    if args.dump_graph:
         print(json.dumps(g, indent=4, sort_keys=True))
 
     bl = Builder(g, p, build_dir)
