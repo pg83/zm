@@ -28,7 +28,7 @@ if __name__ == '__main__':
     argp.add_argument('-c', '--clear', help='clear cache', default=False, action='store_const', const=True)
     argp.add_argument('-p', '--profile', help='run profiler', default=False, action='store_const', const=True)
     argp.add_argument('-G', '--dump-graph', help='dump graph', default=False, action='store_const', const=True)
-    argp.add_argument('-j', '--threads', help='thread count', default=0)
+    argp.add_argument('-j', '--threads', help='thread count', default=-1)
 
     args = argp.parse_args(sys.argv[1:])
 
@@ -1363,10 +1363,12 @@ def main():
     bl = Builder(g, p, build_dir)
     tc = int(args.threads)
 
-    if tc == 0:
+    if tc < 0:
         tc = multiprocessing.cpu_count()
 
-    if tc < 2:
+    if tc == 0:
+        pass
+    elif tc < 2:
         bl.build()
     else:
         bl.build_parallel(tc)
