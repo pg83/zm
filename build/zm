@@ -639,9 +639,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [
-                ['ln', '-f', o, to_sd(o) + '.exe'],
-            ],
+            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [['ln', '-f', o, to_sd(o) + '.exe']],
         }
 
     def fatobj_command(self, srcs, out):
@@ -650,7 +648,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.fatobj_command(srcs, o),
+            'cmd': self.compiler.fatobj_command(srcs, o) + [['ln', '-f', o, to_sd(o)]],
         }
 
     def ar_command(self, srcs, out):
@@ -659,7 +657,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.ar_command(srcs, o),
+            'cmd': self.compiler.ar_command(srcs, o) + [['ln', '-f', o, to_sd(o)]],
         }
 
     def iter_simple_commands(self):

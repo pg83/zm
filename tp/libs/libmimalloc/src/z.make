@@ -11,5 +11,21 @@ c_flags:
 inc_dirs:
 - tp/libs/libmimalloc/include
 
-srcs:
-- all.cpp
+join_srcs:
+- empty.cpp
+#if OS_DARWIN
+- alloc-override-osx.c
+#endif
+- alloc-aligned.c
+- alloc-posix.c
+- alloc.c
+- arena.c
+- heap.c
+- init.c
+- options.c
+- os.c
+- page.c
+- random.c
+- region.c
+- segment.c
+- stats.c
