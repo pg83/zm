@@ -390,6 +390,10 @@ class Module(object):
         return []
 
     @property
+    def allocator(self):
+        return self._d.get('allocator', 'mim')
+
+    @property
     def name(self):
         return self._d['name']
 
@@ -772,6 +776,13 @@ class Program(Module):
         if self.name not in ['yasm']:
             yield 'tp/libs/libasmlib'
 
+        alloc = {
+            'mim': 'tp/libs/libmimalloc',
+            'lf': 'tp/libs/liblfalloc',
+        }
+
+        yield alloc[self.allocator]
+
     def extra_depends(self):
         return list(self.iter_extra_deps())
 
@@ -792,7 +803,10 @@ class Library(Module):
     def commands(self):
         cc, ss, dc = self.calc_commands()
 
-        return cc + dc + [self.ar_command(ss, 'lib' + self.name + '.a')]
+        if ss:
+            return cc + dc + [self.ar_command(ss, 'lib' + self.name + '.a')]
+
+        return dc
 
     def extra_depends(self):
         if self.name not in self.exclude:

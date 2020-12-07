@@ -13,3 +13,5 @@ recurse:
 - libcares
 - libmimalloc
 - libdoubleconversion
+- liblfalloc
+- libgtest

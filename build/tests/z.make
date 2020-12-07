@@ -1,3 +1,4 @@
 recurse:
 - libs
 - progs
+- tests
