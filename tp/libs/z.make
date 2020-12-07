@@ -18,3 +18,4 @@ recurse:
 - libkernel
 - libxxhash
 - libzstd
+- liblzmasdk
