@@ -5,7 +5,7 @@
 #if defined(USE_INTELCC) || defined(_darwin_) || defined(_freebsd_) || defined(_STLPORT_VERSION)
 #define OP_THROWNOTHING noexcept
 #else
-#define OP_THROWNOTHING
+#define OP_THROWNOTHING noexcept
 #endif
 
 #ifndef _darwin_
