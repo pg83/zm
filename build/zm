@@ -500,6 +500,8 @@ class Module(object):
 
     def parse_includes_md5(self, p):
         def it():
+            md5 = self.parser.md5_calcer
+
             for i in self.parse_includes(p):
                 if from_bd(i):
                     yield {
@@ -508,7 +510,7 @@ class Module(object):
                 else:
                     yield {
                         'path': i,
-                        'md5': self.parser.md5_calcer.get_md5(self.src_path(i)),
+                        'md5': md5.get_md5(self.src_path(i)),
                     }
 
         return list(it())
@@ -1319,7 +1321,7 @@ def main():
     try:
         with open(cache, 'rb') as f:
             inc = pickle.loads(f.read())
-    except Exception as e:
+    except Exception:
         inc = IncParser(MD5Calcer())
 
     p = Parser(find_root(), run_target(), inc)
