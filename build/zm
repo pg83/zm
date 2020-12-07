@@ -714,15 +714,13 @@ class SystemCompiler(object):
             yield out
             yield '-nostdlib++'
             yield '-fcolor-diagnostics'
+
             yield from flags
-
-            if self.add_wl:
-                yield '-Wl,--start-group'
-
             yield from srcs
 
-            if self.add_wl:
-                yield '-Wl,--end-group'
+            for s in srcs:
+                if s.endswith('.a'):
+                    yield s
 
             yield from self.extra_libs
 
@@ -735,19 +733,11 @@ class SystemCompiler(object):
         return [['ld', '-r', '-o', out] + srcs]
 
     @property
-    def add_wl(self):
-        return True
-
-    @property
     def extra_libs(self):
         return ['-lpthread', '-ldl']
 
 
 class DarwinCompiler(SystemCompiler):
-    @property
-    def add_wl(self):
-        return False
-
     @property
     def extra_libs(self):
         return []
