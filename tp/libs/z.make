@@ -17,3 +17,4 @@ recurse:
 - libgtest
 - libkernel
 - libxxhash
+- libzstd
