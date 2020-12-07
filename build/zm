@@ -478,11 +478,13 @@ class Module(object):
             yield w
             yield from self.iter_inc_dirs()
 
+        ld = self.parser.loader
+
         for x in iter_uniq_list(it()):
             pp = p.replace('$(S)', x)
             spp = self.src_path(pp)
 
-            if self.parser.loader.exists(spp):
+            if ld.exists(spp):
                 return pp
 
         return to_bd(p)
@@ -1246,12 +1248,14 @@ class FileLoader(object):
 
     @cached_method
     def exists(self, p):
-        try:
-            self.get_mtime(p)
+        return os.path.basename(p) in self.list_dir(os.path.dirname(p))
 
-            return True
-        except Exception:
-            return False
+    @cached_method
+    def list_dir(self, d):
+        try:
+            return frozenset(os.listdir(d))
+        except FileNotFoundError:
+            return []
 
 
 class MD5Calcer(object):
