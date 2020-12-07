@@ -583,7 +583,7 @@ class Module(object):
                 'cmd': [
                     ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
                 ],
-                'depends': ['tp/tools/file2c'],
+                'use': ['tp/tools/file2c'],
                 'inc': self.parse_includes_md5(src),
             },
         ]
@@ -604,7 +604,7 @@ class Module(object):
                 'cmd': [
                     ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
                 ],
-                'depends': ['tp/tools/yasm'],
+                'use': ['tp/tools/yasm'],
             },
         ]
 
@@ -703,6 +703,19 @@ class Module(object):
         dc = uniq_nodes(self.iter_sub_commands(iter_depends()))
 
         return cc, ss, dc
+
+    def full_commands(self):
+        cc = self.commands()
+
+        def iter_programs():
+            for l in cc:
+                yield from l.get('use', [])
+
+        def iter_nodes():
+            yield from cc
+            yield from self.iter_sub_commands(iter_programs())
+
+        return build_uids(uniq_nodes(iter_nodes()))
 
 
 class SystemCompiler(object):
@@ -1324,7 +1337,7 @@ def main():
     p = Parser(find_root(), run_target(), inc)
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t)
-    g = build_uids(uniq_nodes(m.commands()))
+    g = m.full_commands()
 
     with open(cache, 'wb') as f:
         f.write(pickle.dumps(inc))
