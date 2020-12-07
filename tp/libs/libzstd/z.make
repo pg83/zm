@@ -3,6 +3,13 @@ module: library
 depends:
 - tp/libs/libxxhash
 
+inc_dirs:
+- tp/libs/libzstd/legacy
+- tp/libs/libzstd/common
+- tp/libs/libzstd/compress
+- tp/libs/libzstd/decompress
+- tp/libs/libzstd/dictBuilder
+
 c_flags:
 - -DZSTD_LEGACY_SUPPORT=1
 
