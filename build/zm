@@ -708,13 +708,39 @@ class SystemCompiler(object):
         return self.compile_command(['clang++'], src, out, inc, ['-std=c++17', '-nostdinc++'] + flags)
 
     def link_command(self, srcs, out, flags):
-        return [['clang++', '-o', out] + ['-nostdlib++', '-fcolor-diagnostics'] + flags + srcs]
+        def iter_flags():
+            yield 'clang++'
+            yield '-o'
+            yield out
+            yield '-nostdlib++'
+            yield '-fcolor-diagnostics'
+            yield from flags
+
+            if self.add_wl:
+                yield '-Wl,--start-group'
+
+            yield from srcs
+
+            if self.add_wl:
+                yield '-Wl,--end-group'
+
+        return [list(iter_flags())]
 
     def ar_command(self, srcs, out):
         return [['ar', 'q', out] + srcs]
 
     def fatobj_command(self, srcs, out):
         return [['ld', '-r', '-o', out] + srcs]
+
+    @property
+    def add_wl(self):
+        return True
+
+
+class DarwinCompiler(SystemCompiler):
+    @property
+    def add_wl(self):
+        return False
 
 
 class Program(Module):
@@ -810,9 +836,8 @@ class Recurse(Module):
 
 
 class Parser(object):
-    def __init__(self, root, compiler, target, inc_parser):
+    def __init__(self, root, target, inc_parser):
         self._r = root
-        self._c = compiler
         self._i = inc_parser
         self._t = target
 
@@ -834,7 +859,7 @@ class Parser(object):
 
     @property
     def compiler(self):
-        return self._c
+        return self.target.compiler
 
     @property
     def root(self):
@@ -1159,6 +1184,15 @@ class Target(object):
         return self.exe_format + str(self.bits)
 
 
+    @property
+    @cached_method
+    def compiler(self):
+        if 'OS_DARWIN' in self.flags:
+            return DarwinCompiler()
+
+        return SystemCompiler()
+
+
 @singleton
 def run_target():
     return Target(platform.system().lower(), platform.machine().lower())
@@ -1242,7 +1276,7 @@ def main():
     except Exception as e:
         inc = IncParser(MD5Calcer())
 
-    p = Parser(find_root(), SystemCompiler(), run_target(), inc)
+    p = Parser(find_root(), run_target(), inc)
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t)
     g = build_uids(uniq_list_slow(m.commands()))
