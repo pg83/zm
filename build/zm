@@ -724,6 +724,8 @@ class SystemCompiler(object):
             if self.add_wl:
                 yield '-Wl,--end-group'
 
+            yield from self.extra_libs
+
         return [list(iter_flags())]
 
     def ar_command(self, srcs, out):
@@ -736,11 +738,19 @@ class SystemCompiler(object):
     def add_wl(self):
         return True
 
+    @property
+    def extra_libs(self):
+        return ['-lpthread', '-ldl']
+
 
 class DarwinCompiler(SystemCompiler):
     @property
     def add_wl(self):
         return False
+
+    @property
+    def extra_libs(self):
+        return []
 
 
 class Program(Module):
