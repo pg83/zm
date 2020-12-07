@@ -19,3 +19,8 @@ recurse:
 - libxxhash
 - libzstd
 - liblzmasdk
+#if OS_LINUX
+- libmusl
+- libmuslfull
+#endif
+- libasmglibc
