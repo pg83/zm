@@ -732,12 +732,7 @@ class SystemCompiler(object):
             yield '-fcolor-diagnostics'
 
             yield from flags
-            yield from srcs
-
-            for s in srcs:
-                if s.endswith('.a'):
-                    yield s
-
+            yield from self.fix_srcs(srcs)
             yield from self.extra_libs
 
         return [list(iter_flags())]
@@ -748,6 +743,11 @@ class SystemCompiler(object):
     def fatobj_command(self, srcs, out):
         return [['ld', '-r', '-o', out] + srcs]
 
+    def fix_srcs(self, srcs):
+        yield '-Wl,--start-group'
+        yield from srcs
+        yield '-Wl,--end-group'
+
     @property
     def extra_libs(self):
         return ['-lpthread', '-ldl']
@@ -757,6 +757,9 @@ class DarwinCompiler(SystemCompiler):
     @property
     def extra_libs(self):
         return []
+
+    def fix_srcs(self, srcs):
+        return srcs
 
 
 class Program(Module):
