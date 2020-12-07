@@ -196,7 +196,7 @@ def preprocess(data, flags):
             elif '#if' in l:
                 skip = not eval(l[3:].strip(), {}, all_flags)
             elif skip:
-                print('SKIP ' + l)
+                msg('S', 'by', l)
             else:
                 yield l
 
