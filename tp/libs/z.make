@@ -12,3 +12,4 @@ recurse:
 - libaapl
 - libcares
 - libmimalloc
+- libdoubleconversion
