@@ -1,7 +1,7 @@
 module: library
 
 inc_dirs:
-- contrib/libs/c-ares
+- tp/libs/libcares
 
 c_flags:
 - -DCARES_BUILDING_LIBRARY
