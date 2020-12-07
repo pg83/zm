@@ -16,3 +16,4 @@ recurse:
 - liblfalloc
 - libgtest
 - libkernel
+- libxxhash
