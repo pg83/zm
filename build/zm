@@ -33,6 +33,18 @@ if __name__ == '__main__':
     args = argp.parse_args(sys.argv[1:])
 
 
+def singleton(f):
+    def wrapper():
+        try:
+            wrapper.__res__
+        except AttributeError:
+            wrapper.__res__ = f()
+
+        return wrapper.__res__
+
+    return wrapper
+
+
 ## colors
 
 ATTRIBUTES = dict(
@@ -163,21 +175,36 @@ def colorize(text, color):
     return get_color(color) + text + get_color('')
 
 
-MM = set()
-ML = threading.Lock()
+class Display(object):
+    def __init__(self):
+        self._mm = set()
+        self._ml = threading.Lock()
 
-def msg(l, c, msg):
-    m  = colorize('[' + l + '] ', c)
-    m += colorize('(' + str(struct_hash(threading.get_ident()))[:5] + ') ', 'bb')
-    m += msg.replace('$(S)', colorize('$(S)', 'bg')).replace('$(B)', colorize('$(B)', 'by'))
+    def msg(self, l, c, msg):
+        thr_id = str(struct_hash(threading.get_ident()))[:4]
 
-    with ML:
-        if m in MM:
-            return
+        m  = colorize('(' + thr_id + ')', 'bb')
+        m += ' '
+        m += colorize('[' + l + ']', c)
+        m += ' '
+        m += msg.replace('$(S)', colorize('$(S)', 'bg')).replace('$(B)', colorize('$(B)', 'by'))
 
-        MM.add(m)
+        with self._ml:
+            if m in self._mm:
+                return
 
-        print(m)
+            self._mm.add(m)
+
+            print(m)
+
+
+@singleton
+def display():
+    return Display()
+
+
+def msg(*args, **kwargs):
+    display().msg(*args, **kwargs)
 
 
 ## end color
@@ -266,18 +293,6 @@ def iter_uniq_list(l):
 
 def uniq_list(l):
     return list(iter_uniq_list(l))
-
-
-def singleton(f):
-    def wrapper():
-        try:
-            wrapper.__res__
-        except AttributeError:
-            wrapper.__res__ = f()
-
-        return wrapper.__res__
-
-    return wrapper
 
 
 def cached_method(meth):
