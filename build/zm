@@ -299,7 +299,7 @@ def cached_method(meth):
     def wrapper(self, *args, **kwargs):
         try:
             self.__cache__
-        except Exception:
+        except AttributeError:
             self.__cache__ = {}
 
         d = self.__cache__
