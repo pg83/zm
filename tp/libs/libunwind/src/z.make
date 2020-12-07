@@ -14,6 +14,9 @@ c_flags:
 - -w
 
 srcs:
+#if OS_DARWIN
+- Unwind_AppleExtras.cpp
+#endif
 - Unwind-EHABI.cpp
 - Unwind-seh.cpp
 - Unwind-sjlj.c
@@ -22,4 +25,3 @@ srcs:
 - UnwindRegistersRestore.S
 - UnwindRegistersSave.S
 - libunwind.cpp
-- Unwind_AppleExtras.cpp

@@ -181,6 +181,28 @@ def msg(l, c, msg):
 ## end color
 
 
+def preprocess(data, flags):
+    def iter_lines():
+        all_flags = collections.defaultdict(bool)
+
+        for x in flags:
+            all_flags[x] = True
+
+        skip = False
+
+        for l in data.split('\n'):
+            if '#endif' in l:
+                skip = False
+            elif '#if' in l:
+                skip = not eval(l[3:].strip(), {}, all_flags)
+            elif skip:
+                print('SKIP ' + l)
+            else:
+                yield l
+
+    return '\n'.join(iter_lines()).strip()
+
+
 def filter_cmd_out(o):
     def iter_lines():
         for l in o.split('\n'):
@@ -229,17 +251,16 @@ def iter_uniq_list_slow(l):
             yield x
 
 
+def uniq_list_slow(l):
+    return list(iter_uniq_list_slow(l))
+
+
 def iter_uniq_list(l):
     v = set()
 
     for x in l:
-        try:
-            if x in v:
-                continue
-        except Exception:
-            yield from iter_uniq_list_slow(l)
-
-            return
+        if x in v:
+            continue
 
         v.add(x)
 
@@ -669,7 +690,7 @@ class Module(object):
                 yield from l.get('depends', [])
 
         # libs
-        dc = list(self.iter_sub_commands(iter_depends()))
+        dc = uniq_list_slow(self.iter_sub_commands(iter_depends()))
 
         return cc, ss, dc
 
@@ -714,7 +735,7 @@ class Program(Module):
 
         ls = list(iter_ls())
 
-        return cc + dc + [self.link_command(uniq_list(ss + ls), self.name)]
+        return cc + dc + [self.link_command(ss + ls, self.name)]
 
     def iter_extra_deps(self):
         yield 'tp/libs/libcxx'
@@ -783,11 +804,9 @@ class Recurse(Module):
 
     @cached_method
     def commands(self):
-        def iter_cc():
-            for d in self.iter_sub_modules(self.depends):
-                yield from d.commands()
+        cc, ss, dc = self.calc_commands()
 
-        return list(iter_cc())
+        return dc
 
 
 class Parser(object):
@@ -829,7 +848,7 @@ class Parser(object):
         msg('T', 'bc', '$(S)/' + target)
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = yaml.load(f.read(), Loader=yaml.Loader)
+            d = yaml.load(preprocess(f.read(), self.target.flags), Loader=yaml.Loader)
 
         if 'recurse' in d:
             return Recurse(d, self, target)
@@ -897,17 +916,10 @@ def build_uids(g):
 
         return n['uid']
 
-    by_uid = {}
-    res = []
+    for x in g:
+        uid(x)
 
-    for n in g:
-        u = uid(n)
-
-        if u not in by_uid:
-            by_uid[u] = n
-            res.append(n)
-
-    return res
+    return g
 
 
 def prepare_dir(ro):
@@ -1233,7 +1245,7 @@ def main():
     p = Parser(find_root(), SystemCompiler(), run_target(), inc)
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t)
-    g = build_uids(m.commands())
+    g = build_uids(uniq_list_slow(m.commands()))
 
     with open(cache, 'wb') as f:
         f.write(pickle.dumps(inc))

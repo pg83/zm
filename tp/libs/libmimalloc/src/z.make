@@ -1,17 +1,21 @@
 module: object
 
 c_flags:
+#if OS_DARWIN
+- -DMI_OSX_ZONE=1
+#endif
 - -DMI_INTERPOSE
 - -DMI_MALLOC_OVERRIDE
-- -DMI_OSX_ZONE=1
 - -DMI_STATIC_LIB
 
 inc_dirs:
 - tp/libs/libmimalloc/include
 
 join_srcs:
-- alloc-aligned.c
+#if OS_DARWIN
 - alloc-override-osx.c
+#endif
+- alloc-aligned.c
 - alloc-posix.c
 - alloc.c
 - arena.c
