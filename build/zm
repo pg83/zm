@@ -946,8 +946,7 @@ def from_sd(i):
 
 
 def struct_hash(s):
-    #return hashlib.md5(json.dumps(s, sort_keys=True).encode('utf-8')).hexdigest()[:10]
-    return zlib.crc32(json.dumps(s, sort_keys=True).encode('utf-8'))
+    return zlib.crc32(json.dumps(s, sort_keys=True).encode('ascii'))
 
 
 def build_uids(g):
@@ -1101,7 +1100,6 @@ class Builder(object):
                     self.build_command(n)
                     qo.put(make_func(d))
                 except Exception as e:
-                    raise
                     qo.put(make_err(n, e))
 
         for i in range(0, th):
