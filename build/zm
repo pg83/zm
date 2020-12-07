@@ -1048,7 +1048,7 @@ class Builder(object):
             self._bu[u] = n
 
     def replace_path(self, p, n, w):
-        uid = str(n['uid'])
+        uid = (n['uid']).to_bytes(4, 'little').hex()
         bp = p.replace('$(B)', self._bd + '/$(W)/' + uid[:2] + '/' + uid[2:]).replace('$(W)', w)
 
         return self._p.replace_path(bp)
