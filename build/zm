@@ -4,6 +4,7 @@ import os
 import sys
 import json
 import yaml
+import zlib
 import queue
 import base64
 import shutil
@@ -166,7 +167,7 @@ ML = threading.Lock()
 
 def msg(l, c, msg):
     m  = colorize('[' + l + '] ', c)
-    m += colorize('(' + struct_hash(threading.get_ident())[:5] + ') ', 'bb')
+    m += colorize('(' + str(struct_hash(threading.get_ident()))[:5] + ') ', 'bb')
     m += msg.replace('$(S)', colorize('$(S)', 'bg')).replace('$(B)', colorize('$(B)', 'by'))
 
     with ML:
@@ -242,11 +243,11 @@ def join_path(a, b):
     return a + '/' + b
 
 
-def iter_uniq_list_slow(l):
+def iter_uniq_list_base(l, key):
     v = set()
 
     for x in l:
-        k = struct_hash(x)
+        k = key(x)
 
         if k not in v:
             v.add(k)
@@ -254,20 +255,12 @@ def iter_uniq_list_slow(l):
             yield x
 
 
-def uniq_list_slow(l):
-    return list(iter_uniq_list_slow(l))
+def uniq_list_base(l, key):
+    return list(iter_uniq_list_base(l, key))
 
 
 def iter_uniq_list(l):
-    v = set()
-
-    for x in l:
-        if x in v:
-            continue
-
-        v.add(x)
-
-        yield x
+    return iter_uniq_list_base(l, lambda x: x)
 
 
 def uniq_list(l):
@@ -380,6 +373,14 @@ def strip_ext(p):
     return p[:-1 - len(fext(p))]
 
 
+def node_key(n):
+    return ' '.join(n['out'])
+
+
+def uniq_nodes(g):
+    return uniq_list_base(g, node_key)
+
+
 class Module(object):
     def __init__(self, data, parser, prefix):
         self._d = data
@@ -456,6 +457,8 @@ class Module(object):
 
     def parse_includes(self, pp):
         v = set()
+        dp = os.path.dirname(pp)
+        ip = self.parser.inc_parser
 
         def do(p):
             if p in v:
@@ -463,15 +466,15 @@ class Module(object):
 
             v.add(p)
 
-            p = self.find_location(p, os.path.dirname(pp))
+            p = self.find_location(p, dp)
 
             yield p
 
             if from_sd(p):
-                for i in self.parser.inc_parser.parse_cpp_includes(self.src_path(p)):
+                for i in ip.parse_cpp_includes(self.src_path(p)):
                     yield from do('$(S)/' + i[1:-1])
 
-        yield from do(pp)
+        return do(pp)
 
     def find_location(self, p, w):
         def it():
@@ -550,7 +553,7 @@ class Module(object):
         return list(self.build_command_0(src))
 
     def join_srcs_command(self, srcs):
-        o = '$(B)/' + self.prefix + '/' + struct_hash('_'.join(srcs)) + '.' + fext(srcs[0])
+        o = '$(B)/' + self.prefix + '/' + str(struct_hash('_'.join(srcs))) + '.' + fext(srcs[0])
 
         def iter_inc():
             for s in srcs:
@@ -701,7 +704,7 @@ class Module(object):
                 yield from l.get('depends', [])
 
         # libs
-        dc = uniq_list_slow(self.iter_sub_commands(iter_depends()))
+        dc = uniq_nodes(self.iter_sub_commands(iter_depends()))
 
         return cc, ss, dc
 
@@ -943,7 +946,8 @@ def from_sd(i):
 
 
 def struct_hash(s):
-    return hashlib.md5(json.dumps(s, sort_keys=True).encode('utf-8')).hexdigest()[:10]
+    #return hashlib.md5(json.dumps(s, sort_keys=True).encode('utf-8')).hexdigest()[:10]
+    return zlib.crc32(json.dumps(s, sort_keys=True).encode('utf-8'))
 
 
 def build_uids(g):
@@ -1035,10 +1039,15 @@ class Builder(object):
         self._bu = {}
 
         for n in self._g:
-            self._bu[n['uid']] = n
+            u = n['uid']
+
+            assert u not in self._bu
+
+            self._bu[u] = n
 
     def replace_path(self, p, n, w):
-        bp = p.replace('$(B)', self._bd + '/$(W)/' + n['uid'][:2] + '/' + n['uid'][2:]).replace('$(W)', w)
+        uid = str(n['uid'])
+        bp = p.replace('$(B)', self._bd + '/$(W)/' + uid[:2] + '/' + uid[2:]).replace('$(W)', w)
 
         return self._p.replace_path(bp)
 
@@ -1092,6 +1101,7 @@ class Builder(object):
                     self.build_command(n)
                     qo.put(make_func(d))
                 except Exception as e:
+                    raise
                     qo.put(make_err(n, e))
 
         for i in range(0, th):
@@ -1317,7 +1327,7 @@ def main():
     p = Parser(find_root(), run_target(), inc)
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t)
-    g = build_uids(uniq_list_slow(m.commands()))
+    g = build_uids(uniq_nodes(m.commands()))
 
     with open(cache, 'wb') as f:
         f.write(pickle.dumps(inc))
