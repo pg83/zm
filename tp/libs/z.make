@@ -15,3 +15,4 @@ recurse:
 - libdoubleconversion
 - liblfalloc
 - libgtest
+- libkernel
