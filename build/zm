@@ -776,6 +776,9 @@ class Program(Module):
 
         return cc + dc + [self.link_command(ss + ls, self.name)]
 
+    def more_deps(self):
+        return []
+
     def iter_extra_deps(self):
         yield 'tp/libs/libcxx'
 
@@ -788,9 +791,15 @@ class Program(Module):
         }
 
         yield alloc[self.allocator]
+        yield from self.more_deps()
 
     def extra_depends(self):
         return list(self.iter_extra_deps())
+
+
+class GTest(Program):
+    def more_deps(self):
+        yield 'tp/libs/libgtest'
 
 
 class Library(Module):
@@ -872,6 +881,7 @@ class Parser(object):
         'library': Library,
         'object': FatObj,
         'recurse': Recurse,
+        'gtest': GTest,
     }
 
     def __init__(self, root, target, inc_parser):
