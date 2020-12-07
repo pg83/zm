@@ -4,4 +4,4 @@ srcs:
 - test1.cpp
 
 depends:
-- gtest
+- tp/libs/libgtest

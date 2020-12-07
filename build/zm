@@ -386,16 +386,18 @@ class Module(object):
         self._p = prefix
         self._parser = parser
 
+    def prog_name(self):
+        return os.path.basename(self.prefix)
+
+    def lib_name(self):
+        return self.prefix.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
+
     def extra_depends(self):
         return []
 
     @property
     def allocator(self):
         return self._d.get('allocator', 'mim')
-
-    @property
-    def name(self):
-        return self._d['name']
 
     @property
     @cached_method
@@ -754,6 +756,10 @@ class Program(Module):
     def __init__(self, data, parser, prefix):
         Module.__init__(self, data, parser, prefix)
 
+    @property
+    def name(self):
+        return self.prog_name()
+
     @cached_method
     def commands(self):
         cc, ss, dc = self.calc_commands()
@@ -799,6 +805,10 @@ class Library(Module):
     def __init__(self, data, parser, prefix):
         Module.__init__(self, data, parser, prefix)
 
+    @property
+    def name(self):
+        return self.lib_name()
+
     @cached_method
     def commands(self):
         cc, ss, dc = self.calc_commands()
@@ -818,6 +828,10 @@ class Library(Module):
 class FatObj(Module):
     def __init__(self, data, parser, prefix):
         Module.__init__(self, data, parser, prefix)
+
+    @property
+    def name(self):
+        return self.lib_name()
 
     @cached_method
     def commands(self):
@@ -853,6 +867,13 @@ class Recurse(Module):
 
 
 class Parser(object):
+    BY_NAME = {
+        'program': Program,
+        'library': Library,
+        'object': FatObj,
+        'recurse': Recurse,
+    }
+
     def __init__(self, root, target, inc_parser):
         self._r = root
         self._i = inc_parser
@@ -895,24 +916,10 @@ class Parser(object):
         if 'recurse' in d:
             return Recurse(d, self, target)
 
-        m = d['module']
+        def error(*args):
+            raise Exception('unsupported module ' + m)
 
-        if m == 'program':
-            if 'name' not in d:
-                d['name'] = os.path.basename(target)
-
-            return Program(d, self, target)
-
-        if 'name' not in d:
-            d['name'] = target.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
-
-        if m == 'library':
-            return Library(d, self, target)
-
-        if m == 'object':
-            return FatObj(d, self, target)
-
-        raise Exception('unsupported module ' + m)
+        return self.BY_NAME.get(d['module'], error)(d, self, target)
 
 
 def from_bd(i):

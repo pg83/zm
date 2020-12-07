@@ -1,4 +1,3 @@
 recurse:
 - build
 - tp
-- gtest
