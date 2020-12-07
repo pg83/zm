@@ -602,9 +602,7 @@ class Module(object):
                 'in': [src, '$(B)/tp/tools/yasm/yasm'],
                 'out': [o],
                 'cmd': [
-                    [
-                        '$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src
-                    ],
+                    ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
                 ],
                 'depends': ['tp/tools/yasm'],
             },
