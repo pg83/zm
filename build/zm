@@ -209,6 +209,9 @@ def filter_cmd_out(o):
             if 'creating archive' in l:
                 continue
 
+            if 'ar: creating' in l:
+                continue
+
             if 'has no symbols' in l:
                 continue
 
