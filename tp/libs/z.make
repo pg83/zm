@@ -25,3 +25,4 @@ recurse:
 #endif
 - libasmglibc
 - libstrings
+- libopenssl
