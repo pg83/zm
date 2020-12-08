@@ -834,7 +834,9 @@ class Program(Module):
     def iter_extra_deps(self):
         yield 'tp/libs/libcxx'
 
-        if self.name not in ['yasm']:
+        if self.name in ['yasm']:
+            yield 'tp/libs/libstrings'
+        else:
             yield 'tp/libs/libasmlib'
 
         alloc = {
