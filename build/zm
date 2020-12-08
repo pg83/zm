@@ -196,7 +196,7 @@ class Display(object):
 
             self._mm.add(m)
 
-            print(m)
+            print(m, file=sys.stderr)
 
 
 @singleton
@@ -406,10 +406,10 @@ class Module(object):
         self._parser = parser
 
     def prog_name(self):
-        return os.path.basename(self.prefix)
+        return self._d.get('name', '') or os.path.basename(self.prefix)
 
     def lib_name(self):
-        return self.prefix.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
+        return self._d.get('name', '') or self.prefix.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
 
     def extra_depends(self):
         return []
@@ -1421,7 +1421,7 @@ if __name__ == '__main__':
             except Exception as e:
                 msg('F', 'br', str(e))
             except KeyboardInterrupt:
-                print('')
+                print('', file=sys.stderr)
                 msg('F', 'br', 'sigint')
 
     if args.profile:
