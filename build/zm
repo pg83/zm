@@ -897,6 +897,11 @@ class GTest(Program):
         yield 'tp/libs/libgtest'
 
 
+class BenchMark(Program):
+    def more_deps(self):
+        yield 'tp/libs/libbenchmark'
+
+
 class Library(Module):
     exclude = frozenset([
         'tpcxxinclude',
@@ -983,6 +988,7 @@ class Parser(object):
         'object': FatObj,
         'recurse': Recurse,
         'gtest': GTest,
+        'benchmark': BenchMark,
     }
 
     def __init__(self, root, target, inc_parser):
