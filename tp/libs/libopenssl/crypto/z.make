@@ -4,6 +4,7 @@ depends:
 - tp/libs/libz
 
 inc_dirs:
+- tp/libs/libz
 - tp/libs/libopenssl
 - tp/libs/libopenssl/crypto
 - tp/libs/libopenssl/crypto/ec/curve448

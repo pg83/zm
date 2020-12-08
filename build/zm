@@ -1222,6 +1222,16 @@ class Builder(object):
             v.remove(res)
 
     def build_command(self, n):
+        while True:
+            try:
+                return self.build_command_0(n)
+            except Exception as e:
+                if 'I/O error' in str(e):
+                    msg('B', 'br', 'retry error ' + str(e))
+                else:
+                    raise e
+
+    def build_command_0(self, n):
         where_c = self.replace_path('$(B)', n, 'c')
         where_t = self.replace_path('$(B)', n, 't')
 
