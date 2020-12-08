@@ -9,6 +9,7 @@ import queue
 import base64
 import shutil
 import pickle
+import marshal
 import hashlib
 import profile
 import argparse
@@ -356,7 +357,7 @@ def parse_cpp_includes(data):
     for l in data.splitlines():
         l = l.strip()
 
-        if not l:
+        if '#' not in l:
             continue
 
         ll = l.replace(' ', '').replace('\t', '')
@@ -393,7 +394,12 @@ def strip_ext(p):
 
 
 def node_key(n):
-    return ' '.join(n['out'])
+    o = n['out']
+
+    if len(o) == 1:
+        return o[0]
+
+    return ' '.join(o)
 
 
 def uniq_nodes(g):
@@ -406,18 +412,16 @@ class Module(object):
         self._p = prefix
         self._parser = parser
 
+    @cached_method
     def prog_name(self):
         return self._d.get('name', '') or os.path.basename(self.prefix)
 
+    @cached_method
     def lib_name(self):
         return self._d.get('name', '') or self.prefix.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
 
     def extra_depends(self):
         return []
-
-    @property
-    def allocator(self):
-        return self._d.get('allocator', 'mim')
 
     @property
     @cached_method
@@ -427,15 +431,16 @@ class Module(object):
     @property
     @cached_method
     def inc_dirs(self):
-        return uniq_list(self.global_inc_dirs() + self._d.get('inc_dirs', []))
+        return uniq_list(self.global_inc_dirs + self._d.get('inc_dirs', []))
 
+    @property
     @cached_method
     def global_inc_dirs(self):
         def iter_dirs():
             yield from self._d.get('global_inc_dirs', [])
 
             for sm in self.iter_sub_modules(self.depends):
-                yield from sm.global_inc_dirs()
+                yield from sm.global_inc_dirs
 
         return uniq_list(iter_dirs())
 
@@ -502,6 +507,7 @@ class Module(object):
 
         return do(pp)
 
+    @cached_method
     def find_location(self, p, w):
         def it():
             yield w
@@ -842,6 +848,10 @@ class Program(Module):
     def name(self):
         return self.prog_name()
 
+    @property
+    def allocator(self):
+        return self._d.get('allocator', 'mim')
+
     @cached_method
     def commands(self):
         cc, ss, dc = self.calc_commands()
@@ -1031,7 +1041,9 @@ def from_sd(i):
 
 
 def struct_hash(s):
-    return zlib.crc32(json.dumps(s, sort_keys=True).encode('ascii'))
+    #return zlib.crc32(json.dumps(s, sort_keys=True).encode('ascii'))
+    return zlib.crc32(marshal.dumps(s))
+    #return zlib.crc32(str(s).encode('utf-8'))
 
 
 def build_uids(g):
@@ -1316,7 +1328,6 @@ class Target(object):
     @cached_method
     def complete_exe_format(self):
         return self.exe_format + str(self.bits)
-
 
     @property
     @cached_method
