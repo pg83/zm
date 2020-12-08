@@ -64,10 +64,6 @@
 #include <strings.h>
 #endif
 
-#if __linux__ && __x86_64__
-__asm__(".symver memcpy,memcpy@GLIBC_2.2.5");
-#endif
-
 #include <libyasm-stdint.h>
 #include <libyasm/coretype.h>
 

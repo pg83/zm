@@ -13,14 +13,16 @@ recurse:
 - libcares
 - libmimalloc
 - libdoubleconversion
-- liblfalloc
 - libgtest
 - libkernel
 - libxxhash
 - libzstd
 - liblzmasdk
 #if OS_LINUX
+- liblfalloc
 - libmusl
+- libmuslinc
 - libmuslfull
 #endif
 - libasmglibc
+- libstrings

@@ -6,9 +6,13 @@ inc_dirs:
 depends:
 - tp/libs/libcxx/include
 - tp/libs/libcxxrt
+#if OS_LINUX
+- tp/libs/libmuslfull
+#endif
 
 cxx_flags:
 - -D_LIBCPP_BUILDING_LIBRARY
+- -D_LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE
 - -DLIBCXXRT=1
 
 srcs:

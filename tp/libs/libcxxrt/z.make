@@ -3,6 +3,7 @@ module: library
 depends:
 - tp/libs/libunwind
 - tp/libs/libdemangle
+- tp/libs/libcxx/include
 
 inc_dirs:
 - tp/libs/libcxxrt

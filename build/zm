@@ -29,6 +29,7 @@ if __name__ == '__main__':
     argp.add_argument('-p', '--profile', help='run profiler', default=False, action='store_const', const=True)
     argp.add_argument('-G', '--dump-graph', help='dump graph', default=False, action='store_const', const=True)
     argp.add_argument('-j', '--threads', help='thread count', default=-1)
+    argp.add_argument('-B', '--build-dir', help='build dir', default='')
 
     args = argp.parse_args(sys.argv[1:])
 
@@ -445,8 +446,15 @@ class Module(object):
         return self._d.get('c_flags', []) + self._d.get('cxx_flags', [])
 
     @property
+    @cached_method
     def ld_flags(self):
-        return self._d.get('ld_flags', [])
+        def iter_flags():
+            yield from self._d.get('ld_flags', [])
+
+            for sm in self.iter_sub_modules(self.depends):
+                yield from sm.ld_flags
+
+        return uniq_list(iter_flags())
 
     @property
     def parser(self):
@@ -653,7 +661,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [['ln', '-f', o, to_sd(o) + '.exe']],
+            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [['cp', o, to_sd(o) + '.exe']],
         }
 
     def fatobj_command(self, srcs, out):
@@ -662,7 +670,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.fatobj_command(srcs, o) + [['ln', '-f', o, to_sd(o)]],
+            'cmd': self.compiler.fatobj_command(srcs, o) + [['cp', o, to_sd(o)]],
         }
 
     def ar_command(self, srcs, out):
@@ -671,7 +679,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.ar_command(srcs, o) + [['ln', '-f', o, to_sd(o)]],
+            'cmd': self.compiler.ar_command(srcs, o) + [['cp', o, to_sd(o)]],
         }
 
     def iter_simple_commands(self):
@@ -748,19 +756,20 @@ class SystemCompiler(object):
     def link_command(self, srcs, out, flags):
         def iter_flags():
             yield 'clang++'
-            yield '-o'
-            yield out
             yield '-nostdlib++'
             yield '-fcolor-diagnostics'
-
             yield from flags
+            yield '-o'
+            yield out
             yield from self.fix_srcs(srcs)
-            yield from self.extra_libs
 
         return [list(iter_flags())]
 
     def ar_command(self, srcs, out):
-        return [['ar', 'q', out] + srcs]
+        return [
+            ['ar', 'q', out] + srcs,
+            ['ranlib', out],
+        ]
 
     def fatobj_command(self, srcs, out):
         return [['ld', '-r', '-o', out] + srcs]
@@ -770,16 +779,8 @@ class SystemCompiler(object):
         yield from srcs
         yield '-Wl,--end-group'
 
-    @property
-    def extra_libs(self):
-        return ['-lpthread', '-ldl']
-
 
 class DarwinCompiler(SystemCompiler):
-    @property
-    def extra_libs(self):
-        return []
-
     def fix_srcs(self, srcs):
         return srcs
 
@@ -841,6 +842,12 @@ class Library(Module):
         'tpcxxrt',
         'tpunwindsrc',
         'tpdemangle',
+        'tpmusl',
+        'tpmuslinc',
+        'tpmuslfull',
+        'tpasm',
+        'tpasmgc',
+        'tpkernel',
     ])
 
     def __init__(self, data, parser, prefix):
@@ -1331,7 +1338,10 @@ class IncParser(object):
 
 
 def main():
-    build_dir = os.path.join(os.path.expanduser('~'), '.zbuild')
+    build_dir = args.build_dir
+
+    if not build_dir:
+        build_dir = os.path.join(os.path.expanduser('~'), '.zbuild')
 
     if args.clear:
         shutil.rmtree(build_dir, ignore_errors=True)

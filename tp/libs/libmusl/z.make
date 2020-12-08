@@ -20,6 +20,9 @@ c_flags:
 - -fno-stack-protector
 - -w
 
+ld_flags:
+- -nostdlib
+
 srcs:
 - crt/crt1.c
 - dso.c

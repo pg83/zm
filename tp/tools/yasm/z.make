@@ -10,6 +10,9 @@ c_flags:
 - -DYASM_LIB_SOURCE
 - -w
 
+depends:
+- tp/libs/libstrings
+
 srcs:
 - frontends/yasm/yasm-options.c
 - frontends/yasm/yasm.c

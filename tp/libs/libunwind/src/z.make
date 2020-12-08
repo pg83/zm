@@ -6,6 +6,9 @@ global_inc_dirs:
 inc_dirs:
 - tp/libs/libunwind/src
 
+depends:
+- tp/libs/libcxx/include
+
 c_flags:
 - -D_LIBUNWIND_IS_NATIVE_ONLY
 - -fno-exceptions

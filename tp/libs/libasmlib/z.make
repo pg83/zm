@@ -1,5 +1,8 @@
 module: library
 
+depends:
+- tp/libs/libasmglibc
+
 srcs:
 - debugbreak64.asm
 - cachesize64.asm

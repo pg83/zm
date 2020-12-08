@@ -1,6 +1,8 @@
 #ifndef _ENDIAN_H
 #define _ENDIAN_H
 
+#pragma GCC system_header
+
 #include <features.h>
 
 #define __NEED_uint16_t
