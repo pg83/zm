@@ -48,6 +48,7 @@ def singleton(f):
 
 ## colors
 
+
 ATTRIBUTES = dict(
     list(zip(
         [
@@ -251,8 +252,8 @@ def filter_cmd_out(o):
     return '\n'.join(iter_lines()).strip()
 
 
-def run_cmd(cmd):
-    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+def run_cmd(cmd, cwd):
+    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd)
     out, err = p.communicate()
     code = p.wait()
     out = filter_cmd_out(out.decode('utf-8'))
@@ -551,6 +552,7 @@ class Module(object):
             's': self.c_compile_command,
             'file2c': self.file2c_command,
             'asm': self.yasm_command,
+            'proto': self.proto_command,
         }
 
         def nope(src):
@@ -609,6 +611,26 @@ class Module(object):
                 ],
                 'use': ['tp/tools/file2c'],
                 'inc': self.parse_includes_md5(src),
+            },
+        ]
+
+    def proto_command(self, src):
+        pb = to_bd(strip_ext(src))
+        pbc = pb + '.pb.cc'
+        pbh = pb + '.pb.h'
+        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+        f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+
+        return [
+            {
+                'in': [src, '$(B)/tp/libs/libprotobuf/src/google/protobuf/compiler/protoc'],
+                'out': [pbc, pbh],
+                'cmd': [
+                    ['$(B)/tp/libs/libprotobuf/src/google/protobuf/compiler/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
+                ],
+                'use': ['tp/libs/libprotobuf/src/google/protobuf/compiler'],
+                'out_inc': self.parse_includes_md5(f1) + self.parse_includes_md5(f2),
+                'cwd': '$(S)',
             },
         ]
 
@@ -754,9 +776,17 @@ class Module(object):
 
 class SystemCompiler(object):
     def compile_command(self, cxx, src, out, inc, flags):
-        return [
-            cxx + ['-fcolor-diagnostics'] + flags + ['-I' + x for x in inc] + ['-c', '-o', out, src],
-        ]
+        def it():
+            yield from cxx
+            yield from ['-fcolor-diagnostics', '-msse2', '-msse3', '-mssse3', '-msse4.1', '-msse4.2', '-mpopcnt', '-mcx16']
+            yield from flags
+
+            for x in inc:
+                yield '-I' + x
+
+            yield from ['-c', '-o', out, src]
+
+        return [list(it())]
 
     def c_compile_command(self, src, out, inc, flags):
         return self.compile_command(['clang'], src, out, inc, flags)
@@ -1205,11 +1235,12 @@ class Builder(object):
 
         for c in n['cmd']:
             cmd = [self.replace_path(x, n, 't') for x in c]
+            cwd = self.replace_path(n.get('cwd', '/'), n, 't')
 
             if args.verbose:
-                app_msg(colorize(' '.join(cmd), 'dw'))
+                app_msg(colorize('CWD=' + cwd + ' ' + ' '.join(cmd), 'dw'))
 
-            app_msg(run_cmd(cmd))
+            app_msg(run_cmd(cmd, cwd))
 
         msg('B', 'g', '\n'.join(m).strip())
 
