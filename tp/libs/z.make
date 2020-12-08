@@ -26,3 +26,4 @@ recurse:
 - libasmglibc
 - libstrings
 - libopenssl
+- libbenchmark
