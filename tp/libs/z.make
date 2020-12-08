@@ -27,3 +27,4 @@ recurse:
 - libstrings
 - libopenssl
 - libbenchmark
+- libre2
