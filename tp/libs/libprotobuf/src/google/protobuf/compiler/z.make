@@ -1,6 +1,4 @@
-module: program
-
-name: protoc
+module: library
 
 depends:
 - tp/libs/libprotobuf

@@ -623,12 +623,12 @@ class Module(object):
 
         return [
             {
-                'in': [src, '$(B)/tp/libs/libprotobuf/src/google/protobuf/compiler/protoc'],
+                'in': [src, '$(B)/tp/tools/protoc/protoc'],
                 'out': [pbc, pbh],
                 'cmd': [
-                    ['$(B)/tp/libs/libprotobuf/src/google/protobuf/compiler/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
+                    ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
                 ],
-                'use': ['tp/libs/libprotobuf/src/google/protobuf/compiler'],
+                'use': ['tp/tools/protoc'],
                 'out_inc': self.parse_includes_md5(f1) + self.parse_includes_md5(f2),
                 'cwd': '$(S)',
             },

@@ -3,3 +3,4 @@ recurse:
 - gperf
 - yasm
 - ragel
+- protoc
