@@ -656,13 +656,23 @@ class Module(object):
             },
         ]
 
+    def symlink_command(self, o, suff=''):
+        io = '$(B)/../../../' + os.path.basename(o)
+        oo = to_sd(o) + suff
+
+        return [
+            ['ln', '-f', o, io],
+            ['rm', '-rf', oo],
+            ['python3', '-c', 'import sys; import os; os.symlink(os.path.normpath(sys.argv[1]), os.path.normpath(sys.argv[2]))', io, oo],
+        ]
+
     def link_command(self, srcs, out):
         o = '$(B)/' + self.prefix + '/' + out
 
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + [['cp', o, to_sd(o) + '.exe']],
+            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + self.symlink_command(o, '.exe'),
         }
 
     def fatobj_command(self, srcs, out):
@@ -671,7 +681,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.fatobj_command(srcs, o) + [['cp', o, to_sd(o)]],
+            'cmd': self.compiler.fatobj_command(srcs, o) + self.symlink_command(o),
         }
 
     def ar_command(self, srcs, out):
@@ -680,7 +690,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.ar_command(srcs, o) + [['cp', o, to_sd(o)]],
+            'cmd': self.compiler.ar_command(srcs, o) + self.symlink_command(o),
         }
 
     def iter_simple_commands(self):
@@ -745,7 +755,7 @@ class Module(object):
 class SystemCompiler(object):
     def compile_command(self, cxx, src, out, inc, flags):
         return [
-            cxx + ['-I' + x for x in inc] + ['-fcolor-diagnostics'] + flags + ['-c', '-o', out, src],
+            cxx + ['-fcolor-diagnostics'] + flags + ['-I' + x for x in inc] + ['-c', '-o', out, src],
         ]
 
     def c_compile_command(self, src, out, inc, flags):
@@ -757,8 +767,8 @@ class SystemCompiler(object):
     def link_command(self, srcs, out, flags):
         def iter_flags():
             yield 'clang++'
-            yield '-nostdlib++'
             yield '-fcolor-diagnostics'
+            yield '-nostdlib++'
             yield from flags
             yield '-o'
             yield out
@@ -1016,7 +1026,8 @@ def build_uids(g):
                 if i in by_out:
                     deps.append(uid(by_out[i]))
                 else:
-                    msg('U', 'br', i)
+                    if args.verbose:
+                        msg('U', 'br', i)
 
             n['deps'] = deps
             n['uid'] = struct_hash(n)
@@ -1233,6 +1244,9 @@ class Target(object):
 
             if self.is_unix:
                 yield 'os_unix'
+
+            if self.os == 'linux':
+                yield 'musl'
 
         def iter_flags_1():
             for f in iter_flags_0():
