@@ -6,9 +6,6 @@ inc_dirs:
 depends:
 - tp/libs/libcxx/include
 - tp/libs/libcxxrt
-#if OS_LINUX
-- tp/libs/libmuslfull
-#endif
 
 cxx_flags:
 - -D_LIBCPP_BUILDING_LIBRARY

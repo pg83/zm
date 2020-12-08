@@ -8,3 +8,6 @@ global_inc_dirs:
 
 depends:
 - tp/libs/libmusl
+
+srcs:
+- dlvsym.cpp

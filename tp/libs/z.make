@@ -22,7 +22,6 @@ recurse:
 - liblfalloc
 - libmusl
 - libmuslinc
-- libmuslfull
 #endif
 - libasmglibc
 - libstrings
