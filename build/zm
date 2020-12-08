@@ -776,8 +776,16 @@ class SystemCompiler(object):
         return [['ld', '-r', '-o', out] + srcs]
 
     def fix_srcs(self, srcs):
+        for s in srcs:
+            if s.endswith('.o'):
+                yield s
+
         yield '-Wl,--start-group'
-        yield from srcs
+
+        for s in srcs:
+            if not s.endswith('.o'):
+                yield s
+
         yield '-Wl,--end-group'
 
 

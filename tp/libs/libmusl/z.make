@@ -7,6 +7,7 @@ inc_dirs:
 - tp/libs/libmusl/src/internal
 - tp/libs/libmusl/include
 - tp/libs/libmusl/extra
+- tp/libs/libmusl/src/include/sys
 
 depends:
 - tp/libs/libkernel
