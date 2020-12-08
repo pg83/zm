@@ -1,11 +1,7 @@
 module: library
 
+c_flags:
+- -w
+
 srcs:
-- memcpy.c
-- strcat.c
-- strlen.c
-- memset.c
-- strcpy.c
-- memchr.c
-- memmove.c
-- memcmp.c
+- all.c
