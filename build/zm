@@ -73,9 +73,11 @@ class ProtoBufPlugin(object):
 
     def command(self, src, module):
         pb = to_bd(strip_ext(src))
+
         pbc = pb + '.pb.cc'
         pbh = pb + '.pb.h'
-        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+
+        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.cc'
         f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
 
         return [
@@ -93,7 +95,14 @@ class ProtoBufPlugin(object):
         ]
 
     def parse(self, data):
-        return []
+        for l in data.splitlines():
+            if not l.startswith('import'):
+                continue
+
+            if res := get_substr(ll, '"', '"'):
+                yield res
+            else:
+                raise Exception('unparsed include ' + l)
 
     def depends(self):
         return ['tp/libs/libprotobuf']
@@ -653,6 +662,7 @@ class Module(object):
         self._d = data
         self._p = prefix
         self._parser = parser
+        self._c = {}
 
     @cached_method
     def prog_name(self):
@@ -732,13 +742,19 @@ class Module(object):
     def compiler(self):
         return self.parser.compiler
 
-    def src_path(self, p):
-        p = self.parser.replace_path(p)
+    def src_path_0(self, p):
+        rp = self.parser.replace_path(p)
 
         if './' in p:
-            return os.path.normpath(p)
+            return os.path.normpath(rp)
 
-        return p
+        return rp
+
+    def src_path(self, p):
+        if p not in self._c:
+            self._c[p] = self.src_path_0(p)
+
+        return self._c[p]
 
     def parse_includes(self, pp, ext):
         v = set()
@@ -1230,7 +1246,6 @@ def from_sd(i):
 
 
 def struct_hash(s):
-    #return zlib.crc32(json.dumps(s, sort_keys=True).encode('ascii'))
     return zlib.crc32(marshal.dumps(s))
 
 
