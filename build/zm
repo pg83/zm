@@ -56,15 +56,16 @@ class File2CPlugin(PluginBase):
 
     def command(self, src, module):
         o = to_bd(strip_ext(src) + '.h')
+        tool = '$(B)/tp/tools/file2c/file2c'
 
         return [
             {
                 'in': [src],
                 'out': [o],
                 'cmd': [
-                    ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
+                    ['/bin/sh', '-c', tool + ' < ' + src + ' > ' + o],
                 ],
-                'use': ['tp/tools/file2c/file2c'],
+                'use': [tool],
                 'inc': [module.parse_includes_md5(src, 'file2c')],
             },
         ]
@@ -83,14 +84,16 @@ class ProtoBufPlugin(PluginBase):
         f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.cc'
         f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
 
+        tool = '$(B)/tp/tools/protoc/protoc'
+
         return [
             {
                 'in': [src],
                 'out': [pbc, pbh],
                 'cmd': [
-                    ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
+                    [tool, '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
                 ],
-                'use': ['tp/tools/protoc/protoc'],
+                'use': [tool],
                 'inc': [module.parse_includes_md5(src, 'proto')],
                 'out_inc': module.parse_includes_md5(f1, 'cpp') + module.parse_includes_md5(f2, 'cpp'),
                 'cwd': '$(S)',
@@ -146,15 +149,17 @@ class YasmPlugin(PluginBase):
                 yield '-D'
                 yield f
 
+        tool = '$(B)/tp/tools/yasm/yasm'
+
         return [
             {
                 'in': [src],
                 'out': [o],
                 'cmd': [
-                    ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
+                    [tool, '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
                 ],
                 'inc': [module.parse_includes_md5(src, 'yasm')],
-                'use': ['tp/tools/yasm/yasm'],
+                'use': [tool],
             },
         ]
 
@@ -962,7 +967,7 @@ class Module(object):
         def iter_programs():
             for l in cc:
                 for x in l.get('use', []):
-                    yield os.path.dirname(x)
+                    yield os.path.dirname(x)[5:]
 
         def iter_nodes():
             yield from cc
@@ -1256,8 +1261,7 @@ def iter_node_in(n):
             if from_bd(i):
                 yield i
 
-        for i in n.get('use', []):
-            yield '$(B)/' + i
+        yield from n.get('use', [])
 
         for f in flatten(n.get('inc', [])):
             if 'md5' not in f:
