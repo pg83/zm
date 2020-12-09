@@ -464,6 +464,9 @@ class File2CPlugin(object):
             },
         ]
 
+    def parse(self, data):
+        return []
+
 
 class ProtoBufPlugin(object):
     def ext(self):
@@ -490,6 +493,9 @@ class ProtoBufPlugin(object):
             },
         ]
 
+    def parse(self, data):
+        return []
+
 
 class CppPlugin(object):
     def ext(self):
@@ -498,6 +504,9 @@ class CppPlugin(object):
     def command(self, src, module):
         return module.cxx_compile_command(src)
 
+    def parse(self, data):
+        return parse_cpp_includes(data)
+
 
 class CPlugin(object):
     def ext(self):
@@ -505,6 +514,9 @@ class CPlugin(object):
 
     def command(self, src, module):
         return module.c_compile_command(src)
+
+    def parse(self, data):
+        return parse_cpp_includes(data)
 
 
 class YasmPlugin(object):
@@ -531,6 +543,9 @@ class YasmPlugin(object):
                 'use': ['tp/tools/yasm'],
             },
         ]
+
+    def parse(self, data):
+        return []
 
 
 class Plugins(object):
@@ -681,7 +696,7 @@ class Module(object):
             yield p
 
             if from_sd(p):
-                for i in ip.parse_cpp_includes(self.src_path(p)):
+                for i in ip.parse_includes(self.src_path(p)):
                     yield from do('$(S)/' + i[1:-1])
 
         return do(pp)
@@ -1543,14 +1558,19 @@ class IncParser(object):
     def __init__(self, md5_calcer):
         self._m = md5_calcer
 
-    def parse_cpp_includes(self, p):
-        return self.parse_cpp_includes_0(p, self._m.get_md5(p))
+    def parse_includes(self, p):
+        return self.parse_includes_0(p, self._m.get_md5(p))
 
     @cached_method
-    def parse_cpp_includes_0(self, p, md5):
+    def parse_includes_0(self, p, md5):
         msg('P', 'bm', p)
 
-        return list(parse_cpp_includes(self.loader.get_data(p)))
+        try:
+            parse = plugins().find(fext(p)).parse
+        except KeyError:
+            parse = parse_cpp_includes
+
+        return list(parse(self.loader.get_data(p)))
 
     @property
     def loader(self):
