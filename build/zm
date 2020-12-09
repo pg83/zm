@@ -5,9 +5,11 @@ import sys
 import json
 import yaml
 import zlib
+import time
 import queue
 import base64
 import shutil
+import atexit
 import pickle
 import marshal
 import hashlib
@@ -29,6 +31,7 @@ if __name__ == '__main__':
     argp.add_argument('-c', '--clear', help='clear cache', default=False, action='store_const', const=True)
     argp.add_argument('-p', '--profile', help='run profiler', default=False, action='store_const', const=True)
     argp.add_argument('-G', '--dump-graph', help='dump graph', default=False, action='store_const', const=True)
+    argp.add_argument('--flame-graph', help='dump flame graph', default=False, action='store_const', const=True)
     argp.add_argument('-j', '--threads', help='thread count', default=-1)
     argp.add_argument('-B', '--build-dir', help='build dir', default='')
 
@@ -299,6 +302,61 @@ def uniq_list(l):
     return list(iter_uniq_list(l))
 
 
+class AtExit(object):
+    def __init__(self):
+        self._f = []
+
+        atexit.register(self.at_exit)
+
+    def register(self, f):
+        self._f.append(f)
+
+    def at_exit(self):
+        for f in self._f:
+            f()
+
+
+@singleton
+def at_exit_obj():
+    return AtExit()
+
+
+def at_exit(f):
+    at_exit_obj().register(f)
+
+    return f
+
+
+def prof(meth):
+    class Wrapper(object):
+        def __init__(self):
+            self.t = 0
+            self.c = 0
+
+            at_exit(self.print)
+
+        def print(self):
+            msg('P', 'by', meth.__name__ + ' -> time = ' + str(self.t) + ', count = ' + str(self.c))
+
+        def inc(self, t):
+            self.t += t
+            self.c += 1
+
+    w = Wrapper()
+
+    def wrapper(*args, **kwargs):
+        t1 = time.time()
+
+        try:
+            return meth(*args, **kwargs)
+        finally:
+            w.inc(time.time() - t1)
+
+    wrapper.__name__ = meth.__name__
+
+    return wrapper
+
+
 def cached_method(meth):
     def wrapper(self, *args, **kwargs):
         try:
@@ -307,13 +365,19 @@ def cached_method(meth):
             self.__cache__ = {}
 
         d = self.__cache__
-        k = struct_hash([args, kwargs, meth.__name__])
+
+        if args or kwargs:
+            k = struct_hash([args, kwargs, meth.__name__])
+        else:
+            k = meth.__name__
 
         if k not in d:
             d[k] = object()
             d[k] = meth(self, *args, **kwargs)
 
         return d[k]
+
+    wrapper.__name__ = meth.__name__
 
     return wrapper
 
@@ -357,7 +421,10 @@ def parse_cpp_includes(data):
     for l in data.splitlines():
         l = l.strip()
 
-        if '#' not in l:
+        if not l:
+            continue
+
+        if l[0] != '#':
             continue
 
         ll = l.replace(' ', '').replace('\t', '')
@@ -376,6 +443,117 @@ def parse_cpp_includes(data):
             yield res
         else:
             raise Exception('unparsed include ' + l)
+
+
+class File2CPlugin(object):
+    def ext(self):
+        return ['file2c']
+
+    def command(self, src, module):
+        o = to_bd(strip_ext(src) + '.h')
+
+        return [
+            {
+                'in': [src, '$(B)/tp/tools/file2c/file2c'],
+                'out': [o],
+                'cmd': [
+                    ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
+                ],
+                'use': ['tp/tools/file2c'],
+                'inc': [module.parse_includes_md5(src)],
+            },
+        ]
+
+
+class ProtoBufPlugin(object):
+    def ext(self):
+        return ['proto']
+
+    def command(self, src, module):
+        pb = to_bd(strip_ext(src))
+        pbc = pb + '.pb.cc'
+        pbh = pb + '.pb.h'
+        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+        f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+
+        return [
+            {
+                'in': [src, '$(B)/tp/tools/protoc/protoc'],
+                'out': [pbc, pbh],
+                'cmd': [
+                    ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
+                ],
+                'use': ['tp/tools/protoc'],
+                'inc': [module.parse_includes_md5(src)],
+                'out_inc': module.parse_includes_md5(f1) + module.parse_includes_md5(f2),
+                'cwd': '$(S)',
+            },
+        ]
+
+
+class CppPlugin(object):
+    def ext(self):
+        return ['C', 'cpp', 'cc', 'cxx', 'c++']
+
+    def command(self, src, module):
+        return module.cxx_compile_command(src)
+
+
+class CPlugin(object):
+    def ext(self):
+        return ['c', 'S', 's']
+
+    def command(self, src, module):
+        return module.c_compile_command(src)
+
+
+class YasmPlugin(object):
+    def ext(self):
+        return ['asm']
+
+    def command(self, src, module):
+        o = to_bd(strip_ext(src) + '.o')
+        t = module.parser.target
+
+        def iter_flags():
+            for f in t.defines:
+                yield '-D'
+                yield f
+
+        return [
+            {
+                'in': [src, '$(B)/tp/tools/yasm/yasm'],
+                'out': [o],
+                'cmd': [
+                    ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
+                ],
+                'inc': [module.parse_includes_md5(src)],
+                'use': ['tp/tools/yasm'],
+            },
+        ]
+
+
+class Plugins(object):
+    def __init__(self):
+        self._by_ext = {}
+
+        for k, v in globals().items():
+            if k.endswith('Plugin'):
+                self.register(v())
+
+    def register(self, p):
+        msg('R', 'br', 'register ' + p.__class__.__name__)
+
+        for e in p.ext():
+            self._by_ext[e] = p
+
+    def find(self, e):
+        return self._by_ext[e]
+
+
+@singleton
+def plugins():
+    return Plugins()
 
 
 def to_bd(p):
@@ -509,18 +687,19 @@ class Module(object):
         return do(pp)
 
     @cached_method
+    def exists(self, p):
+        return self.parser.loader.exists(p)
+
+    @cached_method
     def find_location(self, p, w):
         def it():
             yield w
             yield from self.iter_inc_dirs()
 
-        ld = self.parser.loader
-
         for x in iter_uniq_list(it()):
             pp = p.replace('$(S)', x)
-            spp = self.src_path(pp)
 
-            if ld.exists(spp):
+            if self.exists(self.src_path(pp)):
                 return pp
 
         return to_bd(p)
@@ -549,23 +728,10 @@ class Module(object):
         return list(it())
 
     def build_command_1(self, src):
-        by_ext = {
-            'C': self.cxx_compile_command,
-            'cc': self.cxx_compile_command,
-            'cxx': self.cxx_compile_command,
-            'cpp': self.cxx_compile_command,
-            'c': self.c_compile_command,
-            'S': self.c_compile_command,
-            's': self.c_compile_command,
-            'file2c': self.file2c_command,
-            'asm': self.yasm_command,
-            'proto': self.proto_command,
-        }
-
-        def nope(src):
+        try:
+            return plugins().find(fext(src)).command(src, self)
+        except KeyError:
             return []
-
-        return by_ext.get(fext(src), nope)(src)
 
     def build_command_0(self, src):
         to_v = [src]
@@ -605,63 +771,6 @@ class Module(object):
             'cmd': list(iter_cmds()),
             'inc': [list(iter_inc())],
         }
-
-    def file2c_command(self, src):
-        o = to_bd(strip_ext(src) + '.h')
-
-        return [
-            {
-                'in': [src, '$(B)/tp/tools/file2c/file2c'],
-                'out': [o],
-                'cmd': [
-                    ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
-                ],
-                'use': ['tp/tools/file2c'],
-                'inc': [self.parse_includes_md5(src)],
-            },
-        ]
-
-    def proto_command(self, src):
-        pb = to_bd(strip_ext(src))
-        pbc = pb + '.pb.cc'
-        pbh = pb + '.pb.h'
-        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
-        f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
-
-        return [
-            {
-                'in': [src, '$(B)/tp/tools/protoc/protoc'],
-                'out': [pbc, pbh],
-                'cmd': [
-                    ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
-                ],
-                'use': ['tp/tools/protoc'],
-                'inc': [self.parse_includes_md5(src)],
-                'out_inc': self.parse_includes_md5(f1) + self.parse_includes_md5(f2),
-                'cwd': '$(S)',
-            },
-        ]
-
-    def yasm_command(self, src):
-        o = to_bd(strip_ext(src) + '.o')
-        t = self.parser.target
-
-        def iter_flags():
-            for f in t.defines:
-                yield '-D'
-                yield f
-
-        return [
-            {
-                'in': [src, '$(B)/tp/tools/yasm/yasm'],
-                'out': [o],
-                'cmd': [
-                    ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
-                ],
-                'inc': [self.parse_includes_md5(src)],
-                'use': ['tp/tools/yasm'],
-            },
-        ]
 
     def c_compile_command(self, src):
         o = to_bd(src + '.o')
@@ -746,9 +855,21 @@ class Module(object):
         for d in self.iter_sub_modules(deps):
             yield from d.commands()
 
+    def calc_simple_commands(self):
+        return list(self.iter_simple_commands())
+
+    def calc_depend_commands(self, cc):
+        def iter_depends():
+            yield from self.depends
+
+            for l in cc:
+                yield from l.get('depends', [])
+
+        return uniq_nodes(self.iter_sub_commands(iter_depends()))
+
     def calc_commands(self):
-        # compile
-        cc = list(self.iter_simple_commands())
+        cc = self.calc_simple_commands()
+        dc = self.calc_depend_commands(cc)
 
         def iter_ss():
             for l in cc:
@@ -757,15 +878,6 @@ class Module(object):
                         yield o
 
         ss = list(iter_ss())
-
-        def iter_depends():
-            yield from self.depends
-
-            for l in cc:
-                yield from l.get('depends', [])
-
-        # libs
-        dc = uniq_nodes(self.iter_sub_commands(iter_depends()))
 
         return cc, ss, dc
 
@@ -978,9 +1090,7 @@ class Recurse(Module):
 
     @cached_method
     def commands(self):
-        cc, ss, dc = self.calc_commands()
-
-        return dc
+        return self.calc_depend_commands([])
 
 
 class Parser(object):
@@ -1163,6 +1273,20 @@ def simple_engine(it, key=lambda x: x):
     return iter_ready, cb
 
 
+def make_func(d):
+    def func():
+        return d
+
+    return func
+
+
+def make_err(n, e):
+    def func():
+        raise Exception('while build ' + ' '.join(n['out']) + ': ' + str(e))
+
+    return func
+
+
 class Builder(object):
     def __init__(self, g, parser, build_dir):
         self._g = g
@@ -1211,18 +1335,6 @@ class Builder(object):
 
         qi = queue.SimpleQueue()
         qo = queue.SimpleQueue()
-
-        def make_func(d):
-            def func():
-                return d
-
-            return func
-
-        def make_err(n, e):
-            def func():
-                raise Exception('while build ' + ' '.join(n['out']) + ': ' + str(e))
-
-            return func
 
         def run_thr():
             while True:
@@ -1500,6 +1612,11 @@ def main():
 
 if __name__ == '__main__':
     def run():
+        if args.flame_graph:
+            import flamegraph
+
+            flamegraph.start_profile_thread(fd=open("./perf.log", "w"))
+
         if args.verbose:
             main()
         else:
