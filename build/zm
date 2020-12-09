@@ -38,6 +38,109 @@ if __name__ == '__main__':
     args = argp.parse_args(sys.argv[1:])
 
 
+class File2CPlugin(object):
+    def ext(self):
+        return ['file2c']
+
+    def command(self, src, module):
+        o = to_bd(strip_ext(src) + '.h')
+
+        return [
+            {
+                'in': [src, '$(B)/tp/tools/file2c/file2c'],
+                'out': [o],
+                'cmd': [
+                    ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
+                ],
+                'use': ['tp/tools/file2c'],
+                'inc': [module.parse_includes_md5(src)],
+            },
+        ]
+
+    def parse(self, data):
+        return []
+
+
+class ProtoBufPlugin(object):
+    def ext(self):
+        return ['proto']
+
+    def command(self, src, module):
+        pb = to_bd(strip_ext(src))
+        pbc = pb + '.pb.cc'
+        pbh = pb + '.pb.h'
+        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+        f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+
+        return [
+            {
+                'in': [src, '$(B)/tp/tools/protoc/protoc'],
+                'out': [pbc, pbh],
+                'cmd': [
+                    ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
+                ],
+                'use': ['tp/tools/protoc'],
+                'inc': [module.parse_includes_md5(src)],
+                'out_inc': module.parse_includes_md5(f1) + module.parse_includes_md5(f2),
+                'cwd': '$(S)',
+            },
+        ]
+
+    def parse(self, data):
+        return []
+
+
+class CppPlugin(object):
+    def ext(self):
+        return ['C', 'cpp', 'cc', 'cxx', 'c++']
+
+    def command(self, src, module):
+        return module.cxx_compile_command(src)
+
+    def parse(self, data):
+        return parse_cpp_includes(data)
+
+
+class CPlugin(object):
+    def ext(self):
+        return ['c', 'S', 's']
+
+    def command(self, src, module):
+        return module.c_compile_command(src)
+
+    def parse(self, data):
+        return parse_cpp_includes(data)
+
+
+class YasmPlugin(object):
+    def ext(self):
+        return ['asm']
+
+    def command(self, src, module):
+        o = to_bd(strip_ext(src) + '.o')
+        t = module.parser.target
+
+        def iter_flags():
+            for f in t.defines:
+                yield '-D'
+                yield f
+
+        return [
+            {
+                'in': [src, '$(B)/tp/tools/yasm/yasm'],
+                'out': [o],
+                'cmd': [
+                    ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
+                ],
+                'inc': [module.parse_includes_md5(src)],
+                'use': ['tp/tools/yasm'],
+            },
+        ]
+
+    def parse(self, data):
+        return []
+
+
 def singleton(f):
     def wrapper():
         try:
@@ -443,109 +546,6 @@ def parse_cpp_includes(data):
             yield res
         else:
             raise Exception('unparsed include ' + l)
-
-
-class File2CPlugin(object):
-    def ext(self):
-        return ['file2c']
-
-    def command(self, src, module):
-        o = to_bd(strip_ext(src) + '.h')
-
-        return [
-            {
-                'in': [src, '$(B)/tp/tools/file2c/file2c'],
-                'out': [o],
-                'cmd': [
-                    ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
-                ],
-                'use': ['tp/tools/file2c'],
-                'inc': [module.parse_includes_md5(src)],
-            },
-        ]
-
-    def parse(self, data):
-        return []
-
-
-class ProtoBufPlugin(object):
-    def ext(self):
-        return ['proto']
-
-    def command(self, src, module):
-        pb = to_bd(strip_ext(src))
-        pbc = pb + '.pb.cc'
-        pbh = pb + '.pb.h'
-        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
-        f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
-
-        return [
-            {
-                'in': [src, '$(B)/tp/tools/protoc/protoc'],
-                'out': [pbc, pbh],
-                'cmd': [
-                    ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
-                ],
-                'use': ['tp/tools/protoc'],
-                'inc': [module.parse_includes_md5(src)],
-                'out_inc': module.parse_includes_md5(f1) + module.parse_includes_md5(f2),
-                'cwd': '$(S)',
-            },
-        ]
-
-    def parse(self, data):
-        return []
-
-
-class CppPlugin(object):
-    def ext(self):
-        return ['C', 'cpp', 'cc', 'cxx', 'c++']
-
-    def command(self, src, module):
-        return module.cxx_compile_command(src)
-
-    def parse(self, data):
-        return parse_cpp_includes(data)
-
-
-class CPlugin(object):
-    def ext(self):
-        return ['c', 'S', 's']
-
-    def command(self, src, module):
-        return module.c_compile_command(src)
-
-    def parse(self, data):
-        return parse_cpp_includes(data)
-
-
-class YasmPlugin(object):
-    def ext(self):
-        return ['asm']
-
-    def command(self, src, module):
-        o = to_bd(strip_ext(src) + '.o')
-        t = module.parser.target
-
-        def iter_flags():
-            for f in t.defines:
-                yield '-D'
-                yield f
-
-        return [
-            {
-                'in': [src, '$(B)/tp/tools/yasm/yasm'],
-                'out': [o],
-                'cmd': [
-                    ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
-                ],
-                'inc': [module.parse_includes_md5(src)],
-                'use': ['tp/tools/yasm'],
-            },
-        ]
-
-    def parse(self, data):
-        return []
 
 
 class Plugins(object):
