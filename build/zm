@@ -22,6 +22,9 @@ import collections
 import multiprocessing
 
 
+CACHE_V = '1'
+
+
 if __name__ == '__main__':
     argp = argparse.ArgumentParser()
 
@@ -53,11 +56,14 @@ class File2CPlugin(object):
                     ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
                 ],
                 'use': ['tp/tools/file2c'],
-                'inc': [module.parse_includes_md5(src)],
+                'inc': [module.parse_includes_md5(src, 'file2c')],
             },
         ]
 
     def parse(self, data):
+        return []
+
+    def depends(self):
         return []
 
 
@@ -80,14 +86,17 @@ class ProtoBufPlugin(object):
                     ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
                 ],
                 'use': ['tp/tools/protoc'],
-                'inc': [module.parse_includes_md5(src)],
-                'out_inc': module.parse_includes_md5(f1) + module.parse_includes_md5(f2),
+                'inc': [module.parse_includes_md5(src, 'proto')],
+                'out_inc': module.parse_includes_md5(f1, 'cpp') + module.parse_includes_md5(f2, 'cpp'),
                 'cwd': '$(S)',
             },
         ]
 
     def parse(self, data):
         return []
+
+    def depends(self):
+        return ['tp/libs/libprotobuf']
 
 
 class CppPlugin(object):
@@ -100,6 +109,9 @@ class CppPlugin(object):
     def parse(self, data):
         return parse_cpp_includes(data)
 
+    def depends(self):
+        return []
+
 
 class CPlugin(object):
     def ext(self):
@@ -111,10 +123,13 @@ class CPlugin(object):
     def parse(self, data):
         return parse_cpp_includes(data)
 
+    def depends(self):
+        return []
+
 
 class YasmPlugin(object):
     def ext(self):
-        return ['asm']
+        return ['asm', 'yasm']
 
     def command(self, src, module):
         o = to_bd(strip_ext(src) + '.o')
@@ -132,12 +147,32 @@ class YasmPlugin(object):
                 'cmd': [
                     ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
                 ],
-                'inc': [module.parse_includes_md5(src)],
+                'inc': [module.parse_includes_md5(src, 'yasm')],
                 'use': ['tp/tools/yasm'],
             },
         ]
 
     def parse(self, data):
+        for l in data.splitlines():
+            l = l.strip()
+
+            if not l:
+                continue
+
+            if l[0] != '%':
+                continue
+
+            ll = l.replace(' ', '').replace('\t', '')
+
+            if not ll.startswith('%include'):
+                continue
+
+            if res := get_substr(ll, '"', '"'):
+                yield res
+            else:
+                raise Exception('unparsed include ' + l)
+
+    def depends(self):
         return []
 
 
@@ -499,7 +534,7 @@ def get_target(t):
 
 
 def strip_prefix(s, p):
-    assert s.startswith(p), 'out of root build'
+    assert s.startswith(p), 'out of source root'
 
     return s[len(p) + 1:]
 
@@ -565,6 +600,9 @@ class Plugins(object):
     def find(self, e):
         return self._by_ext[e]
 
+    def find_path(self, p):
+        return self.find(fext(p))
+
 
 @singleton
 def plugins():
@@ -580,11 +618,21 @@ def to_sd(p):
 
 
 def fext(p):
-    return os.path.basename(p).split('.')[-1]
+    a, b, c = p.rpartition('.')
+
+    if b:
+        return c
+
+    return ''
 
 
 def strip_ext(p):
-    return p[:-1 - len(fext(p))]
+    a, b, c = p.rpartition('.')
+
+    if b:
+        return a
+
+    return p
 
 
 def node_key(n):
@@ -620,7 +668,14 @@ class Module(object):
     @property
     @cached_method
     def depends(self):
-        return uniq_list(self._d.get('depends', []) + self.extra_depends())
+        def iter_deps():
+            yield from self._d.get('depends', [])
+            yield from self.extra_depends()
+
+            for s in self.srcs:
+                yield from plugins().find_path(s).depends()
+
+        return uniq_list(iter_deps())
 
     @property
     @cached_method
@@ -678,9 +733,14 @@ class Module(object):
         return self.parser.compiler
 
     def src_path(self, p):
-        return os.path.normpath(self.parser.replace_path(p))
+        p = self.parser.replace_path(p)
 
-    def parse_includes(self, pp):
+        if './' in p:
+            return os.path.normpath(p)
+
+        return p
+
+    def parse_includes(self, pp, ext):
         v = set()
         dp = os.path.dirname(pp)
         ip = self.parser.inc_parser
@@ -696,7 +756,7 @@ class Module(object):
             yield p
 
             if from_sd(p):
-                for i in ip.parse_includes(self.src_path(p)):
+                for i in ip.parse_includes(self.src_path(p), ext):
                     yield from do('$(S)/' + i[1:-1])
 
         return do(pp)
@@ -725,11 +785,11 @@ class Module(object):
         for x in self.inc_dirs:
             yield '$(S)/' + x
 
-    def parse_includes_md5(self, p):
+    def parse_includes_md5(self, p, ext):
         def it():
             md5 = self.parser.md5_calcer
 
-            for i in self.parse_includes(p):
+            for i in self.parse_includes(p, ext):
                 if from_bd(i):
                     yield {
                         'path': i,
@@ -744,7 +804,7 @@ class Module(object):
 
     def build_command_1(self, src):
         try:
-            return plugins().find(fext(src)).command(src, self)
+            return plugins().find_path(src).command(src, self)
         except KeyError:
             return []
 
@@ -770,11 +830,12 @@ class Module(object):
         return list(self.build_command_0(src))
 
     def join_srcs_command(self, srcs):
-        o = '$(B)/' + self.prefix + '/' + str(struct_hash('_'.join(srcs))) + '.' + fext(srcs[0])
+        ext = fext(srcs[0])
+        o = '$(B)/' + self.prefix + '/' + str(struct_hash('_'.join(srcs))) + '.' + ext
 
         def iter_inc():
             for s in srcs:
-                yield from self.parse_includes_md5(s)
+                yield from self.parse_includes_md5(s, ext)
 
         def iter_cmds():
             for l in srcs:
@@ -795,7 +856,7 @@ class Module(object):
                 'in': [src],
                 'out': [o],
                 'cmd': self.compiler.c_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.c_flags),
-                'inc': [self.parse_includes_md5(src)],
+                'inc': [self.parse_includes_md5(src, 'c')],
             },
         ]
 
@@ -807,7 +868,7 @@ class Module(object):
                 'in': [src],
                 'out': [o],
                 'cmd': self.compiler.cxx_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.cxx_flags),
-                'inc': [self.parse_includes_md5(src)],
+                'inc': [self.parse_includes_md5(src, 'cpp')],
             },
         ]
 
@@ -873,18 +934,12 @@ class Module(object):
     def calc_simple_commands(self):
         return list(self.iter_simple_commands())
 
-    def calc_depend_commands(self, cc):
-        def iter_depends():
-            yield from self.depends
-
-            for l in cc:
-                yield from l.get('depends', [])
-
-        return uniq_nodes(self.iter_sub_commands(iter_depends()))
+    def calc_depend_commands(self):
+        return uniq_nodes(self.iter_sub_commands(self.depends))
 
     def calc_commands(self):
         cc = self.calc_simple_commands()
-        dc = self.calc_depend_commands(cc)
+        dc = self.calc_depend_commands()
 
         def iter_ss():
             for l in cc:
@@ -1105,7 +1160,7 @@ class Recurse(Module):
 
     @cached_method
     def commands(self):
-        return self.calc_depend_commands([])
+        return self.calc_depend_commands()
 
 
 class Parser(object):
@@ -1558,19 +1613,14 @@ class IncParser(object):
     def __init__(self, md5_calcer):
         self._m = md5_calcer
 
-    def parse_includes(self, p):
-        return self.parse_includes_0(p, self._m.get_md5(p))
+    def parse_includes(self, p, ext):
+        return self.parse_includes_0(p, self._m.get_md5(p), ext)
 
     @cached_method
-    def parse_includes_0(self, p, md5):
+    def parse_includes_0(self, p, md5, ext):
         msg('P', 'bm', p)
 
-        try:
-            parse = plugins().find(fext(p)).parse
-        except KeyError:
-            parse = parse_cpp_includes
-
-        return list(parse(self.loader.get_data(p)))
+        return list(plugins().find(ext).parse(self.loader.get_data(p)))
 
     @property
     def loader(self):
@@ -1595,7 +1645,7 @@ def main():
     except OSError:
         pass
 
-    cache = os.path.join(build_dir, 'cache')
+    cache = os.path.join(build_dir, 'cache.' + CACHE_V)
 
     try:
         with open(cache, 'rb') as f:
