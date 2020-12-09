@@ -8,16 +8,5 @@ message TParam {
 };
 
 message TRequest {
-    repeated bytes Gta = 1;
-    repeated bytes Grouping = 2;
-    repeated TParam Relev = 3;
-    repeated TParam Rearr = 4;
-    repeated bytes Pron = 5;
-    optional bytes ReqId = 6;
-    optional bytes Text = 7;
-    optional bytes QTree = 8;
-    optional bytes UserRequest = 9;
-    optional bytes Geo = 10;
-    optional uint32 PageNum = 11;
-    repeated TParam Trash = 12;
+    repeated TParam Trash = 1;
 };

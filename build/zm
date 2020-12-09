@@ -603,7 +603,7 @@ class Module(object):
             'in': srcs,
             'out': [o],
             'cmd': list(iter_cmds()),
-            'inc': list(iter_inc()),
+            'inc': [list(iter_inc())],
         }
 
     def file2c_command(self, src):
@@ -617,7 +617,7 @@ class Module(object):
                     ['/bin/sh', '-c', '$(B)/tp/tools/file2c/file2c < ' + src + ' > ' + o],
                 ],
                 'use': ['tp/tools/file2c'],
-                'inc': self.parse_includes_md5(src),
+                'inc': [self.parse_includes_md5(src)],
             },
         ]
 
@@ -636,6 +636,7 @@ class Module(object):
                     ['$(B)/tp/tools/protoc/protoc', '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
                 ],
                 'use': ['tp/tools/protoc'],
+                'inc': [self.parse_includes_md5(src)],
                 'out_inc': self.parse_includes_md5(f1) + self.parse_includes_md5(f2),
                 'cwd': '$(S)',
             },
@@ -657,6 +658,7 @@ class Module(object):
                 'cmd': [
                     ['$(B)/tp/tools/yasm/yasm', '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
                 ],
+                'inc': [self.parse_includes_md5(src)],
                 'use': ['tp/tools/yasm'],
             },
         ]
@@ -669,7 +671,7 @@ class Module(object):
                 'in': [src],
                 'out': [o],
                 'cmd': self.compiler.c_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.c_flags),
-                'inc': self.parse_includes_md5(src),
+                'inc': [self.parse_includes_md5(src)],
             },
         ]
 
@@ -681,7 +683,7 @@ class Module(object):
                 'in': [src],
                 'out': [o],
                 'cmd': self.compiler.cxx_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.cxx_flags),
-                'inc': self.parse_includes_md5(src),
+                'inc': [self.parse_includes_md5(src)],
             },
         ]
 
@@ -778,7 +780,7 @@ class Module(object):
             yield from cc
             yield from self.iter_sub_commands(iter_programs())
 
-        return build_uids(uniq_nodes(iter_nodes()))
+        return build_uids(output_includes(uniq_nodes(iter_nodes())))
 
 
 class SystemCompiler(object):
@@ -1050,7 +1052,42 @@ def from_sd(i):
 def struct_hash(s):
     #return zlib.crc32(json.dumps(s, sort_keys=True).encode('ascii'))
     return zlib.crc32(marshal.dumps(s))
-    #return zlib.crc32(str(s).encode('utf-8'))
+
+
+def flatten(l):
+    for x in l:
+        yield from x
+
+
+def output_includes(g):
+    by_out = {}
+
+    for n in g:
+        if 'out_inc' in n:
+            oi = n.pop('out_inc')
+
+            for o in n['out']:
+                by_out[o] = oi
+
+    for n in g:
+        for i in n['in']:
+            if i in by_out:
+                n['inc'] = n.get('inc', []) + [by_out[i]]
+
+    return g
+
+
+def iter_node_in(n):
+    def iter_in():
+        for i in n['in']:
+            if from_bd(i):
+                yield i
+
+        for f in flatten(n.get('inc', [])):
+            if 'md5' not in f:
+                yield f['path']
+
+    return iter_uniq_list(iter_in())
 
 
 def build_uids(g):
@@ -1064,16 +1101,7 @@ def build_uids(g):
         if 'uid' not in n:
             deps = []
 
-            def iter_in():
-                for i in n['in']:
-                    if from_bd(i):
-                        yield i
-
-                for f in n.get('inc', []):
-                    if 'md5' not in f:
-                        yield f['path']
-
-            for i in iter_in():
+            for i in iter_node_in(n):
                 if i in by_out:
                     deps.append(uid(by_out[i]))
                 else:
