@@ -16,6 +16,7 @@ import hashlib
 import profile
 import argparse
 import platform
+import functools
 import threading
 import subprocess
 import collections
@@ -41,7 +42,15 @@ if __name__ == '__main__':
     args = argp.parse_args(sys.argv[1:])
 
 
-class File2CPlugin(object):
+class PluginBase(object):
+    def parse(self, data):
+        return []
+
+    def depends(self):
+        return []
+
+
+class File2CPlugin(PluginBase):
     def ext(self):
         return ['file2c']
 
@@ -60,14 +69,8 @@ class File2CPlugin(object):
             },
         ]
 
-    def parse(self, data):
-        return []
 
-    def depends(self):
-        return []
-
-
-class ProtoBufPlugin(object):
+class ProtoBufPlugin(PluginBase):
     def ext(self):
         return ['proto']
 
@@ -108,7 +111,7 @@ class ProtoBufPlugin(object):
         return ['tp/libs/libprotobuf']
 
 
-class CppPlugin(object):
+class CppPlugin(PluginBase):
     def ext(self):
         return ['C', 'cpp', 'cc', 'cxx', 'c++']
 
@@ -118,11 +121,8 @@ class CppPlugin(object):
     def parse(self, data):
         return parse_cpp_includes(data)
 
-    def depends(self):
-        return []
 
-
-class CPlugin(object):
+class CPlugin(PluginBase):
     def ext(self):
         return ['c', 'S', 's']
 
@@ -132,11 +132,8 @@ class CPlugin(object):
     def parse(self, data):
         return parse_cpp_includes(data)
 
-    def depends(self):
-        return []
 
-
-class YasmPlugin(object):
+class YasmPlugin(PluginBase):
     def ext(self):
         return ['asm', 'yasm']
 
@@ -181,11 +178,9 @@ class YasmPlugin(object):
             else:
                 raise Exception('unparsed include ' + l)
 
-    def depends(self):
-        return []
-
 
 def singleton(f):
+    @functools.wraps(f)
     def wrapper():
         try:
             wrapper.__res__
@@ -491,6 +486,7 @@ def prof(meth):
 
     w = Wrapper()
 
+    @functools.wraps(meth)
     def wrapper(*args, **kwargs):
         t1 = time.time()
 
@@ -499,12 +495,11 @@ def prof(meth):
         finally:
             w.inc(time.time() - t1)
 
-    wrapper.__name__ = meth.__name__
-
     return wrapper
 
 
 def cached_method(meth):
+    @functools.wraps(meth)
     def wrapper(self, *args, **kwargs):
         try:
             self.__cache__
@@ -523,8 +518,6 @@ def cached_method(meth):
             d[k] = meth(self, *args, **kwargs)
 
         return d[k]
-
-    wrapper.__name__ = meth.__name__
 
     return wrapper
 
@@ -601,16 +594,17 @@ class Plugins(object):
                 self.register(v())
 
     def register(self, p):
-        msg('R', 'br', 'register ' + p.__class__.__name__)
+        if args.verbose:
+            msg('R', 'br', 'register ' + p.__class__.__name__)
 
         for e in p.ext():
             self._by_ext[e] = p
 
-    def find(self, e):
+    def find_ext(self, e):
         return self._by_ext[e]
 
     def find_path(self, p):
-        return self.find(fext(p))
+        return self.find_ext(fext(p))
 
 
 @singleton
@@ -645,12 +639,7 @@ def strip_ext(p):
 
 
 def node_key(n):
-    o = n['out']
-
-    if len(o) == 1:
-        return o[0]
-
-    return ' '.join(o)
+    return n['out'][0]
 
 
 def uniq_nodes(g):
@@ -1042,9 +1031,6 @@ class DarwinCompiler(SystemCompiler):
 
 
 class Program(Module):
-    def __init__(self, data, parser, prefix):
-        Module.__init__(self, data, parser, prefix)
-
     @property
     def name(self):
         return self.prog_name()
@@ -1117,9 +1103,6 @@ class Library(Module):
         'tpkernel',
     ])
 
-    def __init__(self, data, parser, prefix):
-        Module.__init__(self, data, parser, prefix)
-
     @property
     def name(self):
         return self.lib_name()
@@ -1141,9 +1124,6 @@ class Library(Module):
 
 
 class FatObj(Module):
-    def __init__(self, data, parser, prefix):
-        Module.__init__(self, data, parser, prefix)
-
     @property
     def name(self):
         return self.lib_name()
@@ -1159,9 +1139,6 @@ class FatObj(Module):
 
 
 class Recurse(Module):
-    def __init__(self, data, parser, prefix):
-        Module.__init__(self, data, parser, prefix)
-
     @property
     def recurse(self):
         return self._d['recurse']
@@ -1635,7 +1612,7 @@ class IncParser(object):
     def parse_includes_0(self, p, md5, ext):
         msg('P', 'bm', p)
 
-        return list(plugins().find(ext).parse(self.loader.get_data(p)))
+        return list(plugins().find_ext(ext).parse(self.loader.get_data(p)))
 
     @property
     def loader(self):
