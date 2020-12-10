@@ -93,16 +93,6 @@ class Ragel6Plugin(PluginBase):
         if not fext(o):
             o = o + '.cpp'
 
-        ext = fext(o)
-
-        subst = {
-            'h': 'cpp',
-            'H': 'cpp',
-            'hxx': 'cpp',
-            'hpp': 'cpp',
-            'hh': 'cpp',
-        }
-
         return [
             {
                 'in': [src],
@@ -111,7 +101,7 @@ class Ragel6Plugin(PluginBase):
                     [tool, '-G1', src, '-o', o],
                 ],
                 'use': [tool],
-                'out_inc': module.parse_includes_md5(src, subst.get(ext, ext))
+                'out_inc': module.parse_includes_md5(src, fext(o))
             },
         ]
 
@@ -1665,7 +1655,15 @@ class IncParser(object):
         self._m = md5_calcer
 
     def parse_includes(self, p, ext):
-        return self.parse_includes_0(p, self._m.get_md5(p), ext)
+        subst = {
+            'h': 'cpp',
+            'H': 'cpp',
+            'hxx': 'cpp',
+            'hpp': 'cpp',
+            'hh': 'cpp',
+        }
+
+        return self.parse_includes_0(p, self.md5_calcer.get_md5(p), subst.get(ext, ext))
 
     @cached_method
     def parse_includes_0(self, p, md5, ext):
