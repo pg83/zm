@@ -1,5 +1,7 @@
 #pragma once
 
+#include <build/tests/progs/prog7/inc.h>
+
 %%{
     machine ParseStreamUnsigned;
     write data;

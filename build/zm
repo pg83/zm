@@ -90,6 +90,19 @@ class Ragel6Plugin(PluginBase):
         o = to_bd(strip_ext(src))
         tool = '$(B)/tp/tools/ragel/ragel'
 
+        if not fext(o):
+            o = o + '.cpp'
+
+        ext = fext(o)
+
+        subst = {
+            'h': 'cpp',
+            'H': 'cpp',
+            'hxx': 'cpp',
+            'hpp': 'cpp',
+            'hh': 'cpp',
+        }
+
         return [
             {
                 'in': [src],
@@ -98,8 +111,19 @@ class Ragel6Plugin(PluginBase):
                     [tool, '-G1', src, '-o', o],
                 ],
                 'use': [tool],
+                'out_inc': module.parse_includes_md5(src, subst.get(ext, ext))
             },
         ]
+
+    def parse(self, data):
+        for l in data.splitlines():
+            if not l.startswith('include'):
+                continue
+
+            if res := get_substr(ll, '"', '"'):
+                yield res
+            else:
+                raise Exception('unparsed include ' + l)
 
 
 class ProtoBufPlugin(PluginBase):

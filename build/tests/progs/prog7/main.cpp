@@ -14,7 +14,7 @@ static T parse_ragel(const char* b, const char* e) {
         return t;
     }
 
-    throw runtime_error("shit happen");
+    throw system_error(EINVAL, std::system_category(), "parse_ragel");
 }
 
 template <class T>
@@ -22,6 +22,6 @@ static T parse_ragel(string_view s) {
     return parse_ragel<T>(s.begin(), s.end());
 }
 
-int main() {
-    cout << parse_ragel<unsigned>(string_view("123")) << endl;
+int main(int, char** argv) {
+    cout << parse_ragel<unsigned>(string_view(argv[1])) << endl;
 }
