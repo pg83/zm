@@ -14,7 +14,7 @@ static T parse_ragel(const char* b, const char* e) {
         return t;
     }
 
-    throw system_error(EINVAL, std::system_category(), "parse_ragel");
+    throw invalid_argument("can not parse number " + string(b, e));
 }
 
 template <class T>

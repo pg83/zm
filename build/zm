@@ -58,6 +58,7 @@ class PluginBase(object):
                     yield from module.parse_includes_md5(i, fext(i))
 
             c['inc'] = [list(iter_inc())]
+            c['target'] = module.parser.target.descr
 
         return res
 
@@ -1018,6 +1019,10 @@ class Module(object):
 
 
 class SystemCompiler(object):
+    @property
+    def name(self):
+        return 'clang'
+
     def compile_command(self, cxx, src, out, inc, flags):
         def it():
             yield from cxx
@@ -1531,6 +1536,10 @@ class Target(object):
     def __init__(self, os, arch):
         self.os = os
         self.arch = arch
+
+    @property
+    def descr(self):
+        return self.os + '-' + self.arch
 
     @property
     @cached_method
