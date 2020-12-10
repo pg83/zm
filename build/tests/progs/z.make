@@ -5,3 +5,4 @@ recurse:
 - prog4
 - prog5
 - prog6
+- prog7

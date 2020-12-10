@@ -82,6 +82,26 @@ class File2CPlugin(PluginBase):
         ]
 
 
+class Ragel6Plugin(PluginBase):
+    def ext(self):
+        return ['rl', 'rl6']
+
+    def command(self, src, module):
+        o = to_bd(strip_ext(src))
+        tool = '$(B)/tp/tools/ragel/ragel'
+
+        return [
+            {
+                'in': [src],
+                'out': [o],
+                'cmd': [
+                    [tool, '-G1', src, '-o', o],
+                ],
+                'use': [tool],
+            },
+        ]
+
+
 class ProtoBufPlugin(PluginBase):
     def ext(self):
         return ['proto']
