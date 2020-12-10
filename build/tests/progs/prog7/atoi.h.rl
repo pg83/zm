@@ -6,7 +6,7 @@
 }%%
 
 template <class T, class It>
-static inline bool ParseStreamUnsigned(T& val, It p, It pe) {
+static inline bool parse_stream_unsigned(T& val, It p, It pe) {
     int cs;
     val = 0;
 

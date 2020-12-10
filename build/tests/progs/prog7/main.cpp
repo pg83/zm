@@ -7,10 +7,10 @@
 using namespace std;
 
 template <class T>
-static T ParseRagel(const char* b, const char* e) {
+static T parse_ragel(const char* b, const char* e) {
     T t = 0;
 
-    if (!ParseStreamUnsigned(t, b, e)) {
+    if (!parse_stream_unsigned(t, b, e)) {
         return t;
     }
 
@@ -18,10 +18,10 @@ static T ParseRagel(const char* b, const char* e) {
 }
 
 template <class T>
-static T ParseRagel(string_view s) {
-    return ParseRagel<T>(s.begin(), s.end());
+static T parse_ragel(string_view s) {
+    return parse_ragel<T>(s.begin(), s.end());
 }
 
 int main() {
-    cout << ParseRagel<unsigned>(string_view("123")) << endl;
+    cout << parse_ragel<unsigned>(string_view("123")) << endl;
 }
