@@ -2,6 +2,8 @@ module: library
 
 inc_dirs:
 - tp/libs/libcxxrt
+- tp/libs/libcxx/src/include
+- tp/libs/libcxx/src/support/runtime
 
 depends:
 - tp/libs/libcxx/include

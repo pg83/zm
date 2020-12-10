@@ -49,6 +49,18 @@ class PluginBase(object):
     def depends(self):
         return []
 
+    def build_command(self, src, module):
+        res = self.command(src, module)
+
+        for c in res:
+            def iter_inc():
+                for i in c['in']:
+                    yield from module.parse_includes_md5(i, fext(i))
+
+            c['inc'] = [list(iter_inc())]
+
+        return res
+
 
 class File2CPlugin(PluginBase):
     def ext(self):
@@ -66,7 +78,6 @@ class File2CPlugin(PluginBase):
                     ['/bin/sh', '-c', tool + ' < ' + src + ' > ' + o],
                 ],
                 'use': [tool],
-                'inc': [module.parse_includes_md5(src, 'file2c')],
             },
         ]
 
@@ -94,7 +105,6 @@ class ProtoBufPlugin(PluginBase):
                     [tool, '-I=.', '-I=$(S)', '-I=$(B)', '--cpp_out=$(B)', src[5:]],
                 ],
                 'use': [tool],
-                'inc': [module.parse_includes_md5(src, 'proto')],
                 'out_inc': module.parse_includes_md5(f1, 'cpp') + module.parse_includes_md5(f2, 'cpp'),
                 'cwd': '$(S)',
             },
@@ -158,7 +168,6 @@ class YasmPlugin(PluginBase):
                 'cmd': [
                     [tool, '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
                 ],
-                'inc': [module.parse_includes_md5(src, 'yasm')],
                 'use': [tool],
             },
         ]
@@ -814,7 +823,7 @@ class Module(object):
 
     def build_command_1(self, src):
         try:
-            return plugins().find_path(src).command(src, self)
+            return plugins().find_path(src).build_command(src, self)
         except KeyError:
             return []
 
@@ -866,7 +875,6 @@ class Module(object):
                 'in': [src],
                 'out': [o],
                 'cmd': self.compiler.c_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.c_flags),
-                'inc': [self.parse_includes_md5(src, 'c')],
             },
         ]
 
@@ -878,7 +886,6 @@ class Module(object):
                 'in': [src],
                 'out': [o],
                 'cmd': self.compiler.cxx_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.cxx_flags),
-                'inc': [self.parse_includes_md5(src, 'cpp')],
             },
         ]
 
@@ -1248,7 +1255,7 @@ def output_includes(g):
                 by_out[o] = oi
 
     for n in g:
-        for i in n['in']:
+        for i in list(iter_node_in(n)):
             if i in by_out:
                 n['inc'] = n.get('inc', []) + [by_out[i]]
 
