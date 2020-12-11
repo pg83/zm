@@ -130,8 +130,8 @@ class ProtoBufPlugin(PluginBase):
         pbc = pb + '.pb.cc'
         pbh = pb + '.pb.h'
 
-        f1 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.cc'
-        f2 = '$(S)/tp/libs/libprotobuf/src/google/protobuf/any.pb.h'
+        f1 = '$(S)/tp/libs/protobuf/src/google/protobuf/any.pb.cc'
+        f2 = '$(S)/tp/libs/protobuf/src/google/protobuf/any.pb.h'
 
         tool = '$(B)/tp/tools/protoc/protoc'
 
@@ -161,7 +161,7 @@ class ProtoBufPlugin(PluginBase):
                 raise Exception('unparsed include ' + l)
 
     def depends(self):
-        return ['tp/libs/libprotobuf']
+        return ['tp/libs/protobuf']
 
 
 class CppPlugin(PluginBase):
@@ -1128,16 +1128,16 @@ class Program(Module):
         return []
 
     def iter_extra_deps(self):
-        yield 'tp/libs/libcxx'
+        yield 'tp/libs/cxx'
 
         if self.name in ['yasm']:
-            yield 'tp/libs/libstrings'
+            yield 'tp/libs/strings'
         else:
-            yield 'tp/libs/libasmlib'
+            yield 'tp/libs/asmlib'
 
         alloc = {
-            'mim': 'tp/libs/libmimalloc',
-            'lf': 'tp/libs/liblfalloc',
+            'mim': 'tp/libs/mimalloc',
+            'lf': 'tp/libs/lfalloc',
         }
 
         yield alloc[self.allocator]
@@ -1149,23 +1149,23 @@ class Program(Module):
 
 class GTest(Program):
     def more_deps(self):
-        yield 'tp/libs/libgtest'
+        yield 'tp/libs/gtest'
 
 
 class BenchMark(Program):
     def more_deps(self):
-        yield 'tp/libs/libbenchmark'
+        yield 'tp/libs/benchmark'
 
 
 class Library(Module):
     exclude = frozenset([
-        'tp/libs/libcxx',
-        'tp/libs/libcxx/include',
-        'tp/libs/libcxx/src',
-        'tp/libs/libcxxrt',
-        'tp/libs/libunwind',
-        'tp/libs/libunwind/src',
-        'tp/libs/libdemangle',
+        'tp/libs/cxx',
+        'tp/libs/cxx/include',
+        'tp/libs/cxx/src',
+        'tp/libs/cxxrt',
+        'tp/libs/unwind',
+        'tp/libs/unwind/src',
+        'tp/libs/demangle',
     ])
 
     @property
@@ -1183,7 +1183,7 @@ class Library(Module):
 
     def extra_depends(self):
         if self.prefix not in self.exclude:
-            return ['tp/libs/libcxx']
+            return ['tp/libs/cxx']
 
         return []
 
@@ -1200,7 +1200,7 @@ class FatObj(Module):
         return cc + dc + [self.fatobj_command(ss, self.name + '.global.o')]
 
     def extra_depends(self):
-        return ['tp/libs/libcxx']
+        return ['tp/libs/cxx']
 
 
 class Recurse(Module):

@@ -1,4 +1,4 @@
 module: program
 
 depends:
-- tp/libs/libbenchmark
+- tp/libs/benchmark

@@ -1,10 +1,10 @@
 module: program
 
 depends:
-- tp/libs/libaapl
+- tp/libs/aapl
 
 inc_dirs:
-- tp/libs/libaapl
+- tp/libs/aapl
 
 srcs:
 - rlparse.cpp

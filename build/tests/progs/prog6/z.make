@@ -1,7 +1,7 @@
 module: program
 
 depends:
-- tp/libs/libopenssl
+- tp/libs/openssl
 
 srcs:
 - main.cpp
