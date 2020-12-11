@@ -6,7 +6,7 @@ global_inc_dirs:
 inc_dirs:
 - tp/libs/libunwind/include
 
-#if OS_LINUX
+#if MUSL
 depends:
 - tp/libs/libmuslinc
 #endif

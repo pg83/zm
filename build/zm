@@ -35,9 +35,11 @@ if __name__ == '__main__':
     argp.add_argument('-c', '--clear', help='clear cache', default=False, action='store_const', const=True)
     argp.add_argument('-p', '--profile', help='run profiler', default=False, action='store_const', const=True)
     argp.add_argument('-G', '--dump-graph', help='dump graph', default=False, action='store_const', const=True)
-    argp.add_argument('--flame-graph', help='dump flame graph', default=False, action='store_const', const=True)
     argp.add_argument('-j', '--threads', help='thread count', default=-1)
     argp.add_argument('-B', '--build-dir', help='build dir', default='')
+    argp.add_argument('--flame-graph', help='dump flame graph', default=False, action='store_const', const=True)
+    argp.add_argument('--host-platform', help='host platform', default='')
+    argp.add_argument('--target-platform', help='target platform', default='')
 
     args = argp.parse_args(sys.argv[1:])
 
@@ -936,23 +938,14 @@ class Module(object):
             'inc': [list(iter_inc())],
         }
 
-    def symlink_command(self, o, suff=''):
-        io = '$(B)/../../../' + os.path.basename(o)
-        oo = to_sd(o) + suff
-
-        return [
-            ['ln', '-f', o, io],
-            ['rm', '-rf', oo],
-            ['python3', '-c', 'import sys; import os; os.symlink(os.path.normpath(sys.argv[1]), os.path.normpath(sys.argv[2]))', io, oo],
-        ]
-
     def link_command(self, srcs, out):
         o = '$(B)/' + self.prefix + '/' + out
 
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.link_command(srcs, o, self.ld_flags) + self.symlink_command(o, '.exe'),
+            'cmd': self.compiler.link_command(srcs, o, self.ld_flags),
+            'main': True,
         }
 
     def fatobj_command(self, srcs, out):
@@ -961,7 +954,8 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.fatobj_command(srcs, o) + self.symlink_command(o),
+            'cmd': self.compiler.fatobj_command(srcs, o),
+            'main': True,
         }
 
     def ar_command(self, srcs, out):
@@ -970,7 +964,8 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.ar_command(srcs, o) + self.symlink_command(o),
+            'cmd': self.compiler.ar_command(srcs, o),
+            'main': True,
         }
 
     def iter_simple_commands(self):
@@ -995,9 +990,11 @@ class Module(object):
         for d in self.iter_sub_modules(deps):
             yield from d.commands()
 
+    @cached_method
     def calc_simple_commands(self):
         return list(self.iter_simple_commands())
 
+    @cached_method
     def calc_depend_commands(self):
         return uniq_nodes(self.iter_sub_commands(self.depends))
 
@@ -1028,6 +1025,9 @@ class Module(object):
             yield from self.iter_sub_commands(iter_programs())
 
         return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
+
+    def calc_main(self, g):
+        return [g[-1]['uid']]
 
 
 class SystemCompiler(object):
@@ -1224,6 +1224,14 @@ class Recurse(Module):
     def commands(self):
         return self.calc_depend_commands()
 
+    def calc_main(self, g):
+        def iter_main():
+            for n in g:
+                if n.get('main', False):
+                    yield n['uid']
+
+        return list(iter_main())
+
 
 class Parser(object):
     BY_NAME = {
@@ -1347,6 +1355,33 @@ def iter_node_in(n):
     return iter_uniq_list(iter_in())
 
 
+def strip_uids(g, used):
+    v = set()
+    by_uid = {}
+
+    for n in g:
+        by_uid[n['uid']] = n
+
+    def visit(uid):
+        if uid in v:
+            return
+
+        v.add(uid)
+
+        n = by_uid[uid]
+
+        yield n
+
+        for d in n['deps']:
+            yield from visit(d)
+
+    def iter_nodes():
+        for uid in used:
+            yield from visit(uid)
+
+    return list(iter_nodes())
+
+
 def build_uids(g):
     by_out = {}
 
@@ -1435,8 +1470,9 @@ def make_err(n, e):
 
 
 class Builder(object):
-    def __init__(self, g, parser, build_dir):
+    def __init__(self, g, main_uids, parser, build_dir):
         self._g = g
+        self._m = main_uids
         self._p = parser
         self._bd = build_dir
         self._bu = {}
@@ -1511,6 +1547,24 @@ class Builder(object):
             v.remove(res)
 
     def build_command(self, n):
+        self.build_command_1(n)
+
+        if n['uid'] in self._m:
+            for o in n['out']:
+                f = self.replace_path(o, n, 'c')
+                s = to_sd(o if fext(o) else (o + '.exe'))
+                t = self._p.replace_path(s)
+
+                msg('S', 'bb', s)
+
+                try:
+                    os.unlink(t)
+                except Exception:
+                    pass
+
+                os.symlink(f, t)
+
+    def build_command_1(self, n):
         while True:
             try:
                 return self.build_command_0(n)
@@ -1647,6 +1701,12 @@ def run_target():
     return Target(platform.system().lower(), platform.machine().lower())
 
 
+def parse_platform(p):
+    a, b = p.split('-')
+
+    return Target(a, b)
+
+
 class FileLoader(object):
     @cached_method
     def get_data(self, p):
@@ -1716,6 +1776,13 @@ class IncParser(object):
         return self._m
 
 
+def find_main_uids(g):
+    au = [x['uid'] for x in g]
+    uu = sum([x['deps'] for x in g], [])
+
+    return sorted(frozenset(au) - frozenset(uu))
+
+
 def main():
     build_dir = args.build_dir
 
@@ -1730,7 +1797,17 @@ def main():
     except OSError:
         pass
 
-    cache = os.path.join(build_dir, 'cache.' + CACHE_V)
+    if args.host_platform:
+        host_platform = parse_platform(args.host_platform)
+    else:
+        host_platform = run_target()
+
+    if args.target_platform:
+        target_platform = parse_platform(args.target_platform)
+    else:
+        target_platform = host_platform
+
+    cache = os.path.join(build_dir, 'cache.' + CACHE_V + '.' + host_platform.descr + '.' + target_platform.descr)
 
     try:
         with open(cache, 'rb') as f:
@@ -1738,7 +1815,7 @@ def main():
     except Exception:
         inc = IncParser(MD5Calcer())
 
-    p = Parser(find_root(), run_target(), run_target(), inc)
+    p = Parser(find_root(), host_platform, target_platform, inc)
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t, p.target_platform)
     g = m.full_commands()
@@ -1749,7 +1826,8 @@ def main():
     if args.dump_graph:
         print(json.dumps(g, indent=4, sort_keys=True))
 
-    bl = Builder(g, p, build_dir)
+    mu = m.calc_main(g)
+    bl = Builder(strip_uids(g, mu), mu, p, build_dir)
     tc = int(args.threads)
 
     if tc < 0:
