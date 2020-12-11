@@ -1639,7 +1639,8 @@ class Builder(object):
                 s = to_sd(o if fext(o) else (o + '.exe'))
                 t = self._p.replace_path(s)
 
-                msg('S', 'bb', '{' + n['platform'] + '} ' + s)
+                if args.verbose:
+                    msg('S', 'bb', '{' + n['platform'] + '} ' + s)
 
                 try:
                     os.unlink(t)
