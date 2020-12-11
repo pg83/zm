@@ -471,8 +471,8 @@ def filter_cmd_out(o):
     return '\n'.join(iter_lines()).strip()
 
 
-def run_cmd(cmd, cwd):
-    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd)
+def run_cmd(cmd, cwd, tmp_dir):
+    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env={'TMPDIR': tmp_dir})
     out, err = p.communicate()
     code = p.wait()
     out = filter_cmd_out(out.decode('utf-8'))
@@ -888,32 +888,28 @@ class Module(object):
 
         return list(it())
 
-    def build_command_1(self, src):
+    def build_one_command(self, src):
         try:
             return plugins().find_path(src).build_command(src, self)
         except KeyError:
             return []
 
-    def build_command_0(self, src):
-        to_v = [src]
+    def build_command(self, src):
         v = set()
 
-        while to_v:
-            s = to_v.pop()
-
+        def do(s):
             if s in v:
-                continue
+                return
 
             v.add(s)
 
-            for c in self.build_command_1(s):
+            for c in self.build_one_command(s):
                 yield c
 
                 for o in c['out']:
-                    to_v.append(o)
+                    yield from do(o)
 
-    def build_command(self, src):
-        return list(self.build_command_0(src))
+        return list(do(src))
 
     def join_srcs_command(self, srcs):
         ext = fext(srcs[0])
@@ -1018,8 +1014,8 @@ class Module(object):
                     yield os.path.dirname(x)[5:]
 
         def iter_nodes():
-            yield from cc
             yield from self.iter_sub_commands(iter_programs())
+            yield from cc
 
         return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
 
@@ -1549,7 +1545,7 @@ class Builder(object):
                 s = to_sd(o if fext(o) else (o + '.exe'))
                 t = self._p.replace_path(s)
 
-                msg('S', 'bb', s)
+                msg('S', 'bb', '{' + n['platform'] + '} ' + s)
 
                 try:
                     os.unlink(t)
@@ -1606,7 +1602,7 @@ class Builder(object):
             if args.verbose:
                 app_msg(colorize('CWD=' + cwd + ' ' + ' '.join(cmd), 'dw'))
 
-            app_msg(run_cmd(cmd, cwd))
+            app_msg(run_cmd(cmd, cwd, self._bd))
 
         for o in n['out']:
             f = os.path.join(where_t, o[5:])

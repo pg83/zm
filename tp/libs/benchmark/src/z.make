@@ -3,6 +3,10 @@ module: library
 inc_dirs:
 - tp/libs/benchmark/include
 
+c_flags:
+- -O2
+- -DNDEBUG
+
 srcs:
 - benchmark.cc
 - benchmark_api_internal.cc
