@@ -1023,15 +1023,7 @@ class Module(object):
             yield from self.iter_sub_commands(programs)
             yield from cc
 
-        res = add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
-        main = self.calc_main(res)
-
-        if programs:
-            tools, _ = Recurse({'recurse': programs}, self.parser, '', self.parser.host_platform).full_commands()
-
-            return merge_tools(res, tools), main
-
-        return res, main
+        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
 
     def calc_main(self, g):
         return [g[-1]['uid']]
@@ -1922,9 +1914,15 @@ def main():
 
     p = Parser(find_root(), host_platform, target_platform, inc)
     t = strip_prefix(get_target(args.target), p.root)
-    m = p.parse_module(t, p.target_platform)
-    g, mu = m.full_commands()
-    g = strip_uids(g, mu)
+
+    mt = p.parse_module(t, p.target_platform)
+    gt = mt.full_commands()
+    mu = mt.calc_main(gt)
+
+    mh = p.parse_module(t, p.host_platform)
+    gh = mh.full_commands()
+
+    g = strip_uids(merge_tools(gt, gh), mu)
 
     with open(cache, 'wb') as f:
         f.write(pickle.dumps(inc))
