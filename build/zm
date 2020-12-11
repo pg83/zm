@@ -587,7 +587,7 @@ def cached_method(meth):
             k = meth.__name__
 
         if k not in d:
-            d[k] = object()
+            #d[k] = object()
             d[k] = meth(self, *args, **kwargs)
 
         return d[k]
@@ -740,7 +740,7 @@ class Module(object):
 
     @property
     def name(self):
-        return self._d.get('name', '') or os.path.basename(self.prefix)
+        return self._d.get('name', '') or os.path.basename(self.prefix.replace('/src', ''))
 
     def extra_depends(self):
         return []
