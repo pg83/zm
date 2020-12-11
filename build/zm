@@ -1159,17 +1159,13 @@ class BenchMark(Program):
 
 class Library(Module):
     exclude = frozenset([
-        'tpcxxinclude',
-        'tpcxxsrc',
-        'tpcxxrt',
-        'tpunwindsrc',
-        'tpdemangle',
-        'tpmusl',
-        'tpmuslinc',
-        'tpmuslfull',
-        'tpasm',
-        'tpasmgc',
-        'tpkernel',
+        'tp/libs/libcxx',
+        'tp/libs/libcxx/include',
+        'tp/libs/libcxx/src',
+        'tp/libs/libcxxrt',
+        'tp/libs/libunwind',
+        'tp/libs/libunwind/src',
+        'tp/libs/libdemangle',
     ])
 
     @property
@@ -1186,7 +1182,7 @@ class Library(Module):
         return dc
 
     def extra_depends(self):
-        if self.name not in self.exclude:
+        if self.prefix not in self.exclude:
             return ['tp/libs/libcxx']
 
         return []
@@ -1470,11 +1466,7 @@ def make_err(n, e):
 
 
 def hard_link(f, t):
-    try:
-        os.makedirs(os.path.dirname(t))
-    except OSError:
-        pass
-
+    prepare_dir(t)
     os.link(f, t)
 
 
@@ -1585,12 +1577,15 @@ class Builder(object):
 
     def build_command_0(self, n):
         where_c = self.replace_path('$(B)', n, 'c')
-        where_t = self.replace_path('$(B)', n, 't')
 
         if os.path.exists(where_c):
             return
 
+        where_t = self.replace_path('$(B)', n, 't')
+        where_p = where_t + '.tmp'
+
         shutil.rmtree(where_t, ignore_errors=True)
+        shutil.rmtree(where_p, ignore_errors=True)
 
         for o in n['out']:
             prepare_dir(self.replace_path(o, n, 't'))
@@ -1619,8 +1614,6 @@ class Builder(object):
                 app_msg(colorize('CWD=' + cwd + ' ' + ' '.join(cmd), 'dw'))
 
             app_msg(run_cmd(cmd, cwd))
-
-        where_p = where_t + '.tmp'
 
         for o in n['out']:
             f = os.path.join(where_t, o[5:])
