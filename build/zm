@@ -1469,6 +1469,15 @@ def make_err(n, e):
     return func
 
 
+def hard_link(f, t):
+    try:
+        os.makedirs(os.path.dirname(t))
+    except OSError:
+        pass
+
+    os.link(f, t)
+
+
 class Builder(object):
     def __init__(self, g, main_uids, parser, build_dir):
         self._g = g
@@ -1586,10 +1595,13 @@ class Builder(object):
         for o in n['out']:
             prepare_dir(self.replace_path(o, n, 't'))
 
+        def sl(s, d, *args, **kwargs):
+            os.symlink(s, d)
+
         for d in n['deps']:
             dn = self._bu[d]
 
-            shutil.copytree(self.replace_path('$(B)', dn, 'c'), where_t, dirs_exist_ok=True)
+            shutil.copytree(self.replace_path('$(B)', dn, 'c'), where_t, copy_function=sl, dirs_exist_ok=True)
 
         m = []
 
@@ -1608,9 +1620,18 @@ class Builder(object):
 
             app_msg(run_cmd(cmd, cwd))
 
-        msg('B', 'g', '\n'.join(m).strip())
+        where_p = where_t + '.tmp'
 
-        shutil.move(where_t, where_c)
+        for o in n['out']:
+            f = os.path.join(where_t, o[5:])
+            t = os.path.join(where_p, o[5:])
+
+            hard_link(f, t)
+
+        shutil.rmtree(where_t)
+        shutil.move(where_p, where_c)
+
+        msg('B', 'g', '\n'.join(m).strip())
 
 
 class Target(object):
