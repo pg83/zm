@@ -5,6 +5,7 @@
 %%{
     machine ParseStreamUnsigned;
     write data;
+    include "qw.rl";
 }%%
 
 template <class T, class It>

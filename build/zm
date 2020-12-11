@@ -23,7 +23,7 @@ import collections
 import multiprocessing
 
 
-CACHE_V = '1'
+CACHE_V = '5'
 
 
 if __name__ == '__main__':
@@ -58,7 +58,6 @@ class PluginBase(object):
                     yield from module.parse_includes_md5(i, fext(i))
 
             c['inc'] = [list(iter_inc())]
-            c['target'] = module.parser.target.descr
 
         return res
 
@@ -108,10 +107,12 @@ class Ragel6Plugin(PluginBase):
 
     def parse(self, data):
         for l in data.splitlines():
+            l = l.strip()
+
             if not l.startswith('include'):
                 continue
 
-            if res := get_substr(ll, '"', '"'):
+            if res := get_substr(l, '"', '"'):
                 yield res
             else:
                 raise Exception('unparsed include ' + l)
@@ -147,10 +148,12 @@ class ProtoBufPlugin(PluginBase):
 
     def parse(self, data):
         for l in data.splitlines():
+            l = l.strip()
+
             if not l.startswith('import'):
                 continue
 
-            if res := get_substr(ll, '"', '"'):
+            if res := get_substr(l, '"', '"'):
                 yield res
             else:
                 raise Exception('unparsed include ' + l)
@@ -164,7 +167,15 @@ class CppPlugin(PluginBase):
         return ['C', 'cpp', 'cc', 'cxx', 'c++']
 
     def command(self, src, module):
-        return module.cxx_compile_command(src)
+        o = to_bd(src + '.o')
+
+        return [
+            {
+                'in': [src],
+                'out': [o],
+                'cmd': module.compiler.cxx_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.cxx_flags),
+            },
+        ]
 
     def parse(self, data):
         return parse_cpp_includes(data)
@@ -175,7 +186,15 @@ class CPlugin(PluginBase):
         return ['c', 'S', 's']
 
     def command(self, src, module):
-        return module.c_compile_command(src)
+        o = to_bd(src + '.o')
+
+        return [
+            {
+                'in': [src],
+                'out': [o],
+                'cmd': module.compiler.c_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.c_flags),
+            },
+        ]
 
     def parse(self, data):
         return parse_cpp_includes(data)
@@ -187,7 +206,7 @@ class YasmPlugin(PluginBase):
 
     def command(self, src, module):
         o = to_bd(strip_ext(src) + '.o')
-        t = module.parser.target
+        t = module.platform
 
         def iter_flags():
             for f in t.defines:
@@ -378,12 +397,15 @@ class Display(object):
         self._ml = threading.Lock()
 
     def msg(self, l, c, msg):
-        thr_id = str(struct_hash(threading.get_ident()))[:4]
+        m = ''
 
-        m  = colorize('(' + thr_id + ')', 'bb')
-        m += ' '
+        if args.verbose:
+            m += colorize('(' + str(struct_hash(threading.get_ident()))[:4] + ')', 'bb')
+            m += ' '
+
         m += colorize('[' + l + ']', c)
         m += ' '
+
         m += msg.replace('$(S)', colorize('$(S)', 'bg')).replace('$(B)', colorize('$(B)', 'by'))
 
         with self._ml:
@@ -695,12 +717,24 @@ def uniq_nodes(g):
     return uniq_list_base(g, node_key)
 
 
+def add_platform(g, p):
+    for n in g:
+        n['platform'] = p
+
+    return g
+
+
 class Module(object):
-    def __init__(self, data, parser, prefix):
+    def __init__(self, data, parser, prefix, platform):
         self._d = data
         self._p = prefix
         self._parser = parser
         self._c = {}
+        self._pl = platform
+
+    @property
+    def platform(self):
+        return self._pl
 
     @cached_method
     def prog_name(self):
@@ -778,7 +812,7 @@ class Module(object):
 
     @property
     def compiler(self):
-        return self.parser.compiler
+        return self.platform.compiler
 
     def src_path_0(self, p):
         rp = self.parser.replace_path(p)
@@ -902,28 +936,6 @@ class Module(object):
             'inc': [list(iter_inc())],
         }
 
-    def c_compile_command(self, src):
-        o = to_bd(src + '.o')
-
-        return [
-            {
-                'in': [src],
-                'out': [o],
-                'cmd': self.compiler.c_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.c_flags),
-            },
-        ]
-
-    def cxx_compile_command(self, src):
-        o = to_bd(src + '.o')
-
-        return [
-            {
-                'in': [src],
-                'out': [o],
-                'cmd': self.compiler.cxx_compile_command(src, o, list(self.iter_inc_dirs()) + ['$(B)'], self.cxx_flags),
-            },
-        ]
-
     def symlink_command(self, o, suff=''):
         io = '$(B)/../../../' + os.path.basename(o)
         oo = to_sd(o) + suff
@@ -977,7 +989,7 @@ class Module(object):
 
     def iter_sub_modules(self, deps):
         for d in iter_uniq_list(deps):
-            yield self.parser.parse_module(d)
+            yield self.parser.parse_module(d, self.platform)
 
     def iter_sub_commands(self, deps):
         for d in self.iter_sub_modules(deps):
@@ -1015,10 +1027,13 @@ class Module(object):
             yield from cc
             yield from self.iter_sub_commands(iter_programs())
 
-        return build_uids(output_includes(uniq_nodes(iter_nodes())))
+        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
 
 
 class SystemCompiler(object):
+    def __init__(self, target):
+        self._t = target
+
     @property
     def name(self):
         return 'clang'
@@ -1027,6 +1042,7 @@ class SystemCompiler(object):
         def it():
             yield from cxx
             yield from ['-fcolor-diagnostics', '-msse2', '-msse3', '-mssse3', '-msse4.1', '-msse4.2', '-mpopcnt', '-mcx16']
+            yield '--target=' + self._t.descr
             yield from flags
 
             for x in inc:
@@ -1047,6 +1063,7 @@ class SystemCompiler(object):
             yield 'clang++'
             yield '-fcolor-diagnostics'
             yield '-nostdlib++'
+            yield '--target=' + self._t.descr
             yield from flags
             yield '-o'
             yield out
@@ -1218,18 +1235,28 @@ class Parser(object):
         'benchmark': BenchMark,
     }
 
-    def __init__(self, root, target, inc_parser):
+    def __init__(self, root, host_platform, target_platform, inc_parser):
         self._r = root
         self._i = inc_parser
-        self._t = target
+        self._h = host_platform
+        self._t = target_platform
+
+        self._p = {
+            self._h.descr: self._h,
+            self._t.descr: self._t,
+        }
 
     @property
     def md5_calcer(self):
         return self._i.md5_calcer
 
     @property
-    def target(self):
+    def target_platform(self):
         return self._t
+
+    @property
+    def host_platform(self):
+        return self._h
 
     @property
     def inc_parser(self):
@@ -1240,30 +1267,34 @@ class Parser(object):
         return self.inc_parser.loader
 
     @property
-    def compiler(self):
-        return self.target.compiler
-
-    @property
     def root(self):
         return self._r
 
     def replace_path(self, p):
         return p.replace('$(S)', self.root)
 
+    def parse_module(self, target, platform):
+        return self.parse_module_impl(target, platform.descr)
+
     @cached_method
-    def parse_module(self, target):
+    def parse_module_impl(self, target, platform):
         msg('T', 'bc', '$(S)/' + target)
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = yaml.load(preprocess(f.read(), self.target.flags), Loader=yaml.Loader)
+            d = yaml.load(preprocess(f.read(), self.host_platform.flags), Loader=yaml.Loader)
+
+        pt = self.platform_by_name(platform)
 
         if 'recurse' in d:
-            return Recurse(d, self, target)
+            return Recurse(d, self, target, pt)
 
         def error(*args):
             raise Exception('unsupported module ' + m)
 
-        return self.BY_NAME.get(d['module'], error)(d, self, target)
+        return self.BY_NAME.get(d['module'], error)(d, self, target, pt)
+
+    def platform_by_name(self, name):
+        return self._p[name]
 
 
 def from_bd(i):
@@ -1411,11 +1442,7 @@ class Builder(object):
         self._bu = {}
 
         for n in self._g:
-            u = n['uid']
-
-            assert u not in self._bu
-
-            self._bu[u] = n
+            self._bu[n['uid']] = n
 
     def replace_path(self, p, n, w):
         uid = (n['uid']).to_bytes(4, 'little').hex()
@@ -1516,7 +1543,7 @@ class Builder(object):
             if ms:
                 m.append(ms)
 
-        app_msg(' '.join(n['out']))
+        app_msg('{' + n['platform'] + '} ' + ' '.join(n['out']))
 
         for c in n['cmd']:
             cmd = [self.replace_path(x, n, 't') for x in c]
@@ -1610,9 +1637,9 @@ class Target(object):
     @cached_method
     def compiler(self):
         if 'OS_DARWIN' in self.flags:
-            return DarwinCompiler()
+            return DarwinCompiler(self)
 
-        return SystemCompiler()
+        return SystemCompiler(self)
 
 
 @singleton
@@ -1711,9 +1738,9 @@ def main():
     except Exception:
         inc = IncParser(MD5Calcer())
 
-    p = Parser(find_root(), run_target(), inc)
+    p = Parser(find_root(), run_target(), run_target(), inc)
     t = strip_prefix(get_target(args.target), p.root)
-    m = p.parse_module(t)
+    m = p.parse_module(t, p.target_platform)
     g = m.full_commands()
 
     with open(cache, 'wb') as f:
