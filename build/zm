@@ -463,6 +463,9 @@ def filter_cmd_out(o):
             if 'ar: creating' in l:
                 continue
 
+            if 'warning: creating' in l:
+                continue
+
             if 'has no symbols' in l:
                 continue
 
@@ -472,7 +475,8 @@ def filter_cmd_out(o):
 
 
 def run_cmd(cmd, cwd, tmp_dir):
-    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd, env={'TMPDIR': tmp_dir})
+    env = {'TMPDIR': tmp_dir}
+    p = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=cwd)
     out, err = p.communicate()
     code = p.wait()
     out = filter_cmd_out(out.decode('utf-8'))
@@ -587,7 +591,7 @@ def cached_method(meth):
             k = meth.__name__
 
         if k not in d:
-            #d[k] = object()
+            d[k] = object()
             d[k] = meth(self, *args, **kwargs)
 
         return d[k]
@@ -1013,14 +1017,34 @@ class Module(object):
                 for x in l.get('use', []):
                     yield os.path.dirname(x)[5:]
 
+        programs = uniq_list(iter_programs())
+
         def iter_nodes():
-            yield from self.iter_sub_commands(iter_programs())
+            yield from self.iter_sub_commands(programs)
             yield from cc
 
-        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
+        res = add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
+        main = self.calc_main(res)
+
+        if programs:
+            tools, _ = Recurse({'recurse': programs}, self.parser, '', self.parser.host_platform).full_commands()
+
+            return merge_tools(res, tools), main
+
+        return res, main
 
     def calc_main(self, g):
         return [g[-1]['uid']]
+
+
+def find_path(p):
+    for x in os.environ['PATH'].split(':'):
+        pp = os.path.join(x, p)
+
+        if os.path.exists(pp):
+            return pp
+
+    raise Exception('can not find ' + p)
 
 
 class SystemCompiler(object):
@@ -1034,16 +1058,34 @@ class SystemCompiler(object):
     def compile_command(self, cxx, src, out, inc, flags):
         def it():
             yield from cxx
-            yield from ['-fcolor-diagnostics', '-msse2', '-msse3', '-mssse3', '-msse4.1', '-msse4.2', '-mpopcnt', '-mcx16']
+
             yield '--target=' + self._t.descr
+
+            yield '-fcolor-diagnostics'
+
+            yield '-msse2'
+            yield '-msse3'
+            yield '-mssse3'
+            yield '-msse4.1'
+            yield '-msse4.2'
+            yield '-mpopcnt'
+            yield '-mcx16'
+
+            yield from self.extra_c_flags()
             yield from flags
 
             for x in inc:
                 yield '-I' + x
 
-            yield from ['-c', '-o', out, src]
+            yield '-c'
+            yield '-o'
+            yield out
+            yield src
 
         return [list(it())]
+
+    def find_tool(self, t):
+        return os.path.join(self._d, t)
 
     def c_compile_command(self, src, out, inc, flags):
         return self.compile_command(['clang'], src, out, inc, flags)
@@ -1054,9 +1096,10 @@ class SystemCompiler(object):
     def link_command(self, srcs, out, flags):
         def iter_flags():
             yield 'clang++'
+            yield '--target=' + self._t.descr
             yield '-fcolor-diagnostics'
             yield '-nostdlib++'
-            yield '--target=' + self._t.descr
+            yield from self.extra_ld_flags()
             yield from flags
             yield '-o'
             yield out
@@ -1066,12 +1109,15 @@ class SystemCompiler(object):
 
     def ar_command(self, srcs, out):
         return [
-            ['ar', 'q', out] + srcs,
-            ['ranlib', out],
+            ['llvm-ar', 'q', out] + srcs,
+            ['llvm-ranlib', out],
         ]
 
     def fatobj_command(self, srcs, out):
-        return [['ld', '-r', '-o', out] + srcs]
+        if len(srcs) > 1:
+            return [[self.linker, '-r', '-o', out] + srcs]
+
+        return [['cp', srcs[0], out]]
 
     def fix_srcs(self, srcs):
         for s in srcs:
@@ -1086,10 +1132,30 @@ class SystemCompiler(object):
 
         yield '-Wl,--end-group'
 
+    @property
+    def linker(self):
+        return 'ld.lld'
+
+    def extra_ld_flags(self):
+        yield '-fuse-ld=lld'
+
+    def extra_c_flags(self):
+        return []
+
 
 class DarwinCompiler(SystemCompiler):
     def fix_srcs(self, srcs):
         return srcs
+
+    @property
+    def linker(self):
+        return 'ld64.lld'
+
+    def extra_ld_flags(self):
+        yield '-L/Library/Developer/CommandLineTools/SDKs/MacOSX11.0.sdk/usr/lib'
+
+    def extra_c_flags(self):
+        yield '-isystem/Library/Developer/CommandLineTools/SDKs/MacOSX11.0.sdk/usr/include'
 
 
 class Program(Module):
@@ -1155,6 +1221,9 @@ class Library(Module):
         'tp/libs/unwind',
         'tp/libs/unwind/src',
         'tp/libs/demangle',
+        'tp/libs/musl',
+        'tp/libs/muslinc',
+        'tp/libs/kernel',
     ])
 
     @cached_method
@@ -1271,18 +1340,18 @@ class Parser(object):
 
     @cached_method
     def parse_module_impl(self, target, platform):
-        msg('T', 'bc', '$(S)/' + target)
-
-        with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = yaml.load(preprocess(f.read(), self.host_platform.flags), Loader=yaml.Loader)
+        msg('T', 'bc', '{' + platform + '} ' + '$(S)/' + target)
 
         pt = self.platform_by_name(platform)
+
+        with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
+            d = yaml.load(preprocess(f.read(), pt.flags), Loader=yaml.Loader)
 
         if 'recurse' in d:
             return Recurse(d, self, target, pt)
 
         def error(*args):
-            raise Exception('unsupported module ' + m)
+            raise Exception('unsupported module ' + target)
 
         return self.BY_NAME.get(d['module'], error)(d, self, target, pt)
 
@@ -1305,6 +1374,39 @@ def struct_hash(s):
 def flatten(l):
     for x in l:
         yield from x
+
+
+def merge_tools(g, t):
+    by_out_t = {}
+    by_out_g = {}
+
+    for n in t:
+        for o in n['out']:
+            by_out_t[o] = n
+
+    for n in g:
+        for o in n['out']:
+            by_out_g[o] = n
+
+    def repl_uid(n, fr, to):
+        def iter_deps():
+            for d in n['deps']:
+                if d == fr:
+                    yield to
+                else:
+                    yield d
+
+        n['deps'] = list(iter_deps())
+
+    for n in g:
+        if 'use' in n:
+            for u in n['use']:
+                ug = by_out_g[u]['uid']
+                ut = by_out_t[u]['uid']
+
+                repl_uid(n, ug, ut)
+
+    return t + g
 
 
 def output_includes(g):
@@ -1821,7 +1923,8 @@ def main():
     p = Parser(find_root(), host_platform, target_platform, inc)
     t = strip_prefix(get_target(args.target), p.root)
     m = p.parse_module(t, p.target_platform)
-    g = m.full_commands()
+    g, mu = m.full_commands()
+    g = strip_uids(g, mu)
 
     with open(cache, 'wb') as f:
         f.write(pickle.dumps(inc))
@@ -1829,8 +1932,7 @@ def main():
     if args.dump_graph:
         print(json.dumps(g, indent=4, sort_keys=True))
 
-    mu = m.calc_main(g)
-    bl = Builder(strip_uids(g, mu), mu, p, build_dir)
+    bl = Builder(g, mu, p, build_dir)
     tc = int(args.threads)
 
     if tc < 0:
