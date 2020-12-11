@@ -738,13 +738,9 @@ class Module(object):
     def platform(self):
         return self._pl
 
-    @cached_method
-    def prog_name(self):
+    @property
+    def name(self):
         return self._d.get('name', '') or os.path.basename(self.prefix)
-
-    @cached_method
-    def lib_name(self):
-        return self._d.get('name', '') or self.prefix.replace('/libs/', '').replace('/', '_').replace('-', '_').replace('_', '').replace('lib', '')
 
     def extra_depends(self):
         return []
@@ -998,6 +994,7 @@ class Module(object):
     def calc_depend_commands(self):
         return uniq_nodes(self.iter_sub_commands(self.depends))
 
+    @cached_method
     def calc_commands(self):
         cc = self.calc_simple_commands()
         dc = self.calc_depend_commands()
@@ -1101,10 +1098,6 @@ class DarwinCompiler(SystemCompiler):
 
 class Program(Module):
     @property
-    def name(self):
-        return self.prog_name()
-
-    @property
     def allocator(self):
         return self._d.get('allocator', 'mim')
 
@@ -1168,16 +1161,12 @@ class Library(Module):
         'tp/libs/demangle',
     ])
 
-    @property
-    def name(self):
-        return self.lib_name()
-
     @cached_method
     def commands(self):
         cc, ss, dc = self.calc_commands()
 
         if ss:
-            return cc + dc + [self.ar_command(ss, 'lib' + self.name + '.a')]
+            return cc + dc + [self.ar_command(ss, ('lib' + self.name + '.a').replace('liblib', 'lib'))]
 
         return dc
 
@@ -1187,12 +1176,16 @@ class Library(Module):
 
         return []
 
+    def calc_main(self, g):
+        _, ss, _ = self.calc_commands()
+
+        if ss:
+            return [g[-1]['uid']]
+
+        return []
+
 
 class FatObj(Module):
-    @property
-    def name(self):
-        return self.lib_name()
-
     @cached_method
     def commands(self):
         cc, ss, dc = self.calc_commands()
