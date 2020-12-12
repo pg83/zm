@@ -51,18 +51,6 @@ class PluginBase(object):
     def depends(self):
         return []
 
-    def build_command(self, src, module):
-        res = self.command(src, module)
-
-        for c in res:
-            def iter_inc():
-                for i in c['in']:
-                    yield from module.parse_includes_md5(i, fext(i))
-
-            c['inc'] = [list(iter_inc())]
-
-        return res
-
 
 class File2CPlugin(PluginBase):
     def ext(self):
@@ -591,7 +579,7 @@ def cached_method(meth):
             k = meth.__name__
 
         if k not in d:
-            d[k] = object()
+            d[k] = None
             d[k] = meth(self, *args, **kwargs)
 
         return d[k]
@@ -690,11 +678,11 @@ def plugins():
 
 
 def to_bd(p):
-    return p.replace('$(S)', '$(B)')
+    return p.replace('$(S)', '$(B)', 1)
 
 
 def to_sd(p):
-    return p.replace('$(B)', '$(S)')
+    return p.replace('$(B)', '$(S)', 1)
 
 
 def fext(p):
@@ -894,7 +882,7 @@ class Module(object):
 
     def build_one_command(self, src):
         try:
-            return plugins().find_path(src).build_command(src, self)
+            return plugins().find_path(src).command(src, self)
         except KeyError:
             return []
 
@@ -908,20 +896,15 @@ class Module(object):
             v.add(s)
 
             for c in self.build_one_command(s):
-                yield c
-
                 for o in c['out']:
                     yield from do(o)
+
+                yield c
 
         return list(do(src))
 
     def join_srcs_command(self, srcs):
-        ext = fext(srcs[0])
-        o = '$(B)/' + self.prefix + '/' + str(struct_hash('_'.join(srcs))) + '.' + ext
-
-        def iter_inc():
-            for s in srcs:
-                yield from self.parse_includes_md5(s, ext)
+        o = '$(B)/' + self.prefix + '/' + str(struct_hash('_'.join(srcs))) + '.' + fext(srcs[0])
 
         def iter_cmds():
             for l in srcs:
@@ -931,7 +914,6 @@ class Module(object):
             'in': srcs,
             'out': [o],
             'cmd': list(iter_cmds()),
-            'inc': [list(iter_inc())],
         }
 
     def link_command(self, srcs, out):
@@ -964,19 +946,29 @@ class Module(object):
             'main': True,
         }
 
-    def iter_simple_commands(self):
+    def iter_commands(self):
+        if js := self.join_srcs:
+            yield self.join_srcs_command(js)
+
+    def iter_simple_commands_0(self):
         for s in self.srcs:
             yield from self.build_command(s)
 
-        js = self.join_srcs
-
-        if js:
-            cmd = self.join_srcs_command(js)
-
+        for cmd in self.iter_commands():
             yield cmd
 
             for o in cmd['out']:
                 yield from self.build_command(o)
+
+    def iter_simple_commands(self):
+        for c in self.iter_simple_commands_0():
+            def iter_inc():
+                for i in c['in']:
+                    yield from self.parse_includes_md5(i, fext(i))
+
+            c['inc'] = [list(iter_inc())]
+
+            yield c
 
     def iter_sub_modules(self, deps):
         for d in iter_uniq_list(deps):
@@ -1368,6 +1360,17 @@ def flatten(l):
         yield from x
 
 
+def repl_uid(n, fr, to):
+    def iter_deps():
+        for d in n['deps']:
+            if d == fr:
+                yield to
+            else:
+                yield d
+
+    n['deps'] = list(iter_deps())
+
+
 def merge_tools(g, t):
     by_out_t = {}
     by_out_g = {}
@@ -1380,25 +1383,16 @@ def merge_tools(g, t):
         for o in n['out']:
             by_out_g[o] = n
 
-    def repl_uid(n, fr, to):
-        def iter_deps():
-            for d in n['deps']:
-                if d == fr:
-                    yield to
-                else:
-                    yield d
-
-        n['deps'] = list(iter_deps())
-
     for n in g:
         if 'use' in n:
             for u in n['use']:
                 ug = by_out_g[u]['uid']
                 ut = by_out_t[u]['uid']
 
-                repl_uid(n, ug, ut)
+                if ug != ut:
+                    repl_uid(n, ug, ut)
 
-    return t + g
+    return g + t
 
 
 def output_includes(g):
@@ -1449,10 +1443,10 @@ def strip_uids(g, used):
 
         n = by_uid[uid]
 
-        yield n
-
         for d in n['deps']:
             yield from visit(d)
+
+        yield n
 
     def iter_nodes():
         for uid in used:
