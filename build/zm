@@ -961,12 +961,12 @@ class Module(object):
                 yield from self.build_command(o)
 
     def iter_simple_commands(self):
-        for c in self.iter_simple_commands_0():
-            def iter_inc():
-                for i in c['in']:
-                    yield from self.parse_includes_md5(i, fext(i))
+        def iter_inc(c):
+            for i in c['in']:
+                yield from self.parse_includes_md5(i, fext(i))
 
-            c['inc'] = [list(iter_inc())]
+        for c in self.iter_simple_commands_0():
+            c['inc'] = [list(iter_inc(c))]
 
             yield c
 
