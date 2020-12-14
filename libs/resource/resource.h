@@ -9,7 +9,7 @@ namespace resource {
     size_t count() noexcept;
 
     struct reg_helper_t {
-        inline reg_helper_t(std::string_view path, std::string_view data) {
+        reg_helper_t(std::string_view path, std::string_view data) {
             store(path, data);
         }
     };
