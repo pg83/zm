@@ -1329,7 +1329,7 @@ class Parser(object):
         pt = self.platform_by_name(platform)
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = yaml.load(preprocess(f.read(), pt.flags), Loader=yaml.Loader)
+            d = yaml.safe_load(preprocess(f.read(), pt.flags))
 
         if 'recurse' in d:
             return Recurse(d, self, target, pt)
