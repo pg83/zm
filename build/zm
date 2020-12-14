@@ -52,6 +52,11 @@ class PluginBase(object):
         return []
 
 
+class EmptyPlugin(PluginBase):
+    def ext(self):
+        return ['']
+
+
 class File2CPlugin(PluginBase):
     def ext(self):
         return ['file2c']
@@ -903,8 +908,40 @@ class Module(object):
 
         return list(do(src))
 
+    def resource_command(self, data):
+        def iter_res():
+            for l in data:
+                f, k = l.split(' ')
+
+                if k[0] != '/':
+                    k = '/' + k
+
+                s = '$(S)/' + self.prefix + '/' + f
+
+                yield s, k, s + ' ' + k
+
+        srcs = []
+        lines = []
+
+        for f, k, l in iter_res():
+            srcs.append(f)
+            lines.append(l)
+
+        out = '$(B)/' + self.prefix + '/resource.global.' + str(struct_hash(lines)) + '.cpp'
+        tool = '$(B)/libs/resource/compiler/compiler'
+
+        return {
+            'in': srcs,
+            'out': [out],
+            'cmd': [
+                ['/bin/sh', '-c', tool + ' ' + ' '.join(lines) + ' > ' + out],
+            ],
+            'use': [tool],
+            'out_inc': self.parse_includes_md5('$(S)/libs/resource/resource.h', 'cpp'),
+        }
+
     def join_srcs_command(self, srcs):
-        o = '$(B)/' + self.prefix + '/' + str(struct_hash('_'.join(srcs))) + '.' + fext(srcs[0])
+        o = '$(B)/' + self.prefix + '/' + str(struct_hash(srcs)) + '.' + fext(srcs[0])
 
         def iter_cmds():
             for l in srcs:
@@ -949,6 +986,9 @@ class Module(object):
     def iter_commands(self):
         if js := self.join_srcs:
             yield self.join_srcs_command(js)
+
+        if data := self._d.get('resource', []):
+            yield self.resource_command(data)
 
     def iter_simple_commands_0(self):
         for s in self.srcs:
