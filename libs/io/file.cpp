@@ -11,7 +11,7 @@ struct file_input_t::impl_t {
         : f_(fopen(path, "rb"))
     {
         if (!f_) {
-            throw std::system_error(errno, std::system_category(), "can not open file " + std::string(path));
+            throw std::system_error(errno, std::generic_category(), "can not open file " + std::string(path));
         }
     }
 
@@ -24,7 +24,7 @@ struct file_input_t::impl_t {
 
         if (res < l) {
             if (ferror(f_) != 0) {
-                throw std::system_error(errno, std::system_category(), "can not read file");
+                throw std::system_error(errno, std::generic_category(), "can not read file");
             }
         }
 
