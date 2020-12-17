@@ -7,3 +7,4 @@ recurse:
 - prog6
 - prog7
 - prog8
+- prog9

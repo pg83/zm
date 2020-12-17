@@ -39,6 +39,11 @@ file_input_t::file_input_t(const char* path)
 {
 }
 
+file_input_t::file_input_t(const std::string& path)
+    : file_input_t(path.c_str())
+{
+}
+
 file_input_t::~file_input_t() {
 }
 

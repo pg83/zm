@@ -2,12 +2,15 @@
 
 #include "base.h"
 
+#include <string>
 #include <utility>
 
 namespace io {
     class file_input_t: public input_i {
     public:
         file_input_t(const char* path);
+        file_input_t(const std::string& path);
+
         ~file_input_t() override;
 
     private:
