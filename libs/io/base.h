@@ -1,8 +1,12 @@
+#pragma once
+
 #include <string>
 
 #include <stddef.h>
 
 namespace io {
+    class output_i;
+
     class input_i {
     public:
         input_i() noexcept;
@@ -18,8 +22,22 @@ namespace io {
 
         size_t read_exact(void* data, size_t len);
         std::string read_all();
+        void read_all(output_i& out);
 
     protected:
         virtual size_t do_read(void* data, size_t len) = 0;
+    };
+
+    class output_i {
+    public:
+        output_i() noexcept;
+        virtual ~output_i();
+
+        void write(const void* data, size_t len) {
+            do_write(data, len);
+        }
+
+    protected:
+        virtual void do_write(const void* data, size_t len) = 0;
     };
 }

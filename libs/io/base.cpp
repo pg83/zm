@@ -1,4 +1,5 @@
 #include "base.h"
+#include "str.h"
 
 using namespace io;
 using namespace std;
@@ -27,12 +28,24 @@ size_t input_i::read_exact(void* d, size_t l) {
 }
 
 std::string input_i::read_all() {
-    char buf[1024];
     std::string ret;
+    str_output_t out(ret);
 
-    while (size_t res = read(buf, sizeof(buf))) {
-        ret.append(buf, res);
-    }
+    read_all(out);
 
     return ret;
+}
+
+void input_i::read_all(output_i& out) {
+    char buf[1024];
+
+    while (size_t res = read(buf, sizeof(buf))) {
+        out.write(buf, res);
+    }
+}
+
+output_i::output_i() noexcept {
+}
+
+output_i::~output_i() {
 }
