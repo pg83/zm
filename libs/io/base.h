@@ -22,7 +22,7 @@ namespace io {
 
         size_t read_exact(void* data, size_t len);
         std::string read_all();
-        void read_all(output_i& out);
+        uint64_t read_all(output_i& out);
 
     protected:
         virtual size_t do_read(void* data, size_t len) = 0;
@@ -40,4 +40,6 @@ namespace io {
     protected:
         virtual void do_write(const void* data, size_t len) = 0;
     };
+
+    uint64_t transfer_data(input_i& in, output_i& out);
 }

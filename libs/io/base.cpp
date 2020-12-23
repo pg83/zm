@@ -36,12 +36,20 @@ std::string input_i::read_all() {
     return ret;
 }
 
-void input_i::read_all(output_i& out) {
-    char buf[1024];
+uint64_t input_i::read_all(output_i& out) {
+    return transfer_data(*this, out);
+}
 
-    while (size_t res = read(buf, sizeof(buf))) {
+uint64_t io::transfer_data(input_i& in, output_i& out) {
+    char buf[1024];
+    uint64_t ret = 0;
+
+    while (size_t res = in.read(buf, sizeof(buf))) {
         out.write(buf, res);
+        ret += res;
     }
+
+    return ret;
 }
 
 output_i::output_i() noexcept {
