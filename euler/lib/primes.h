@@ -57,3 +57,15 @@ primes_map_t<T> to_primes_map(T t) noexcept {
 
     return res;
 }
+
+template <class T>
+size_t num_divisors(T t) noexcept {
+    auto m = to_primes_map(t);
+    size_t res = 1;
+
+    for (auto it = m.begin(); it != m.end(); ++it) {
+        res *= (1 + it->second);
+    }
+
+    return res;
+}
