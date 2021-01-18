@@ -39,8 +39,8 @@ struct bigint_t::impl_t: public bignum_holder_t {
     impl_t() {
     }
 
-    impl_t(const std::string& num) {
-        check_err(mp_read_radix(&bi, num.c_str(), 10));
+    impl_t(const char* num) {
+        check_err(mp_read_radix(&bi, num, 10));
     }
 
     std::string to_string() const {
@@ -58,8 +58,13 @@ bigint_t::bigint_t()
 {
 }
 
-bigint_t::bigint_t(const std::string& num)
+bigint_t::bigint_t(const char* num)
     : i_(new impl_t(num))
+{
+}
+
+bigint_t::bigint_t(const std::string& num)
+    : i_(new impl_t(num.c_str()))
 {
 }
 
