@@ -1,4 +1,22 @@
+#pragma once
+
 #include <deque>
+#include <map>
+
+template <class T>
+bool is_prime_stupid(T t) {
+    T x = 2;
+
+    while (x * x <= t) {
+        if (t % x == 0) {
+            return false;
+        }
+
+        ++x;
+    }
+
+    return true;
+}
 
 template <class T, class C>
 void to_primes(T x, C& c) noexcept {
@@ -24,4 +42,18 @@ std::deque<T> to_primes(T x) noexcept {
     to_primes(x, c);
 
     return c;
+}
+
+template <class T>
+using primes_map_t = std::map<T, size_t>;
+
+template <class T>
+primes_map_t<T> to_primes_map(T t) noexcept {
+    primes_map_t<T> res;
+
+    for (auto p: to_primes(t)) {
+        ++res[p];
+    }
+
+    return res;
 }

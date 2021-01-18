@@ -1,33 +1,7 @@
 #include <euler/lib/primes.h>
+#include <euler/lib/num.h>
 
-#include <map>
 #include <iostream>
-
-template <class T>
-using primes_map_t = std::map<T, size_t>;
-
-template <class T>
-primes_map_t<T> to_primes_map(T t) noexcept {
-    primes_map_t<T> res;
-
-    for (auto p: to_primes(t)) {
-        ++res[p];
-    }
-
-    return res;
-}
-
-template <class T>
-T pov_int(T x, size_t n) noexcept {
-    T res = x;
-
-    while (n > 1) {
-        res *= x;
-        --n;
-    }
-
-    return res;
-}
 
 int main() {
     primes_map_t<unsigned> res;

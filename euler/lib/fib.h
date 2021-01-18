@@ -1,3 +1,5 @@
+#pragma once
+
 template <class T>
 struct fibo_iter_t {
     fibo_iter_t(T a, T b) noexcept

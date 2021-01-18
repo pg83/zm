@@ -1,19 +1,6 @@
+#include <euler/lib/primes.h>
+
 #include <iostream>
-
-template <class T>
-bool is_prime_stupid(T t) {
-    T x = 2;
-
-    while (x * x <= t) {
-        if (t % x == 0) {
-            return false;
-        }
-
-        ++x;
-    }
-
-    return true;
-}
 
 int main() {
     unsigned x = 2;
