@@ -6,6 +6,7 @@
 class bigint_t {
 public:
     bigint_t();
+    bigint_t(long num);
     bigint_t(const char* num);
     bigint_t(const std::string& num);
     ~bigint_t() noexcept;
@@ -17,9 +18,16 @@ public:
     }
 
     friend bigint_t operator+(const bigint_t& l, const bigint_t& r);
+    friend bigint_t operator*(const bigint_t& l, const bigint_t& r);
 
     bigint_t& operator+=(const bigint_t& v) {
         (*this + v).swap(*this);
+
+        return *this;
+    }
+
+    bigint_t& operator*=(const bigint_t& v) {
+        (*this * v).swap(*this);
 
         return *this;
     }

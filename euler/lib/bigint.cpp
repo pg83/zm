@@ -39,6 +39,10 @@ struct bigint_t::impl_t: public bignum_holder_t {
     impl_t() {
     }
 
+    impl_t(long num) {
+        mp_set_l(&bi, num);
+    }
+
     impl_t(const char* num) {
         check_err(mp_read_radix(&bi, num, 10));
     }
@@ -49,12 +53,17 @@ struct bigint_t::impl_t: public bignum_holder_t {
 
         check_err(mp_to_radix(&bi, buf, sizeof(buf), &written, 10));
 
-        return std::string(buf, written);
+        return std::string(buf, written - 1);
     }
 };
 
 bigint_t::bigint_t()
     : i_(new impl_t())
+{
+}
+
+bigint_t::bigint_t(long num)
+    : i_(new impl_t(num))
 {
 }
 
@@ -79,6 +88,14 @@ bigint_t operator+(const bigint_t& l, const bigint_t& r) {
     bigint_t res;
 
     check_err(mp_add(&l.i_->bi, &r.i_->bi, &res.i_->bi));
+
+    return res;
+}
+
+bigint_t operator*(const bigint_t& l, const bigint_t& r) {
+    bigint_t res;
+
+    check_err(mp_mul(&l.i_->bi, &r.i_->bi, &res.i_->bi));
 
     return res;
 }
