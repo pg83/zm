@@ -37,6 +37,7 @@ if __name__ == '__main__':
     argp.add_argument('-G', '--dump-graph', help='dump graph', default=False, action='store_const', const=True)
     argp.add_argument('-j', '--threads', help='thread count', default=-1)
     argp.add_argument('-B', '--build-dir', help='build dir', default='')
+    argp.add_argument('-r', '--release', help='release build', default=False, action='store_const', const=True)
     argp.add_argument('--flame-graph', help='dump flame graph', default=False, action='store_const', const=True)
     argp.add_argument('--host-platform', help='host platform', default='')
     argp.add_argument('--target-platform', help='target platform', default='')
@@ -482,12 +483,12 @@ def run_cmd(cmd, cwd, tmp_dir):
 
 def join_path(a, b):
     if not a:
-        return b
+        return str(b)
 
     if not b:
-        return a
+        return str(a)
 
-    return a + '/' + b
+    return str(a) + '/' + str(b)
 
 
 def iter_uniq_list_base(l, key):
@@ -1086,6 +1087,11 @@ class SystemCompiler(object):
             yield '--target=' + self._t.descr
 
             yield '-fcolor-diagnostics'
+
+            if args.release:
+                yield '-O2'
+            else:
+                yield '-O0'
 
             yield '-msse2'
             yield '-msse3'
