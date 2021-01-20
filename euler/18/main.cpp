@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <deque>
 #include <iostream>
 
 namespace {
@@ -14,6 +15,7 @@ namespace {
     struct graph_t {
         std::vector<value_t> values;
         std::map<idd_t, links_t> links;
+        mutable std::deque<path_t> paths;
 
         void dump() const {
             for (auto i : links) {
@@ -55,16 +57,24 @@ namespace {
             return res;
         }
 
-        path_t calc_max_path(idd_t fr) const {
-            auto calc = cacher1_t<idd_t, path_t>([this] (idd_t fr, auto& calc) -> path_t {
+        path_t* new_path() const {
+            paths.emplace_back();
+
+            return &paths.back();
+        }
+
+        const path_t& calc_max_path(idd_t fr) const {
+            static const path_t empty;
+
+            auto calc = cacher1_t<idd_t, const path_t*>([this] (idd_t fr, auto& calc) -> const path_t* {
                 auto& links = find_links(fr);
 
                 value_t maxw = 0;
-                path_t path_maxw;
+                const path_t* path_maxw = &empty;
 
                 for (auto id : links) {
                     auto path = calc(id);
-                    auto pathw = path_weight(path);
+                    auto pathw = path_weight(*path);
 
                     if (pathw > maxw) {
                         maxw = pathw;
@@ -72,15 +82,15 @@ namespace {
                     }
                 }
 
-                path_t ret;
+                path_t* ret = new_path();
 
-                ret.push_back(fr);
-                ret.insert(ret.end(), path_maxw.begin(), path_maxw.end());
+                ret->push_back(fr);
+                ret->insert(ret->end(), path_maxw->begin(), path_maxw->end());
 
                 return ret;
             });
 
-            return calc(fr);
+            return *calc(fr);
         }
     };
 }
