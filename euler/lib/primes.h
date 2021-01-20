@@ -5,6 +5,10 @@
 
 template <class T>
 bool is_prime_stupid(T t) {
+    if (t < 2) {
+        return false;
+    }
+
     T x = 2;
 
     while (x * x <= t) {
