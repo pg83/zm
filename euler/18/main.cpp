@@ -1,4 +1,5 @@
 #include <euler/lib/cache.h>
+#include <euler/lib/strutils.h>
 
 #include <libs/io/file.h>
 
@@ -87,26 +88,6 @@ namespace {
             return calc(fr);
         }
     };
-
-    std::vector<std::string> split_string(const std::string& s, char delim) {
-        std::vector<std::string> res;
-        std::string tmp;
-
-        for (auto ch : s) {
-            if (ch == delim) {
-                res.push_back(tmp);
-                tmp.clear();
-            } else {
-                tmp += ch;
-            }
-        }
-
-        if (!tmp.empty()) {
-            res.push_back(tmp);
-        }
-
-        return res;
-    }
 }
 
 int main() {
