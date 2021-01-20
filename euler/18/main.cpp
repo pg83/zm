@@ -2,7 +2,7 @@
 #include <euler/lib/strutils.h>
 
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <iostream>
 
 namespace {
@@ -13,7 +13,7 @@ namespace {
 
     struct graph_t {
         std::vector<value_t> values;
-        std::map<idd_t, links_t> links;
+        std::unordered_map<idd_t, links_t> links;
 
         void dump() const {
             for (auto i : links) {
@@ -62,7 +62,7 @@ namespace {
                 auto& links = find_links(fr);
 
                 value_t maxw = 0;
-                const path_t* path_maxw = &empty;
+                auto path_maxw = &empty;
 
                 for (auto id : links) {
                     auto path = &calc(id);
