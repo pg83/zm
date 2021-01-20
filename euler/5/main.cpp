@@ -20,7 +20,7 @@ int main() {
 
     for (auto it = res.begin(); it != res.end(); ++it) {
         std::cout << it->first << " " << it->second << std::endl;
-        mul *= pov_int(it->first, it->second);
+        mul *= pow_int(it->first, it->second);
     }
 
     std::cout << mul << std::endl;
