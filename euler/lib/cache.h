@@ -1,13 +1,13 @@
 #pragma once
 
-#include <map>
+#include <unordered_map>
 #include <functional>
 
 template <class X, class R>
 struct cacher1_t {
     template <class F>
     cacher1_t(F&& ff) {
-        f = [ff, this] (X x) -> R {
+        f = [ff, this] (X x) -> const R& {
             auto& cc = c;
 
             if (cc.find(x) == cc.end()) {
@@ -18,19 +18,19 @@ struct cacher1_t {
         };
     }
 
-    R operator()(X x) {
+    const R& operator()(X x) {
         return f(x);
     }
 
-    std::map<X, R> c;
-    std::function<R (X)> f;
+    std::unordered_map<X, R> c;
+    std::function<const R& (X)> f;
 };
 
 template <class X, class Y, class R>
 struct cacher2_t {
     template <class F>
     cacher2_t(F&& ff) {
-        f = [ff, this] (X x, Y y) -> R {
+        f = [ff, this] (X x, Y y) -> const R& {
             auto& cc = c[y];
 
             if (cc.find(x) == cc.end()) {
@@ -41,10 +41,10 @@ struct cacher2_t {
         };
     }
 
-    R operator()(X x, Y y) {
+    const R& operator()(X x, Y y) {
         return f(x, y);
     }
 
-    std::map<Y, std::map<X, R>> c;
-    std::function<R (X, Y)> f;
+    std::unordered_map<Y, std::unordered_map<X, R>> c;
+    std::function<const R& (X, Y)> f;
 };
