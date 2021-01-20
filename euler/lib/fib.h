@@ -37,14 +37,17 @@ struct fibo_iter_t {
     T b_ = 1;
 };
 
+struct fibo_iter_end_t {
+};
+
 template <class T>
-bool operator==(const fibo_iter_t<T>& l, const fibo_iter_t<T>& r) noexcept {
-    return l.a_ == r.a_;
+bool operator==(const fibo_iter_t<T>&, const fibo_iter_end_t&) noexcept {
+    return false;
 }
 
 template <class T>
-bool operator!=(const fibo_iter_t<T>& l, const fibo_iter_t<T>& r) noexcept {
-    return !(l == r);
+bool operator!=(const fibo_iter_t<T>&, const fibo_iter_end_t&) noexcept {
+    return true;
 }
 
 template <class T>
@@ -53,7 +56,7 @@ struct fibo_seq_t {
         return {T(1), T(1)};
     }
 
-    fibo_iter_t<T> end() const noexcept {
-        return {T(0), T(0)};
+    fibo_iter_end_t end() const noexcept {
+        return {};
     }
 };
