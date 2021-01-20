@@ -5,11 +5,11 @@
 #include <iostream>
 
 int main() {
-    std::set<std::string> res;
+    std::set<bigint_t> res;
 
     for (bigint_t a = 2; a <= 100; ++a) {
         for (int b = 2; b <= 100; ++b) {
-            res.insert(pow_int(a, b).to_string());
+            res.insert(pow_int(a, b));
         }
     }
 
