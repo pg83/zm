@@ -1,5 +1,7 @@
 #include "strutils.h"
 
+#include <libs/io/file.h>
+
 std::vector<std::string> split_string(const std::string& s, char delim) {
 	std::vector<std::string> res;
 	std::string tmp;
@@ -15,6 +17,18 @@ std::vector<std::string> split_string(const std::string& s, char delim) {
 
 	if (!tmp.empty()) {
         res.push_back(tmp);
+    }
+
+    return res;
+}
+
+std::vector<std::string> read_lines(const std::string& path) {
+    std::vector<std::string> res;
+    io::file_input_t fi(path);
+    std::string line;
+
+    while (fi.read_line(line)) {
+        res.push_back(line);
     }
 
     return res;

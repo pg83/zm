@@ -1,8 +1,6 @@
 #include <euler/lib/cache.h>
 #include <euler/lib/strutils.h>
 
-#include <libs/io/file.h>
-
 #include <vector>
 #include <map>
 #include <iostream>
@@ -77,10 +75,7 @@ namespace {
                 path_t ret;
 
                 ret.push_back(fr);
-
-                for (auto id : path_maxw) {
-                    ret.push_back(id);
-                }
+                ret.insert(ret.end(), path_maxw.begin(), path_maxw.end());
 
                 return ret;
             });
@@ -91,15 +86,13 @@ namespace {
 }
 
 int main() {
-    io::file_input_t fi("./18_data.txt");
-    std::string line;
     size_t cnt = 0;
     idd_t lid = 0;
     graph_t gr;
 
-    while (fi.read_line(line)) {
-        for (const auto& f : split_string(line, ' ')) {
-            lid = gr.add_value(std::stoi(f));
+    for (const auto& line : read_lines("./18_data.txt")) {
+        for (const auto& f : parse_string<value_t>(line, ' ')) {
+            lid = gr.add_value(f);
         }
 
         std::cout << line << std::endl;

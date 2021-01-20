@@ -10,3 +10,4 @@ srcs:
 
 depends:
 - tp/libs/tommath
+- libs/io
