@@ -99,3 +99,15 @@ bigint_t operator*(const bigint_t& l, const bigint_t& r) {
 
     return res;
 }
+
+bool operator<(const bigint_t& l, const bigint_t& r) {
+    return mp_cmp(&l.i_->bi, &r.i_->bi) == MP_LT;
+}
+
+bool operator>(const bigint_t& l, const bigint_t& r) {
+    return mp_cmp(&l.i_->bi, &r.i_->bi) == MP_GT;
+}
+
+bool operator==(const bigint_t& l, const bigint_t& r) {
+    return mp_cmp(&l.i_->bi, &r.i_->bi) == MP_EQ;
+}

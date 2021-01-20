@@ -17,8 +17,8 @@ public:
         i_.swap(v.i_);
     }
 
+    // sum
     friend bigint_t operator+(const bigint_t& l, const bigint_t& r);
-    friend bigint_t operator*(const bigint_t& l, const bigint_t& r);
 
     bigint_t& operator+=(const bigint_t& v) {
         (*this + v).swap(*this);
@@ -26,10 +26,38 @@ public:
         return *this;
     }
 
+    bigint_t& operator++() {
+        *this += 1;
+
+        return *this;
+    }
+
+    // mul
+    friend bigint_t operator*(const bigint_t& l, const bigint_t& r);
+
     bigint_t& operator*=(const bigint_t& v) {
         (*this * v).swap(*this);
 
         return *this;
+    }
+
+    // cmp
+    friend bool operator<(const bigint_t& l, const bigint_t& r);
+
+    friend bool operator<=(const bigint_t& l, const bigint_t& r) {
+        return !(l > r);
+    }
+
+    friend bool operator>(const bigint_t& l, const bigint_t& r);
+
+    friend bool operator>=(const bigint_t& l, const bigint_t& r) {
+        return !(l < r);
+    }
+
+    friend bool operator==(const bigint_t& l, const bigint_t& r);
+
+    friend bool operator!=(const bigint_t& l, const bigint_t& r) {
+        return !(l == r);
     }
 
 private:
