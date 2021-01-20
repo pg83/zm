@@ -20,9 +20,15 @@ namespace io {
             return do_read(data, len);
         }
 
+        bool read_char(char& ch) {
+            return read(&ch, 1) > 0;
+        }
+
         size_t read_exact(void* data, size_t len);
         std::string read_all();
         uint64_t read_all(output_i& out);
+        bool read_line(std::string& l);
+        size_t read_to(std::string& l, char to);
 
     protected:
         virtual size_t do_read(void* data, size_t len) = 0;

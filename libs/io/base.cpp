@@ -40,6 +40,40 @@ uint64_t input_i::read_all(output_i& out) {
     return transfer_data(*this, out);
 }
 
+bool input_i::read_line(std::string& l) {
+    const auto res = read_to(l, '\n');
+
+    if (res && !l.empty() && l.back() == '\r') {
+        l.pop_back();
+    }
+
+    return res;
+}
+
+size_t input_i::read_to(std::string& l, char to) {
+    char ch;
+
+    if (!read_char(ch)) {
+        return 0;
+    }
+
+    l.clear();
+
+    size_t result = 0;
+
+    do {
+        ++result;
+
+        if (ch == to) {
+            break;
+        }
+
+        l += ch;
+    } while (read_char(ch));
+
+    return result;
+}
+
 uint64_t io::transfer_data(input_i& in, output_i& out) {
     char buf[1024];
     uint64_t ret = 0;

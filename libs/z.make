@@ -3,3 +3,4 @@ recurse:
 - resource/compiler
 - xxhash
 - io
+- io/ut

@@ -5,3 +5,4 @@ srcs:
 - base.cpp
 - file.cpp
 - str.cpp
+- mem.cpp
