@@ -2,7 +2,6 @@
 #include <vector>
 #include <numeric>
 #include <iostream>
-#include <initializer_list>
 
 static bool is_pand(int a, int b, int c) noexcept {
     std::vector<int> digits;
