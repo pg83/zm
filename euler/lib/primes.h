@@ -69,3 +69,22 @@ size_t num_divisors(T t) noexcept {
 
     return res;
 }
+
+template <class T>
+T proper_divisors_sum(T x) {
+    T res = 0;
+
+    for (T d = 2, max = sqrt(x); d <= max; ++d) {
+        if (x % d == 0) {
+            T dd = x / d;
+
+            if (d == dd) {
+                res += d;
+            } else {
+                res += d + dd;
+            }
+        }
+    }
+
+    return res + 1;
+}
