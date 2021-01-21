@@ -1,10 +1,10 @@
 #include <euler/lib/primes.h>
 
-#include <set>
+#include <unordered_set>
 #include <iostream>
 
 int main() {
-    std::set<int> res;
+    std::unordered_set<int> res;
     auto n = 1000000;
 
     for (auto i = 0; i < n; ++i) {
