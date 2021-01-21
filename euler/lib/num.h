@@ -19,3 +19,15 @@ T pow_int(T a, size_t pow) noexcept {
 
     return res;
 }
+
+template <class T>
+T nod(T a, T b) {
+    while (b) {
+        auto c = a % b;
+
+        a = b;
+        b = c;
+    }
+
+    return a;
+}
