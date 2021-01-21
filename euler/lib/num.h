@@ -31,3 +31,18 @@ T nod(T a, T b) {
 
     return a;
 }
+
+template <class T>
+T factorial(T n) {
+    if (n < 2) {
+        return 1;
+    }
+
+    T res = T(1);
+
+    for (T t = 2; t <= n; ++t) {
+        res *= t;
+    }
+
+    return res;
+}

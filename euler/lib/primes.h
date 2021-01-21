@@ -4,6 +4,9 @@
 #include <map>
 
 template <class T>
+using primes_t = std::deque<T>;
+
+template <class T>
 bool is_prime_stupid(T t) {
     if (t < 2) {
         return false;
@@ -41,8 +44,9 @@ void to_primes(T x, C& c) noexcept {
 }
 
 template <class T>
-std::deque<T> to_primes(T x) noexcept {
-    std::deque<T> c;
+primes_t<T> to_primes(T x) noexcept {
+    primes_t<T> c;
+
     to_primes(x, c);
 
     return c;
