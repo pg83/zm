@@ -1,23 +1,11 @@
+#include <euler/lib/algo.h>
+
 #include <string>
 #include <iostream>
 
 template <class T>
 bool is_palindromic(T t) {
-    auto s = std::to_string(t);
-
-    size_t i = 0;
-    size_t j = s.length() - 1;
-
-    while (i < j) {
-        if (s[i] != s[j]) {
-            return false;
-        }
-
-        ++i;
-        --j;
-    }
-
-    return true;
+    return is_palindrom(std::to_string(t));
 }
 
 int main() {

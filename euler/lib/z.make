@@ -7,6 +7,7 @@ srcs:
 - bigint.cpp
 - cache.cpp
 - strutils.cpp
+- algo.cpp
 
 depends:
 - tp/libs/tommath

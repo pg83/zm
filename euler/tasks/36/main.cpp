@@ -1,19 +1,8 @@
-#include <algorithm>
+#include <euler/lib/algo.h>
+
 #include <numeric>
 #include <iostream>
 #include <vector>
-
-template <class C>
-C reversed(C c) {
-    std::reverse(c.begin(), c.end());
-
-    return c;
-}
-
-template <class C>
-bool is_palindrom(const C& c) {
-    return c == reversed(c);
-}
 
 std::vector<int> to_bin(int n) {
     std::vector<int> res;
