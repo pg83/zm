@@ -96,3 +96,19 @@ T proper_divisors_sum(T x) {
 
     return res + 1;
 }
+
+template <class T>
+int uniq_prime_count(T t) {
+    T r = T(1);
+    int x = 0;
+
+    for (auto p : to_primes(t)) {
+        if (r % p == 0) {
+        } else {
+            r *= p;
+            ++x;
+        }
+    }
+
+    return x;
+}

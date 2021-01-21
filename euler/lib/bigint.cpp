@@ -48,7 +48,7 @@ struct bigint_t::impl_t: public bignum_holder_t {
     }
 
     std::string to_string() const {
-        char buf[1024];
+        char buf[1024 * 16];
         size_t written = 0;
 
         check_err(mp_to_radix(&bi, buf, sizeof(buf), &written, 10));
