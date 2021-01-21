@@ -1,4 +1,4 @@
-#include <euler/18/lib/main.h>
+#include <euler/tasks/18/lib/main.h>
 
 int main() {
     run_main("./18_data.txt");

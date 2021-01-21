@@ -4,4 +4,4 @@ srcs:
 - main.cpp
 
 depends:
-- euler/18/lib
+- euler/tasks/18/lib
