@@ -1,21 +1,11 @@
 #include <euler/lib/primes.h>
+#include <euler/lib/num.h>
 
 #include <iostream>
 #include <cstddef>
 #include <numeric>
 #include <vector>
 #include <algorithm>
-
-template <class C>
-uint64_t to_number(const C& c) noexcept {
-    uint64_t res = 0;
-
-    for (auto d : c) {
-        res = res * 10 + d;
-    }
-
-    return res;
-}
 
 int main() {
     std::vector<uint64_t> res;
@@ -29,7 +19,7 @@ int main() {
         auto tmp = d;
 
         do {
-            auto n = to_number(tmp);
+            auto n = to_number<uint64_t>(tmp);
 
             if (is_prime_stupid(n)) {
                 res.push_back(n);

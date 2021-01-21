@@ -46,3 +46,14 @@ T factorial(T n) {
 
     return res;
 }
+
+template <class T, class C>
+T to_number(const C& c) noexcept {
+    T res = 0;
+
+    for (auto d : c) {
+        res = res * 10 + d;
+    }
+
+    return res;
+}
