@@ -1,5 +1,5 @@
 #include <euler/18/lib/main.h>
 
 int main() {
-    run_main("./18_data.txt");
+    run_main("./triangle.txt");
 }
