@@ -3,6 +3,7 @@
 
 #include <set>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -22,22 +23,31 @@ static std::string keyf(int n, int d) {
 }
 
 static int unkeyf(const std::string& k, int d) {
-    return from_string<int>(replace(k, '*', '0' + d));
+    auto res = replace(k, '*', '0' + d);
+
+    if (res[0] == '0') {
+        return 0;
+    }
+
+    return from_string<int>(res);
 }
 
 int main() {
+    std::unordered_set<std::string> keys;
     std::unordered_map<std::string, std::set<int>> res;
 
-    for (int i = 1; i <= 1000000; ++i) {
+    for (int i = 1; i <= 200000; ++i) {
         for (int d = 0; d <= 9; ++d) {
-            auto k = keyf(i, d);
+            keys.insert(keyf(i, d));
+        }
+    }
 
-            for (int s = 0; s <= 9; ++s) {
-                auto kk = unkeyf(k, s);
+    for (const auto& k : keys) {
+        for (int d = 0; d <= 9; ++d) {
+            auto kk = unkeyf(k, d);
 
-                if (is_prime_stupid(kk)) {
-                    res[k].insert(kk);
-                }
+            if (is_prime_stupid(kk)) {
+                res[k].insert(kk);
             }
         }
     }
@@ -46,7 +56,9 @@ int main() {
         auto& v = it.second;
 
         if (v.size() == 8) {
-            std::cout << it.first << " " << *v.begin() << std::endl;
+            std::cout << *v.begin() << std::endl;
+
+            break;
         }
     }
 }
