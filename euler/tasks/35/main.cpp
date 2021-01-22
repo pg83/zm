@@ -24,7 +24,7 @@ static bool is_circular(int n) noexcept {
     auto d = num_digits(n);
     auto pd = pow_int(10, d - 1);
 
-    for (int i = 0; i < d; ++i) {
+    for (uint i = 0; i < d; ++i) {
         n = (n % 10) * pd + n / 10;
 
         if (!is_prime_stupid(n)) {

@@ -78,7 +78,7 @@ string do_strerror_r(int ev) {
 
 // For the GNU variant, a char* return value:
 __attribute__((unused)) const char *
-handle_strerror_r_return(char *strerror_return, char *buffer) {
+handle_strerror_r_return(char *strerror_return, char */*buffer*/) {
   // GNU always returns a string pointer in its return value. The
   // string might point to either the input buffer, or a static
   // buffer, but we don't care which.

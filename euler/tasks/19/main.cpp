@@ -44,7 +44,7 @@ void for_each_day(int fr, int to, F&& f) {
             }
 
             for (int d = 0; d < dd; ++d) {
-                f(y, m + 1, d + 1);
+                f(y, d + 1);
             }
         }
     }
@@ -54,7 +54,7 @@ int main() {
     int wd = 0;
     int res = 0;
 
-    for_each_day(1900, 2001, [&] (int y, int m, int d) {
+    for_each_day(1900, 2001, [&] (int y, int d) {
         if (y > 1900) {
             if (wd == 6) {
                 if (d == 1) {

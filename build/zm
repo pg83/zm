@@ -1088,6 +1088,9 @@ class SystemCompiler(object):
 
             yield '-fcolor-diagnostics'
 
+            yield '-W'
+            yield '-Wall'
+
             if args.release:
                 yield '-O2'
             else:

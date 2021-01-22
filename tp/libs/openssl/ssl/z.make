@@ -8,6 +8,7 @@ inc_dirs:
 - tp/libs/openssl/include
 
 c_flags:
+- -w
 - -DL_ENDIAN
 - -DOPENSSLDIR="/usr/local/ssl"
 - -DENGINESDIR="/usr/local/lib/engines-1.1"

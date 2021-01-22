@@ -1,5 +1,8 @@
 module: library
 
+c_flags:
+- -w
+
 inc_dirs:
 - tp/libs/bz2
 

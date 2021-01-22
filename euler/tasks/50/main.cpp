@@ -5,17 +5,17 @@
 
 int main() {
     long s = 0;
-    std::vector<long> sums;
+    std::vector<ulong> sums;
 
-    for (long i = 0; i < 100000; ++i) {
+    for (ulong i = 0; i < 100000; ++i) {
         if (is_prime_stupid(i)) {
             s += i;
             sums.push_back(s);
         }
     }
 
-    long maxd = 0;
-    long maxp = 0;
+    ulong maxd = 0;
+    ulong maxp = 0;
 
     for (size_t i = 0; i < sums.size(); ++i) {
         for (size_t j = 0; j < sums.size(); ++j) {

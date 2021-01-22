@@ -8,6 +8,9 @@ srcs:
 - cache.cpp
 - strutils.cpp
 - algo.cpp
+- from_string.cpp
+- comb.cpp
+- types.cpp
 
 depends:
 - tp/libs/tommath

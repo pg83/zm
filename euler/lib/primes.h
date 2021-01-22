@@ -1,5 +1,7 @@
 #pragma once
 
+#include "types.h"
+
 #include <deque>
 #include <map>
 
@@ -98,9 +100,9 @@ T proper_divisors_sum(T x) {
 }
 
 template <class T>
-int uniq_prime_count(T t) {
+uint uniq_prime_count(T t) {
     T r = T(1);
-    int x = 0;
+    uint x = 0;
 
     for (auto p : to_primes(t)) {
         if (r % p == 0) {

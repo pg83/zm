@@ -40,7 +40,7 @@ static void gen_one(const char* fpath, const char* key, T& out) {
 }
 
 int main(int argc, char** argv) {
-    for (size_t i = 1; i < argc; i += 2) {
+    for (int i = 1; i < argc; i += 2) {
         gen_one(argv[i], argv[i + 1], cout);
     }
 }

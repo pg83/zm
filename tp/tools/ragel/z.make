@@ -1,5 +1,8 @@
 module: program
 
+c_flags:
+- -w
+
 depends:
 - tp/libs/aapl
 

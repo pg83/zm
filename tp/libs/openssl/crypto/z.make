@@ -13,6 +13,7 @@ inc_dirs:
 - tp/libs/openssl/include
 
 c_flags:
+- -w
 - -DZLIB
 - -DL_ENDIAN
 - -DOPENSSLDIR="/usr/local/ssl"
