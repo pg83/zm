@@ -32,12 +32,10 @@ int main() {
         }
 
         if (auto uu = (size_t)sqrt(u); uu * uu == u) {
-            if (p) {
-                if (i / p >= 10) {
-                    std::cout << uu << std::endl;
+            if (p && i >= p * 10) {
+                std::cout << uu << std::endl;
 
-                    return 0;
-                }
+                return 0;
             }
         }
     }
