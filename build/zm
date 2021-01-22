@@ -1124,7 +1124,7 @@ class SystemCompiler(object):
         return self.compile_command(['clang'], src, out, inc, flags)
 
     def cxx_compile_command(self, src, out, inc, flags):
-        return self.compile_command(['clang++'], src, out, inc, ['-std=c++17', '-nostdinc++'] + flags)
+        return self.compile_command(['clang++'], src, out, inc, ['-std=c++20', '-nostdinc++'] + flags)
 
     def link_command(self, srcs, out, flags):
         def iter_flags():
