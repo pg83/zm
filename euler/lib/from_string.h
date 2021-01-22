@@ -4,7 +4,6 @@
 #include "bigint.h"
 
 #include <string>
-#include <vector>
 
 template <class R>
 R from_string(const std::string& s);
@@ -20,7 +19,7 @@ inline int from_string<int>(const std::string& s) {
 }
 
 template<>
-inline unsigned int from_string<uint>(const std::string& s) {
+inline uint from_string<uint>(const std::string& s) {
     return (uint)std::stoul(s); //may overflow
 }
 
