@@ -10,6 +10,8 @@
 #include "primes.h"
 #include "strutils.h"
 #include "types.h"
+#include "qir.h"
+#include "dbg_io.h"
 
 #include <map>
 #include <set>

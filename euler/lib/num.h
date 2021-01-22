@@ -33,6 +33,11 @@ T gcd(T a, T b) {
 }
 
 template <class T>
+T gcd(T a, T b, T c) {
+    return gcd(a, gcd(b, c));
+}
+
+template <class T>
 T factorial(T n) {
     if (n < 2) {
         return 1;

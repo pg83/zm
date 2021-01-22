@@ -12,6 +12,8 @@ srcs:
 - comb.cpp
 - types.cpp
 - euler.cpp
+- qir.cpp
+- dbg_io.cpp
 
 depends:
 - tp/libs/tommath
