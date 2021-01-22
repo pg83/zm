@@ -24,10 +24,10 @@ struct cnk_t: public cacher2_t<uint, uint, R> {
 
 using pq_t = std::pair<bigint_t, bigint_t>;
 
-struct eval_pq_t: public cacher1_t<long, pq_t> {
+struct eval_pq_t: public cacher1_t<int, pq_t> {
     template <class F>
     eval_pq_t(F&& cf)
-        : cacher1_t<long, pq_t>([cf](long n, auto& eval) -> pq_t {
+        : cacher1_t<int, pq_t>([cf](int n, auto& eval) -> pq_t {
             if (n == -1) {
                 return {1, 0};
             }
