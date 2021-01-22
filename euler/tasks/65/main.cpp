@@ -11,7 +11,7 @@ int main() {
         e.push_back(1);
     }
 
-    auto eval = eval_pq_t<int>([&](int n) -> int {
+    auto eval = eval_pq_t([&](size_t n) -> int {
         return e[n];
     });
 
