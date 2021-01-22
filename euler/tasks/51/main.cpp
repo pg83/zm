@@ -18,32 +18,32 @@ static std::string replace(std::string s, char f, char t) {
     return s;
 }
 
-static std::string keyf(int n, int d) {
+static std::string keyf(uint n, int d) {
     return replace(std::to_string(n), '0' + d, '*');
 }
 
-static int unkeyf(const std::string& k, int d) {
+static uint unkeyf(const std::string& k, uint d) {
     auto res = replace(k, '*', '0' + d);
 
     if (res[0] == '0') {
         return 0;
     }
 
-    return from_string<int>(res);
+    return from_string<uint>(res);
 }
 
 int main() {
     std::unordered_set<std::string> keys;
-    std::unordered_map<std::string, std::set<int>> res;
+    std::unordered_map<std::string, std::set<uint>> res;
 
-    for (int i = 1; i <= 200000; ++i) {
-        for (int d = 0; d <= 9; ++d) {
+    for (uint i = 1; i <= 200000; ++i) {
+        for (uint d = 0; d <= 9; ++d) {
             keys.insert(keyf(i, d));
         }
     }
 
     for (const auto& k : keys) {
-        for (int d = 0; d <= 9; ++d) {
+        for (uint d = 0; d <= 9; ++d) {
             auto kk = unkeyf(k, d);
 
             if (is_prime_stupid(kk)) {
