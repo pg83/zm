@@ -57,7 +57,8 @@ public:
     //misc
     bigint_t reverse() const;
     std::string to_string() const;
-    size_t dig_sum() const;
+    size_t digit_sum() const;
+    size_t digit_count() const;
 
     void swap(bigint_t& v) noexcept {
         i_.swap(v.i_);

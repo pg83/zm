@@ -9,5 +9,5 @@ int main() {
         res *= i;
     }
 
-    std::cout << res.dig_sum() << std::endl;
+    std::cout << res.digit_sum() << std::endl;
 }

@@ -118,6 +118,10 @@ bigint_t bigint_t::reverse() const {
     return reversed(to_string());
 }
 
-size_t bigint_t::dig_sum() const {
-    return ::dig_sum(to_string());
+size_t bigint_t::digit_sum() const {
+    return ::digit_sum(to_string());
+}
+
+size_t bigint_t::digit_count() const {
+    return to_string().size();
 }

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-size_t dig_sum(const std::string& s) noexcept;
+size_t digit_sum(const std::string& s) noexcept;
 
 std::vector<std::string> split_string(const std::string& s, char delim);
 std::vector<std::string> read_lines(const std::string& path);

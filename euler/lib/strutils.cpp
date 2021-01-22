@@ -2,7 +2,7 @@
 
 #include <libs/io/file.h>
 
-size_t dig_sum(const std::string& s) noexcept {
+size_t digit_sum(const std::string& s) noexcept {
     size_t res = 0;
 
     for (auto ch : s) {
