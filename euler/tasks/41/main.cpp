@@ -8,7 +8,7 @@
 #include <algorithm>
 
 int main() {
-    std::vector<uint64_t> res;
+    std::vector<ui64> res;
     std::vector<int> d;
 
     d.push_back(1);
@@ -19,7 +19,7 @@ int main() {
         auto tmp = d;
 
         do {
-            auto n = to_number<uint64_t>(tmp);
+            auto n = to_number<ui64>(tmp);
 
             if (is_prime_stupid(n)) {
                 res.push_back(n);

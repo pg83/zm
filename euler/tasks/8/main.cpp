@@ -1,3 +1,5 @@
+#include <euler/lib/types.h>
+
 #include <string>
 #include <string_view>
 #include <iostream>
@@ -24,8 +26,8 @@ std::string data =
 05886116467109405077541002256983155200055935729725\
 71636269561882670428252483600823257530420752963450";
 
-uint64_t calc(const char* b, const char* e) {
-    uint64_t res = 1;
+ui64 calc(const char* b, const char* e) {
+    ui64 res = 1;
 
     while (b < e) {
         res *= *b - '0';
@@ -36,7 +38,7 @@ uint64_t calc(const char* b, const char* e) {
 }
 
 int main() {
-    uint64_t res = 0;
+    ui64 res = 0;
     size_t nn = 13;
 
     for (size_t i = 0; i < data.size() - nn; ++i) {
@@ -48,4 +50,6 @@ int main() {
             std::cout << std::string_view(b, nn) << " " << res << std::endl;
         }
     }
+
+    std::cout << res << std::endl;
 }

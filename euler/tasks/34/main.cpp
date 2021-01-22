@@ -27,7 +27,7 @@ static int sum_fac(int n) noexcept {
 }
 
 int main() {
-    uint64_t res = 0;
+    ui64 res = 0;
 
     for (int i = 3; i < 100000; ++i) {
         if (sum_fac(i) == i) {
