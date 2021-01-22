@@ -1,19 +1,19 @@
 #include <euler/lib/euler.h>
 
-int main() {
-    std::vector<int> e;
+static int e_frac(size_t nn) noexcept {
+    auto n = nn + 1;
 
-    e.push_back(2);
-
-    for (int i = 1; i <= 100; ++i) {
-        e.push_back(1);
-        e.push_back(i * 2);
-        e.push_back(1);
+    if (n == 1) {
+        return 2;
     }
 
-    auto eval = eval_pq_t([&](size_t n) -> int {
-        return e[n];
-    });
+    if (n % 3 == 0) {
+        return (2 * n) / 3;
+    }
 
-    std::cout << eval(99).first.digit_sum() << std::endl;
+    return 1;
+}
+
+int main() {
+    std::cout << eval_pq_t(e_frac)(99).first.digit_sum() << std::endl;
 }
