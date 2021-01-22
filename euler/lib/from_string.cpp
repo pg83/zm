@@ -1,5 +1,5 @@
 #include "from_string.h"
-#include "bigint.h"
+#include "euler.h"
 
 template<>
 bigint_t from_string<bigint_t>(const std::string& s) {

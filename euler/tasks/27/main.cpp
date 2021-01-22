@@ -1,6 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static int count_primes(int a, int b) {
     int n = 0;

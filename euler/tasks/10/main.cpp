@@ -1,6 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     size_t sum = 0;

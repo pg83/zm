@@ -1,7 +1,4 @@
-#include <euler/lib/cache.h>
-
-#include <numeric>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static const int coins[] = {200, 100, 50, 20, 10, 5, 2, 1};
 

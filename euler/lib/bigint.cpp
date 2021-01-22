@@ -1,6 +1,5 @@
 #include "bigint.h"
-#include "algo.h"
-#include "strutils.h"
+#include "euler.h"
 
 #include <tp/libs/tommath/tommath.h>
 

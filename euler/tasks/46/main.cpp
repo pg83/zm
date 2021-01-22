@@ -1,7 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <unordered_set>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     std::unordered_set<int> res;

@@ -1,12 +1,4 @@
-#include <euler/lib/primes.h>
-#include <euler/lib/strutils.h>
-
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
-#include <string>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static std::string replace(std::string s, char f, char t) {
     for (auto& ch : s) {

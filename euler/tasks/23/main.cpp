@@ -1,9 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <unordered_set>
-#include <vector>
-#include <numeric>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 template <class T>
 bool is_abundand(T t) {

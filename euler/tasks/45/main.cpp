@@ -1,5 +1,4 @@
-#include <map>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     std::map<long int, int> cnt;

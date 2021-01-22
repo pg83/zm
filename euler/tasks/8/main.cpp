@@ -1,8 +1,4 @@
-#include <euler/lib/types.h>
-
-#include <string>
-#include <string_view>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 std::string data =
 "73167176531330624919225119674426574742355349194934\

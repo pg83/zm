@@ -1,10 +1,4 @@
-#include <euler/lib/algo.h>
-#include <euler/lib/primes.h>
-
-#include <map>
-#include <vector>
-#include <string>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     std::map<std::string, std::vector<int>> eq;

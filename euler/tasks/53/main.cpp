@@ -1,7 +1,4 @@
-#include <euler/lib/bigint.h>
-#include <euler/lib/comb.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     auto cnk = cnk_t<bigint_t>();

@@ -1,6 +1,4 @@
-#include <euler/lib/cache.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     auto f = cacher2_t<int, int, unsigned long>([] (int n, int m, auto& f) -> unsigned long {

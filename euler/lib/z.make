@@ -11,6 +11,7 @@ srcs:
 - from_string.cpp
 - comb.cpp
 - types.cpp
+- euler.cpp
 
 depends:
 - tp/libs/tommath

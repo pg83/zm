@@ -1,4 +1,4 @@
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int count_triangles(int p) {
     int res = 0;

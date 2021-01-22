@@ -1,4 +1,4 @@
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     int s = 0;

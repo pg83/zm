@@ -1,6 +1,4 @@
-#include <euler/lib/num.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static int sum5(int n) noexcept {
     int res = 0;

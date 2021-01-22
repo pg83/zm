@@ -1,5 +1,4 @@
-#include <iostream>
-#include <cstddef>
+#include <euler/lib/euler.h>
 
 static size_t collatz_len(unsigned n) {
     if (n == 1) {

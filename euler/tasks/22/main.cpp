@@ -1,6 +1,4 @@
-#include <string>
-#include <algorithm>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static std::string names[] = {
     #include "names.h"

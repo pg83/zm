@@ -1,7 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <vector>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     long s = 0;

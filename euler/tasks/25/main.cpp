@@ -1,7 +1,4 @@
-#include <euler/lib/bigint.h>
-#include <euler/lib/fib.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     size_t cnt = 0;

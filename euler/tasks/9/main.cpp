@@ -1,4 +1,4 @@
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     for (size_t a = 1; a < 1000; ++a) {

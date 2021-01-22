@@ -1,7 +1,4 @@
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 template <class T, class C>
 std::string multiply(T n, const C& c) {

@@ -1,5 +1,4 @@
-#include <set>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     std::set<int> tr;

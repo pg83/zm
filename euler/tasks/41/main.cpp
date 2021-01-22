@@ -1,11 +1,4 @@
-#include <euler/lib/primes.h>
-#include <euler/lib/num.h>
-
-#include <iostream>
-#include <cstddef>
-#include <numeric>
-#include <vector>
-#include <algorithm>
+#include <euler/lib/euler.h>
 
 int main() {
     std::vector<ui64> res;

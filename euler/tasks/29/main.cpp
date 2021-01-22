@@ -1,8 +1,4 @@
-#include <euler/lib/num.h>
-#include <euler/lib/bigint.h>
-
-#include <set>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     std::set<bigint_t> res;

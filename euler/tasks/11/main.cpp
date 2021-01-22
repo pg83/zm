@@ -1,4 +1,4 @@
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static const unsigned data[] = {
     #include "data.h"

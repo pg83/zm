@@ -1,7 +1,4 @@
-#include <euler/lib/num.h>
-
-#include <set>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     auto xn = 1;

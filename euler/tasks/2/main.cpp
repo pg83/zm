@@ -1,7 +1,4 @@
-#include <euler/lib/fib.h>
-
-#include <iostream>
-#include <cstdint>
+#include <euler/lib/euler.h>
 
 int main() {
     unsigned sum = 0;

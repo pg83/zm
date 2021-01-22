@@ -1,7 +1,4 @@
-#include <euler/lib/primes.h>
-#include <euler/lib/num.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     primes_map_t<unsigned> res;

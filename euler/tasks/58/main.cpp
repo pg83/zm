@@ -1,6 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 template <class T>
 T ulam_diag_num(T n) {

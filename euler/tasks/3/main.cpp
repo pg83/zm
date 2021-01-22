@@ -1,7 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <iostream>
-#include <algorithm>
+#include <euler/lib/euler.h>
 
 int main() {
     auto primes = to_primes(600851475143ull);

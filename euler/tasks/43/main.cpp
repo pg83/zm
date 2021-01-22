@@ -1,10 +1,4 @@
-#include <euler/lib/num.h>
-
-#include <vector>
-#include <algorithm>
-#include <iostream>
-#include <cstddef>
-#include <numeric>
+#include <euler/lib/euler.h>
 
 static bool check(ui64 n) {
     for (auto div : {17, 13, 11, 7, 5, 3, 2}) {

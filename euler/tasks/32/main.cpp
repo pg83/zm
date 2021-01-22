@@ -1,7 +1,4 @@
-#include <set>
-#include <vector>
-#include <numeric>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static bool is_pand(int a, int b, int c) noexcept {
     std::vector<int> digits;

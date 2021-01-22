@@ -1,6 +1,4 @@
-#include <euler/lib/primes.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     for (int res = 1; ; ++res) {

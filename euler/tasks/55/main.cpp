@@ -1,6 +1,4 @@
-#include <euler/lib/bigint.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static bool do_check(bigint_t v, bigint_t vr, size_t c) {
     if (c > 50) {

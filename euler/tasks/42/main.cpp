@@ -1,6 +1,4 @@
-#include <string>
-#include <iostream>
-#include <set>
+#include <euler/lib/euler.h>
 
 static const std::string data[] = {
     #include "words.txt"

@@ -1,6 +1,4 @@
-#include <euler/lib/num.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static const int facs[] = {
     factorial(0),

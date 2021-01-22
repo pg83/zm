@@ -1,6 +1,4 @@
-#include <euler/lib/bigint.h>
-
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     bigint_t res = 1;

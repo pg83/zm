@@ -1,8 +1,4 @@
-#include <euler/lib/algo.h>
-#include <euler/lib/types.h>
-
-#include <string>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static std::string keyf(uint n) {
     return sorted(std::to_string(n));

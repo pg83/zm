@@ -1,5 +1,4 @@
-#include <map>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int reciprocal_cycle(int n, int m) {
     size_t cnt = 0;

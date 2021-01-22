@@ -1,5 +1,4 @@
-#include <iostream>
-#include <cstdint>
+#include <euler/lib/euler.h>
 
 int main() {
     unsigned int res = 0;

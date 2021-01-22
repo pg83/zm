@@ -1,4 +1,4 @@
-#include <iostream>
+#include <euler/lib/euler.h>
 
 bool is_leap(int year) {
     if (year % 4 != 0) {

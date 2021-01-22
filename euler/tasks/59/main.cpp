@@ -1,7 +1,4 @@
-#include <iostream>
-#include <vector>
-#include <algorithm>
-#include <numeric>
+#include <euler/lib/euler.h>
 
 static const int data[] = {
     #include "p059_cipher.txt"

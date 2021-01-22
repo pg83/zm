@@ -1,11 +1,6 @@
 #include "main.h"
 
-#include <euler/lib/cache.h>
-#include <euler/lib/strutils.h>
-
-#include <vector>
-#include <unordered_map>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 namespace {
     using idd_t = int;

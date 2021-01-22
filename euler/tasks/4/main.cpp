@@ -1,7 +1,4 @@
-#include <euler/lib/algo.h>
-
-#include <string>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 template <class T>
 bool is_palindromic(T t) {

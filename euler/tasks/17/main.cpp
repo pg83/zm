@@ -1,7 +1,4 @@
-#include <euler/lib/cache.h>
-
-#include <string>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 static const std::string d1[] = {
     "zero",

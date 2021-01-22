@@ -1,8 +1,4 @@
-#include <euler/lib/algo.h>
-
-#include <numeric>
-#include <iostream>
-#include <vector>
+#include <euler/lib/euler.h>
 
 std::vector<int> to_bin(int n) {
     std::vector<int> res;

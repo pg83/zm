@@ -1,8 +1,4 @@
-#include <euler/lib/num.h>
-#include <euler/lib/primes.h>
-
-#include <cstddef>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 template <class T>
 size_t num_digits(T n) noexcept {

@@ -1,5 +1,4 @@
-#include <string>
-#include <iostream>
+#include <euler/lib/euler.h>
 
 int main() {
     std::string tmp;
