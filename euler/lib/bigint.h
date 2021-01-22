@@ -11,12 +11,6 @@ public:
     bigint_t(const std::string& num);
     ~bigint_t() noexcept;
 
-    std::string to_string() const;
-
-    void swap(bigint_t& v) noexcept {
-        i_.swap(v.i_);
-    }
-
     // sum
     friend bigint_t operator+(const bigint_t& l, const bigint_t& r);
 
@@ -58,6 +52,14 @@ public:
 
     friend bool operator!=(const bigint_t& l, const bigint_t& r) {
         return !(l == r);
+    }
+
+    //misc
+    bigint_t reverse() const;
+    std::string to_string() const;
+
+    void swap(bigint_t& v) noexcept {
+        i_.swap(v.i_);
     }
 
 private:

@@ -1,12 +1,18 @@
 #pragma once
 
 #include "types.h"
+#include "bigint.h"
 
 #include <string>
 #include <vector>
 
 template <class R>
 R from_string(const std::string& s);
+
+template<>
+inline bigint_t from_string<bigint_t>(const std::string& s) {
+    return s;
+}
 
 template<>
 inline int from_string<int>(const std::string& s) {

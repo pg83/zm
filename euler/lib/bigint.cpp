@@ -1,4 +1,5 @@
 #include "bigint.h"
+#include "algo.h"
 
 #include <tp/libs/tommath/tommath.h>
 
@@ -110,4 +111,8 @@ bool operator>(const bigint_t& l, const bigint_t& r) {
 
 bool operator==(const bigint_t& l, const bigint_t& r) {
     return mp_cmp(&l.i_->bi, &r.i_->bi) == MP_EQ;
+}
+
+bigint_t bigint_t::reverse() const {
+    return reversed(to_string());
 }
