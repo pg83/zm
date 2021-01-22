@@ -1,44 +1,31 @@
 #pragma once
 
 #include "types.h"
-#include "bigint.h"
 
 #include <string>
+
+class bigint_t;
 
 template <class R>
 R from_string(const std::string& s);
 
 template<>
-inline bigint_t from_string<bigint_t>(const std::string& s) {
-    return s;
-}
+bigint_t from_string<bigint_t>(const std::string& s);
 
 template<>
-inline int from_string<int>(const std::string& s) {
-    return std::stoi(s);
-}
+int from_string<int>(const std::string& s);
 
 template<>
-inline uint from_string<uint>(const std::string& s) {
-    return (uint)std::stoul(s); //may overflow
-}
+uint from_string<uint>(const std::string& s);
 
 template<>
-inline long from_string<long>(const std::string& s) {
-    return std::stol(s);
-}
+long from_string<long>(const std::string& s);
 
 template<>
-inline ulong from_string<ulong>(const std::string& s) {
-    return std::stoul(s);
-}
+ulong from_string<ulong>(const std::string& s);
 
 template<>
-inline long long from_string<long long>(const std::string& s) {
-    return std::stoll(s);
-}
+long long from_string<long long>(const std::string& s);
 
 template<>
-inline ulonglong from_string<ulonglong>(const std::string& s) {
-    return std::stoull(s);
-}
+ulonglong from_string<ulonglong>(const std::string& s);
