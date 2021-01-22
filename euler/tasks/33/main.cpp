@@ -60,5 +60,5 @@ int main() {
         }
     }
 
-    std::cout << xm / nod(xn, xm) << std::endl;
+    std::cout << xm / gcd(xn, xm) << std::endl;
 }

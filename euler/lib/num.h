@@ -21,7 +21,7 @@ T pow_int(T a, size_t pow) noexcept {
 }
 
 template <class T>
-T nod(T a, T b) {
+T gcd(T a, T b) {
     while (b) {
         auto c = a % b;
 
