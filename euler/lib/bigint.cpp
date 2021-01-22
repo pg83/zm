@@ -1,5 +1,6 @@
 #include "bigint.h"
 #include "algo.h"
+#include "strutils.h"
 
 #include <tp/libs/tommath/tommath.h>
 
@@ -115,4 +116,8 @@ bool operator==(const bigint_t& l, const bigint_t& r) {
 
 bigint_t bigint_t::reverse() const {
     return reversed(to_string());
+}
+
+size_t bigint_t::dig_sum() const {
+    return ::dig_sum(to_string());
 }

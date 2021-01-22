@@ -9,11 +9,5 @@ int main() {
         res *= i;
     }
 
-    size_t sum = 0;
-
-    for (auto ch : res.to_string()) {
-        sum += ch - '0';
-    }
-
-    std::cout << sum << std::endl;
+    std::cout << res.dig_sum() << std::endl;
 }
