@@ -3,6 +3,9 @@ module: library
 depends:
 - tp/libs/protobuf
 
+c_flags:
+- -w
+
 srcs:
 - main.cc
 - code_generator.cc

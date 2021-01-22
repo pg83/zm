@@ -1,6 +1,7 @@
 module: library
 
 c_flags:
+- -w
 - -DBUILD_sqlite
 - -DHAVE_USLEEP
 - -DSQLITE_ENABLE_COLUMN_METADATA

@@ -10,6 +10,7 @@ global_inc_dirs:
 - tp/libs/protobuf/src
 
 c_flags:
+- -w
 - -DHAVE_PTHREAD=1
 - -DHAVE_ZLIB=1
 
