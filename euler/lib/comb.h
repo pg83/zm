@@ -1,12 +1,12 @@
 #pragma once
 
 #include "types.h"
-#include "cache.h"
+#include "memo.h"
 #include "bigint.h"
 
 template <class R>
 auto cnk() {
-    return memoized2<uint, uint, R>([](auto& cnk, uint n, uint k) -> R {
+    return memoized([](auto& cnk, uint n, uint k) -> R {
         if (k == 0) {
             return 1;
         }
@@ -23,7 +23,7 @@ using pq_t = std::pair<bigint_t, bigint_t>;
 
 template <class F>
 auto eval_pq(F&& cf) {
-    return memoized1<int, pq_t>([cf](auto& eval, int n) -> pq_t {
+    return memoized([cf](auto& eval, int n) -> pq_t {
         if (n == -1) {
             return {1, 0};
         }

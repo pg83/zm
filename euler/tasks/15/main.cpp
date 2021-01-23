@@ -1,7 +1,7 @@
 #include <euler/lib/euler.h>
 
 int main() {
-    auto f = memoized2<int, int, unsigned long>([] (auto& f, int n, int m) -> unsigned long {
+    auto f = memoized([] (auto& f, int n, int m) -> unsigned long {
         if (n == 0) {
             return 1;
         }

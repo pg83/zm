@@ -14,7 +14,9 @@ srcs:
 - qir.cpp
 - dbg_io.cpp
 - memo.cpp
+- comb.cpp
 
 depends:
 - tp/libs/tommath
+- tp/libs/memo
 - libs/io

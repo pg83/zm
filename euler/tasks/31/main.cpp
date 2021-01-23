@@ -10,24 +10,18 @@ struct params_t {
     int key() const noexcept {
         return std::accumulate(b, e, 0) * 10000 + n;
     }
+
+    friend bool operator==(const params_t& l, const params_t& r) noexcept {
+        return l.key() == r.key();
+    }
+
+    friend bool operator<(const params_t& l, const params_t& r) noexcept {
+        return l.key() < r.key();
+    }
 };
 
-static bool operator==(const params_t& l, const params_t& r) noexcept {
-    return l.key() == r.key();
-}
-
-namespace std {
-    template<>
-    class hash<params_t> {
-    public:
-        size_t operator()(const params_t& p) const noexcept {
-            return p.key();
-        }
-    };
-}
-
 int main() {
-    auto calc = memoized1<params_t, int>([] (auto& calc, params_t p) -> int {
+    auto calc = memoized([] (auto& calc, params_t p) -> int {
         if (p.n == 0) {
             return 1;
         }

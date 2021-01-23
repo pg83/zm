@@ -38,7 +38,7 @@ static const std::string d3[] = {
 };
 
 int main() {
-    auto cvt = memoized1<int, std::string>([] (auto& cvt, int n) -> std::string {
+    auto cvt = memoized([] (auto& cvt, int n) -> std::string {
         if (n < 10) {
             return d1[n];
         }
