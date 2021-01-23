@@ -4,6 +4,8 @@
 
 template <class T>
 struct qir_t {
+    using cont_fraction_t = std::vector<T>;
+
     T a;
     T x;
     T b;
@@ -44,42 +46,42 @@ struct qir_t {
         return n;
     }
 
-    friend qir_t operator*(T left, qir_t right) {
-        return {right.a * left, right.x, right.b * left, right.c};
+    friend qir_t operator*(T l, qir_t r) {
+        return {r.a * l, r.x, r.b * l, r.c};
     }
 
-    friend qir_t operator+(qir_t left, T right) {
-        return {left.a, left.x, left.b + left.c * right, left.c};
+    friend qir_t operator+(qir_t l, T r) {
+        return {l.a, l.x, l.b + l.c * r, l.c};
     }
 
-    friend qir_t operator-(qir_t left, T right) {
-        return {left.a, left.x, left.b - left.c * right, left.c};
+    friend qir_t operator-(qir_t l, T r) {
+        return {l.a, l.x, l.b - l.c * r, l.c};
     }
 
-    friend bool operator<(qir_t left, T right) {
-        auto d = left.c * right - left.b;
+    friend bool operator<(qir_t l, T r) {
+        auto d = l.c * r - l.b;
 
-        return left.a * left.a * left.x < d * d;
+        return l.a * l.a * l.x < d * d;
     }
 
-    friend bool operator<(T left, qir_t right) {
-        return !(right < left); // can not be equal
+    friend bool operator<(T l, qir_t r) {
+        return !(r < l); // can not be equal
     }
 
-    friend bool operator==(qir_t left, qir_t right) {
-        return left.a == right.a && left.x == right.x && left.b == right.b && left.c == right.c;
+    friend bool operator==(qir_t l, qir_t r) {
+        return l.a == r.a && l.x == r.x && l.b == r.b && l.c == r.c;
     }
 
-    friend bool operator!=(qir_t left, qir_t right) {
-        return !(left == right);
+    friend bool operator!=(qir_t l, qir_t r) {
+        return !(l == r);
     }
 
     static qir_t root_of(T n) {
         return {1, n, 0, 1};
     }
 
-    std::vector<T> cont_fraction() const {
-        std::vector<T> res;
+    cont_fraction_t cont_fraction() const {
+        cont_fraction_t res;
 
         res.push_back(floor());
 
@@ -95,5 +97,15 @@ struct qir_t {
         } while (c != n);
 
         return res;
+    }
+
+    auto cont_fraction_func() const {
+        return [cf = cont_fraction()](size_t n) -> T {
+            if (n == 0) {
+                return cf[0];
+            }
+
+            return cf[1 + ((n - 1) % (cf.size() - 1))];
+        };
     }
 };
