@@ -828,6 +828,7 @@ class Module(object):
         v = set()
         dp = os.path.dirname(pp)
         ip = self.parser.inc_parser
+        extra = collections.defaultdict(list)
 
         def do(p):
             if p in v:
@@ -835,13 +836,17 @@ class Module(object):
 
             v.add(p)
 
-            p = self.find_location(p, dp)
+            p = self.find_location(p, [dp] + extra[p])
 
             yield p
 
             if from_sd(p):
                 for i in ip.parse_includes(self.src_path(p), ext):
-                    yield from do('$(S)/' + i[1:-1])
+                    inc = '$(S)/' + i[1:-1]
+
+                    extra[inc].append(os.path.dirname(p))
+
+                    yield from do(inc)
 
         return do(pp)
 
@@ -852,7 +857,7 @@ class Module(object):
     @cached_method
     def find_location(self, p, w):
         def it():
-            yield w
+            yield from w
             yield from self.iter_inc_dirs()
 
         for x in iter_uniq_list(it()):
