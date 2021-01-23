@@ -49,24 +49,24 @@ int main() {
         }
     }
 
-    for (auto [k, items] : rrr) {
-        if (items.size() > 3) {
-            for (auto& i : items) {
+    for (auto& [k, iss1] : rrr) {
+        if (iss1.size() > 3) {
+            for (auto& i : iss1) {
                 if (has(rrr, i)) {
-                    auto iss = inter(rrr[i], items);
+                    auto iss2 = inter(rrr[i], iss1);
 
-                    if (iss.size() > 2) {
-                        for (auto& j : iss) {
+                    if (iss2.size() > 2) {
+                        for (auto& j : iss2) {
                             if (has(rrr, j)) {
-                                auto iss2 = inter(rrr[j], iss);
+                                auto iss3 = inter(rrr[j], iss2);
 
-                                if (iss2.size() > 1) {
-                                    for (auto& h : iss2) {
+                                if (iss3.size() > 1) {
+                                    for (auto& h : iss3) {
                                         if (has(rrr, h)) {
-                                            auto iss3 = inter(rrr[h], iss2);
+                                            auto iss4 = inter(rrr[h], iss3);
 
-                                            if (iss3.size() > 0) {
-                                                std::cout << k + i + j + h + *iss3.begin() << std::endl;
+                                            if (iss4.size() > 0) {
+                                                std::cout << k + i + j + h + *iss4.begin() << std::endl;
 
                                                 return 0;
                                             }
