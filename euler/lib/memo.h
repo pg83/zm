@@ -1,7 +1,6 @@
 #pragma once
 
 #include <unordered_map>
-#include <functional>
 
 template <class X, class R, class F>
 struct memo1_t {
