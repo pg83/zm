@@ -12,6 +12,8 @@
 #include "qir.h"
 #include "dbg_io.h"
 #include "memo.h"
+#include "ratio.h"
+#include "farey.h"
 
 #include <map>
 #include <set>

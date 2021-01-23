@@ -15,6 +15,8 @@ srcs:
 - dbg_io.cpp
 - memo.cpp
 - comb.cpp
+- ratio.cpp
+- farey.cpp
 
 depends:
 - tp/libs/tommath
