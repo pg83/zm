@@ -6,7 +6,7 @@ int main() {
     for (auto x : fibo_seq_t<bigint_t>()) {
         ++cnt;
 
-        if (x.to_string().length() >= 1000) {
+        if (x.digit_count() >= 1000) {
             break;
         }
     }

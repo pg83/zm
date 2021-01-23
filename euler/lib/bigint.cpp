@@ -56,6 +56,14 @@ struct bigint_t::impl_t: public bignum_holder_t {
 
         return std::string(buf, written - 1);
     }
+
+    size_t digit_count() const {
+        size_t res = 0;
+
+        check_err(mp_radix_size(&bi, 10, &res));
+
+        return res - 1;
+    }
 };
 
 bigint_t::bigint_t()
@@ -122,5 +130,5 @@ size_t bigint_t::digit_sum() const {
 }
 
 size_t bigint_t::digit_count() const {
-    return to_string().size();
+    return i_->digit_count();
 }
