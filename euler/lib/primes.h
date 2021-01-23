@@ -114,3 +114,14 @@ uint uniq_prime_count(T t) {
 
     return x;
 }
+
+template <class T>
+T euler_totient(T n) {
+    T r = 1;
+
+    for (const auto& [p, i] : to_primes_map(n)) {
+        r *= pow_int(p, i - 1) * (p - 1);
+    }
+
+    return r;
+}
