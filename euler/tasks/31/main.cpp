@@ -27,7 +27,7 @@ namespace std {
 }
 
 int main() {
-    auto calc = cacher1_t<params_t, int>([] (params_t p, auto& calc) -> int {
+    auto calc = memoized1<params_t, int>([] (auto& calc, params_t p) -> int {
         if (p.n == 0) {
             return 1;
         }

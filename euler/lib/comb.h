@@ -5,44 +5,38 @@
 #include "bigint.h"
 
 template <class R>
-struct cnk_t: public cacher2_t<uint, uint, R> {
-    cnk_t()
-        : cacher2_t<uint, uint, R>([](uint n, uint k, auto& cnk) -> R {
-            if (k == 0) {
-                return 1;
-            }
+auto cnk() {
+    return memoized2<uint, uint, R>([](auto& cnk, uint n, uint k) -> R {
+        if (k == 0) {
+            return 1;
+        }
 
-            if (n == k) {
-                return 1;
-            }
+        if (n == k) {
+            return 1;
+        }
 
-            return cnk(n - 1, k - 1) + cnk(n - 1, k);
-        })
-    {
-    }
-};
+        return cnk(n - 1, k - 1) + cnk(n - 1, k);
+    });
+}
 
 using pq_t = std::pair<bigint_t, bigint_t>;
 
-struct eval_pq_t: public cacher1_t<int, pq_t> {
-    template <class F>
-    eval_pq_t(F&& cf)
-        : cacher1_t<int, pq_t>([cf](int n, auto& eval) -> pq_t {
-            if (n == -1) {
-                return {1, 0};
-            }
+template <class F>
+auto eval_pq(F&& cf) {
+    return memoized1<int, pq_t>([cf](auto& eval, int n) -> pq_t {
+        if (n == -1) {
+            return {1, 0};
+        }
 
-            if (n == -2) {
-                return {0, 1};
-            }
+        if (n == -2) {
+            return {0, 1};
+        }
 
-            auto pq1 = eval(n - 1);
-            auto pq2 = eval(n - 2);
+        auto pq1 = eval(n - 1);
+        auto pq2 = eval(n - 2);
 
-            auto a = cf((size_t)n);
+        auto a = cf((size_t)n);
 
-            return {a * pq1.first + pq2.first, a * pq1.second + pq2.second};
-        })
-    {
-    }
-};
+        return {a * pq1.first + pq2.first, a * pq1.second + pq2.second};
+    });
+}

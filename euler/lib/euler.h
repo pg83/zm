@@ -2,7 +2,6 @@
 
 #include "algo.h"
 #include "bigint.h"
-#include "cache.h"
 #include "comb.h"
 #include "fib.h"
 #include "from_string.h"
@@ -12,6 +11,7 @@
 #include "types.h"
 #include "qir.h"
 #include "dbg_io.h"
+#include "memo.h"
 
 #include <map>
 #include <set>

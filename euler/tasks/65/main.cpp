@@ -15,5 +15,5 @@ static int e_frac(size_t nn) noexcept {
 }
 
 int main() {
-    std::cout << eval_pq_t(e_frac)(99).first.digit_sum() << std::endl;
+    std::cout << eval_pq(e_frac)(99).first.digit_sum() << std::endl;
 }

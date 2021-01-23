@@ -55,7 +55,7 @@ namespace {
         path_t calc_max_path(idd_t fr) const {
             static const path_t empty;
 
-            auto calc = cacher1_t<idd_t, path_t>([this] (idd_t fr, auto& calc) -> path_t {
+            auto calc = memoized1<idd_t, path_t>([this] (auto& calc, idd_t fr) -> path_t {
                 auto& links = find_links(fr);
 
                 value_t maxw = 0;

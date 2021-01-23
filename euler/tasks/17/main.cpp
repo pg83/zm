@@ -38,7 +38,7 @@ static const std::string d3[] = {
 };
 
 int main() {
-    auto cvt = cacher1_t<int, std::string>([] (int n, auto& cvt) -> std::string {
+    auto cvt = memoized1<int, std::string>([] (auto& cvt, int n) -> std::string {
         if (n < 10) {
             return d1[n];
         }

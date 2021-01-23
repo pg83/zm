@@ -5,7 +5,6 @@ srcs:
 - primes.cpp
 - num.cpp
 - bigint.cpp
-- cache.cpp
 - strutils.cpp
 - algo.cpp
 - from_string.cpp
@@ -14,6 +13,7 @@ srcs:
 - euler.cpp
 - qir.cpp
 - dbg_io.cpp
+- memo.cpp
 
 depends:
 - tp/libs/tommath
