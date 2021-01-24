@@ -1,7 +1,7 @@
 #include <euler/lib/euler.h>
 
 int main() {
-    auto matrix = read_matrix("81_matrix.txt", ',');
+    auto matrix = read_matrix("p082_matrix.txt", ',');
     auto dim = (int)sqrt_int(matrix.size());
 
     auto u = [&](int n) -> std::pair<int, int> {
