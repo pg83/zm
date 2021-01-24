@@ -21,23 +21,6 @@ T pow_int(T a, size_t pow) noexcept {
 }
 
 template <class T>
-T gcd(T a, T b) {
-    while (b) {
-        auto c = a % b;
-
-        a = b;
-        b = c;
-    }
-
-    return a;
-}
-
-template <class T>
-T gcd(T a, T b, T c) {
-    return gcd(a, gcd(b, c));
-}
-
-template <class T>
 T factorial(T n) {
     if (n < 2) {
         return 1;
