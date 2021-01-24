@@ -5,7 +5,7 @@ void primitive_triangles(T p, F&& cb) {
     auto s = sqrt_int(p);
 
     for (T m = 1; m <= s; ++m) {
-        for (T n = 1; n <= s; ++n) {
+        for (T n = 1, maxn = p / (2 * m); n <= maxn; ++n) {
             if (m > n && co_prime(m, n) && (m % 2 + n % 2) < 2) {
                 auto a = m * m - n * n;
                 auto b = 2 * m * n;
