@@ -73,6 +73,7 @@ public:
     }
 
     //misc
+    bigint_t sqrt() const;
     bigint_t reverse() const;
     std::string to_string() const;
     size_t digit_sum() const;

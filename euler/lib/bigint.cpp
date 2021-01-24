@@ -125,6 +125,14 @@ bigint_t operator%(const bigint_t& l, const bigint_t& r) {
     return res;
 }
 
+bigint_t bigint_t::sqrt() const {
+    bigint_t res;
+
+    check_err(mp_sqrt(&i_->bi, &res.i_->bi));
+
+    return res;
+}
+
 bool operator<(const bigint_t& l, const bigint_t& r) {
     return mp_cmp(&l.i_->bi, &r.i_->bi) == MP_LT;
 }
