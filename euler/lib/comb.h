@@ -40,3 +40,41 @@ auto eval_pq(F&& cf) {
         return {a * pq1.first + pq2.first, a * pq1.second + pq2.second};
     });
 }
+
+template <class T>
+auto partition_counter() {
+    auto pc = memoized ([](auto& pc, T n) -> T {
+        if (n < 0) {
+            return 0;
+        }
+
+        if (n == 0) {
+            return 1;
+        }
+
+        T res = 0;
+        int k = 1;
+
+        while (true) {
+            auto p = pc(n - (k * (3 * k - 1)) / 2);
+
+            if (p == 0) {
+                return res;
+            }
+
+            if ((k - 1) % 2 == 0) {
+                res = res + p;
+            } else {
+                res = res - p;
+            }
+
+            if (k > 0) {
+                k = -k;
+            } else {
+                k = -k + 1;
+            }
+        }
+    });
+
+    return pc;
+}
