@@ -35,9 +35,8 @@ void to_primes(T x, C& c) noexcept {
     while (p * p <= x) {
         if (x % p == 0) {
             c.push_back(p);
-            to_primes(x / p, c);
 
-            return;
+            return to_primes(x / p, c);
         }
 
         ++p;

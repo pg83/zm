@@ -9,6 +9,7 @@ size_t digit_sum(const std::string& s) noexcept;
 
 std::vector<std::string> split_string(const std::string& s, char delim);
 std::vector<std::string> read_lines(const std::string& path);
+std::vector<int> read_matrix(const std::string& path, char delim);
 
 template <class R>
 std::vector<R> parse_string(const std::string& s, char delim) {
@@ -20,5 +21,3 @@ std::vector<R> parse_string(const std::string& s, char delim) {
 
     return res;
 }
-
-std::vector<int> read_matrix(const std::string& path, char delim);
