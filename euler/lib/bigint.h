@@ -50,6 +50,9 @@ public:
         return *this;
     }
 
+    //div
+    friend bigint_t operator%(const bigint_t& l, const bigint_t& r);
+
     // cmp
     friend bool operator<(const bigint_t& l, const bigint_t& r);
 

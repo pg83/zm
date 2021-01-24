@@ -14,6 +14,7 @@
 #include "memo.h"
 #include "ratio.h"
 #include "farey.h"
+#include "mod_int.h"
 
 #include <map>
 #include <set>

@@ -17,6 +17,7 @@ srcs:
 - comb.cpp
 - ratio.cpp
 - farey.cpp
+- mod_int.cpp
 
 depends:
 - tp/libs/tommath
