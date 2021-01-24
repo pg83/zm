@@ -3,13 +3,7 @@
 static const bigint_t mult = pow_int(bigint_t(10), 220);
 
 static int sum_str(const std::string& s) noexcept {
-    int res = 0;
-
-    for (size_t i = 0; i < 100; ++i) {
-        res += s[i] - '0';
-    }
-
-    return res;
+    return digit_sum(s.substr(0, 100));
 }
 
 static int ss(const bigint_t& v) {
