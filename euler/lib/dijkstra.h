@@ -2,17 +2,16 @@
 
 #include "algo.h"
 
-#include <set>
-#include <map>
+#include <unordered_set>
+#include <unordered_map>
 #include <vector>
 #include <limits>
 
 struct dijkstra_t {
-    using nodes_t = std::set<int>;
-    using path_t = std::vector<int>;
+    using nodes_t = std::unordered_set<int>;
 
-    std::map<int, int> prev;
-    std::map<int, int> dist;
+    std::unordered_map<int, int> prev;
+    std::unordered_map<int, int> dist;
 
     template <class L, class W>
     dijkstra_t(int source, nodes_t q, L&& nbs, W&& weight) {
@@ -60,8 +59,8 @@ struct dijkstra_t {
         return dist[dest];
     }
 
-    path_t path(int dest) const {
-        path_t r;
+    auto path(int dest) const {
+        std::vector<int> r;
 
         r.push_back(dest);
 
@@ -75,3 +74,8 @@ struct dijkstra_t {
         return reversed(r);
     }
 };
+
+template <class N, class L, class W>
+int dijkstra_distance(int fr, int to, N&& nodes, L&& links, W&& weight) {
+    return dijkstra_t(fr, dijkstra_t::nodes_t(nodes.begin(), nodes.end()), links, weight).distance(to);
+}

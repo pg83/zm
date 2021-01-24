@@ -50,16 +50,14 @@ int main() {
         return matrix[to];
     };
 
-    dijkstra_t::nodes_t nodes;
+    std::vector<int> nodes;
 
-    nodes.insert(-2);
-    nodes.insert(-1);
+    nodes.push_back(-2);
+    nodes.push_back(-1);
 
     for (int i = 0; i < (int)matrix.size(); ++i) {
-        nodes.insert(i);
+        nodes.push_back(i);
     }
 
-    dijkstra_t res(-1, nodes, nbs, weight);
-
-    std::cout << res.distance(-2) - 1 << std::endl;
+    std::cout << dijkstra_distance(-1, -2, nodes, nbs, weight) - 1 << std::endl;
 }
