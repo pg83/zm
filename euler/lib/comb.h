@@ -43,22 +43,22 @@ auto eval_pq(F&& cf) {
 
 template <class T>
 auto partition_counter() {
-    auto pc = memoized ([](auto& pc, T n) -> T {
+    auto pc = memoized ([zero = T(int(0)), one = T(int(1))](auto& pc, long n) -> T {
         if (n < 0) {
-            return 0;
+            return zero;
         }
 
         if (n == 0) {
-            return 1;
+            return one;
         }
 
-        T res = 0;
-        int k = 1;
+        T res = zero;
+        long k = 1;
 
         while (true) {
             auto p = pc(n - (k * (3 * k - 1)) / 2);
 
-            if (p == 0) {
+            if (p == zero) {
                 return res;
             }
 

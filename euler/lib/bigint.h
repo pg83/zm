@@ -26,6 +26,21 @@ public:
         return *this;
     }
 
+    // sub
+    friend bigint_t operator-(const bigint_t& l, const bigint_t& r);
+
+    bigint_t& operator-=(const bigint_t& v) {
+        (*this - v).swap(*this);
+
+        return *this;
+    }
+
+    bigint_t& operator--() {
+        *this -= 1;
+
+        return *this;
+    }
+
     // mul
     friend bigint_t operator*(const bigint_t& l, const bigint_t& r);
 

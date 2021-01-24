@@ -101,6 +101,14 @@ bigint_t operator+(const bigint_t& l, const bigint_t& r) {
     return res;
 }
 
+bigint_t operator-(const bigint_t& l, const bigint_t& r) {
+    bigint_t res;
+
+    check_err(mp_sub(&l.i_->bi, &r.i_->bi, &res.i_->bi));
+
+    return res;
+}
+
 bigint_t operator*(const bigint_t& l, const bigint_t& r) {
     bigint_t res;
 
