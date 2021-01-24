@@ -18,6 +18,7 @@ srcs:
 - ratio.cpp
 - farey.cpp
 - mod_int.cpp
+- dijkstra.cpp
 
 depends:
 - tp/libs/tommath

@@ -43,3 +43,15 @@ std::vector<std::string> read_lines(const std::string& path) {
 
     return res;
 }
+
+std::vector<int> read_matrix(const std::string& path, char delim) {
+    std::vector<int> res;
+
+    for (const auto& l : read_lines(path)) {
+        for (auto el : parse_string<int>(l, delim)) {
+            res.push_back(el);
+        }
+    }
+
+    return res;
+}

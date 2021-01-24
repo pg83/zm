@@ -2,7 +2,7 @@
 
 template <class T, class F>
 void primitive_triangles(T p, F&& cb) {
-    auto s = std::sqrt(p);
+    auto s = sqrt_int(p);
 
     for (T m = 1; m <= s; ++m) {
         for (T n = 1; n <= s; ++n) {

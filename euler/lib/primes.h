@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "num.h"
 
 #include <deque>
 #include <map>
@@ -84,7 +85,7 @@ template <class T>
 T proper_divisors_sum(T x) {
     T res = 0;
 
-    for (T d = 2, max = sqrt(x); d <= max; ++d) {
+    for (T d = 2, max = sqrt_int(x); d <= max; ++d) {
         if (x % d == 0) {
             T dd = x / d;
 

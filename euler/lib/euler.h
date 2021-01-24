@@ -15,6 +15,7 @@
 #include "ratio.h"
 #include "farey.h"
 #include "mod_int.h"
+#include "dijkstra.h"
 
 #include <map>
 #include <set>

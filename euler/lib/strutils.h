@@ -20,3 +20,5 @@ std::vector<R> parse_string(const std::string& s, char delim) {
 
     return res;
 }
+
+std::vector<int> read_matrix(const std::string& path, char delim);

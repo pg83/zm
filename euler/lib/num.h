@@ -2,6 +2,8 @@
 
 #include "types.h"
 
+#include <cmath>
+
 template <class T>
 T pow_int(T a, size_t pow) noexcept {
     T res = T(1);
@@ -18,6 +20,11 @@ T pow_int(T a, size_t pow) noexcept {
     }
 
     return res;
+}
+
+template <class T>
+T sqrt_int(T v) noexcept {
+    return (T)std::sqrt(v);
 }
 
 template <class T>

@@ -29,7 +29,7 @@ int main() {
             ++p;
         }
 
-        if (auto uu = (size_t)sqrt(u); uu * uu == u) {
+        if (auto uu = sqrt_int(u); uu * uu == u) {
             if (p && i >= p * 10) {
                 std::cout << uu << std::endl;
 
