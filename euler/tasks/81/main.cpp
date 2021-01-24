@@ -15,19 +15,15 @@ int main() {
     };
 
     auto nbs = [&](int n) -> std::vector<int> {
-        std::vector<int> res;
-
         if (n == -1) {
-            res.push_back(0);
-
-            return res;
+            return {0};
         }
 
         if (n == dim * dim - 1) {
-            res.push_back(-2);
-
-            return res;
+            return {-2};
         }
+
+        std::vector<int> res;
 
         auto [x, y] = u(n);
 
