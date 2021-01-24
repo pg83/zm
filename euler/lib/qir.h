@@ -1,5 +1,7 @@
 #pragma once
 
+#include "comb.h"
+
 #include <vector>
 
 template <class T>
@@ -107,5 +109,9 @@ struct qir_t {
 
             return cf[1 + ((n - 1) % (cf.size() - 1))];
         };
+    }
+
+    auto eval_pq() {
+        return ::eval_pq(cont_fraction_func());
     }
 };

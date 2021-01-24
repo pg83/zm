@@ -1,12 +1,10 @@
 #include <euler/lib/euler.h>
 
 static bigint_t pell_fund_sol(int d) {
-    auto ev = eval_pq(qir_t<long>::root_of(d).cont_fraction_func());
+    auto ev = qir_t<long>::root_of(d).eval_pq();
 
     for (long i = 0; ; ++i) {
-        auto pq = ev(i);
-        auto x = pq.first;
-        auto y = pq.second;
+        auto [x, y] = ev(i);
 
         if (x * x == d * y * y + 1) {
             return x;
