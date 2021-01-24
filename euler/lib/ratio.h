@@ -22,7 +22,7 @@ struct ratio_t {
     {
     }
 
-    //cmp
+    // cmp
     friend bool operator<(const ratio_t& l, const ratio_t& r) {
         return l.a * r.b < r.a * l.b;
     }
@@ -47,6 +47,7 @@ struct ratio_t {
         return !(l == r);
     }
 
+    // misc
     ratio_t inversed() const {
         return {b, a};
     }
