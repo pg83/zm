@@ -15,7 +15,7 @@ static int weight(const std::string& w) {
 }
 
 int main() {
-    size_t cnt = sizeof(names) / sizeof(*names);
+    size_t cnt = std::size(names);
     std::sort(names, names + cnt);
     int res = 0;
 

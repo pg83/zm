@@ -7,7 +7,7 @@ static const char* data[] = {
 int main() {
     bigint_t res;
 
-    for (size_t i = 0; i < sizeof(data) / sizeof(*data); ++i) {
+    for (size_t i = 0; i < std::size(data); ++i) {
         res += data[i];
     }
 

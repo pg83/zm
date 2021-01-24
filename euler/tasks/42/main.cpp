@@ -27,7 +27,7 @@ int main() {
 
     size_t res = 0;
 
-    for (size_t i = 0; i < sizeof(data) / sizeof(*data); ++i) {
+    for (size_t i = 0; i < std::size(data); ++i) {
         if (is_triangle(alpha_weight(data[i]))) {
             ++res;
         }

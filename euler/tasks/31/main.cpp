@@ -41,5 +41,5 @@ int main() {
         return res;
     });
 
-    std::cout << calc(params_t{200, coins, coins + sizeof(coins) / sizeof(*coins)}) << std::endl;
+    std::cout << calc(params_t{200, coins, coins + std::size(coins)}) << std::endl;
 }
