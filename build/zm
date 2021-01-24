@@ -844,7 +844,8 @@ class Module(object):
                 for i in ip.parse_includes(self.src_path(p), ext):
                     inc = '$(S)/' + i[1:-1]
 
-                    extra[inc].append(os.path.dirname(p))
+                    if i[0] == '"':
+                        extra[inc].append(os.path.dirname(p))
 
                     yield from do(inc)
 
