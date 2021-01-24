@@ -14,7 +14,7 @@ int main() {
         return y * dim + x;
     };
 
-    auto nbs = [&](int n) -> std::vector<int> {
+    auto links = [&](int n) -> std::vector<int> {
         if (n == -1) {
             return {0};
         }
@@ -46,14 +46,11 @@ int main() {
         return matrix[to];
     };
 
-    std::vector<int> nodes;
-
-    nodes.push_back(-2);
-    nodes.push_back(-1);
+    std::vector<int> nodes{-2, -1};
 
     for (int i = 0; i < (int)matrix.size(); ++i) {
         nodes.push_back(i);
     }
 
-    std::cout << dijkstra_distance(-1, -2, nodes, nbs, weight) - 1 << std::endl;
+    std::cout << dijkstra_distance(-1, -2, nodes, links, weight) - 1 << std::endl;
 }
