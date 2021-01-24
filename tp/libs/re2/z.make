@@ -1,5 +1,8 @@
 module: library
 
+c_flags:
+- -w
+
 global_inc_dirs:
 - tp/libs/re2
 
