@@ -12,7 +12,7 @@ std::vector<std::string> read_lines(const std::string& path);
 std::vector<int> read_matrix(const std::string& path, char delim);
 
 template <class R>
-std::vector<R> parse_string(const std::string& s, char delim) {
+auto parse_string(const std::string& s, char delim) {
     std::vector<R> res;
 
     for (const auto& l : split_string(s, delim)) {
