@@ -21,7 +21,7 @@ struct qir_t {
         return {a / n, x, b / n, c / n};
     }
 
-    qir_t inverse() const {
+    auto inverse() const {
         return reciprocal().minimized();
     }
 
@@ -80,7 +80,7 @@ struct qir_t {
         return {1, n, 0, 1};
     }
 
-    cont_fraction_t cont_fraction() const {
+    auto cont_fraction() const {
         cont_fraction_t res;
 
         res.push_back(floor());
