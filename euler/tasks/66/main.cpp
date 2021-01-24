@@ -4,7 +4,7 @@ static bigint_t pell_fund_sol(int d) {
     auto ev = qir_t<long>::root_of(d).eval_pq();
 
     for (long i = 0; ; ++i) {
-        auto [x, y] = ev(i);
+        const auto& [x, y] = ev(i);
 
         if (x * x == d * y * y + 1) {
             return x;
