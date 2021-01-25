@@ -25,8 +25,12 @@ int main() {
         return res;
     });
 
+    auto eval = [&] (int n) -> int {
+        return calc(n, n);
+    };
+
     for (int i = 0; ; ++i) {
-        if (calc(i, i) > 5000) {
+        if (eval(i) > 5000) {
             std::cout << i << std::endl;
 
             break;
