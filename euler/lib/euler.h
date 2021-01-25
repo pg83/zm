@@ -16,6 +16,7 @@
 #include "farey.h"
 #include "mod_int.h"
 #include "dijkstra.h"
+#include "defer.h"
 
 #include <map>
 #include <set>

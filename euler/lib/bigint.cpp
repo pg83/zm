@@ -49,10 +49,29 @@ struct bigint_t::impl_t: public bignum_holder_t {
     }
 
     std::string to_string() const {
-        char buf[1024 * 16];
+        try {
+            char buf[1024 * 16];
+            size_t written = 0;
+
+            check_err(mp_to_radix(&bi, buf, sizeof(buf), &written, 10));
+
+            return std::string(buf, written - 1);
+        } catch (...) {
+            return to_string_slow();
+        }
+    }
+
+    std::string to_string_slow() const {
+        size_t nbuf = 10000000;
+        char* buf = (char*)malloc(nbuf);
+
+        defer {
+            free(buf);
+        };
+
         size_t written = 0;
 
-        check_err(mp_to_radix(&bi, buf, sizeof(buf), &written, 10));
+        check_err(mp_to_radix(&bi, buf, nbuf, &written, 10));
 
         return std::string(buf, written - 1);
     }

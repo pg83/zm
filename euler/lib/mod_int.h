@@ -1,19 +1,17 @@
 #pragma once
 
-#include "types.h"
-
 #include <ostream>
 
-template <ui64 N>
+template <class T, T N>
 struct mod_int_t {
-    ui64 v;
+    T v;
 
     mod_int_t() noexcept
         : v(0)
     {
     }
 
-    mod_int_t(ui64 x) noexcept
+    mod_int_t(T x) noexcept
         : v(x % N)
     {
     }
@@ -37,7 +35,7 @@ struct mod_int_t {
     }
 };
 
-template <ui64 N>
-std::ostream& operator<<(std::ostream& o, const mod_int_t<N>& v) {
+template <class T, T N>
+std::ostream& operator<<(std::ostream& o, const mod_int_t<T, N>& v) {
     return o << "*" << v.v;
 }

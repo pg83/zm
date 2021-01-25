@@ -19,6 +19,7 @@ srcs:
 - farey.cpp
 - mod_int.cpp
 - dijkstra.cpp
+- defer.cpp
 
 depends:
 - tp/libs/tommath
