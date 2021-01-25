@@ -12,6 +12,8 @@ public:
     bigint_t(long num);
     bigint_t(const char* num);
     bigint_t(const std::string& num);
+    bigint_t(impl_ref_t ref) noexcept;
+
     ~bigint_t() noexcept;
 
     // sum
@@ -84,14 +86,12 @@ public:
     size_t digit_count() const;
 
     void swap(bigint_t& v) noexcept {
-        auto x = i_;
-        i_ = v.i_;
-        v.i_ = x;
-        //i_.swap(v.i_);
+        i_.swap(v.i_);
     }
 
 private:
-    impl_ref_t construct(long v);
+    static impl_ref_t construct();
+    static impl_ref_t construct(long v);
 
 private:
     impl_ref_t i_;

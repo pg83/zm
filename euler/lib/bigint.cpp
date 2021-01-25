@@ -86,11 +86,9 @@ struct bigint_t::impl_t: public bignum_holder_t {
 };
 
 bigint_t::impl_ref_t bigint_t::construct(long v) {
-    using ref_t = bigint_t::impl_ref_t;
+    #define EL(X) impl_ref_t(new impl_t(long(X)))
 
-    #define EL(X) ref_t(new impl_t(long(X)))
-
-    static const ref_t small[] = {
+    static const impl_ref_t small[] = {
         EL(0),
         EL(1),
         EL(2),
@@ -107,11 +105,15 @@ bigint_t::impl_ref_t bigint_t::construct(long v) {
         return small[v];
     }
 
-    return ref_t(new impl_t(v));
+    return impl_ref_t(new impl_t(v));
+}
+
+bigint_t::impl_ref_t bigint_t::construct() {
+    return impl_ref_t(new impl_t());
 }
 
 bigint_t::bigint_t()
-    : i_(new impl_t())
+    : i_(construct())
 {
 }
 
@@ -130,6 +132,11 @@ bigint_t::bigint_t(const std::string& num)
 {
 }
 
+bigint_t::bigint_t(impl_ref_t ref) noexcept
+    : i_(ref)
+{
+}
+
 bigint_t::~bigint_t() noexcept {
 }
 
@@ -138,50 +145,50 @@ std::string bigint_t::to_string() const {
 }
 
 bigint_t operator+(const bigint_t& l, const bigint_t& r) {
-    bigint_t res;
+    auto res = bigint_t::construct();
 
-    check_err(mp_add(&l.i_->bi, &r.i_->bi, &res.i_->bi));
+    check_err(mp_add(&l.i_->bi, &r.i_->bi, &res->bi));
 
     return res;
 }
 
 bigint_t operator-(const bigint_t& l, const bigint_t& r) {
-    bigint_t res;
+    auto res = bigint_t::construct();
 
-    check_err(mp_sub(&l.i_->bi, &r.i_->bi, &res.i_->bi));
+    check_err(mp_sub(&l.i_->bi, &r.i_->bi, &res->bi));
 
     return res;
 }
 
 bigint_t operator*(const bigint_t& l, const bigint_t& r) {
-    bigint_t res;
+    auto res = bigint_t::construct();
 
-    check_err(mp_mul(&l.i_->bi, &r.i_->bi, &res.i_->bi));
+    check_err(mp_mul(&l.i_->bi, &r.i_->bi, &res->bi));
 
     return res;
 }
 
 bigint_t operator%(const bigint_t& l, const bigint_t& r) {
-    bigint_t res;
+    auto res = bigint_t::construct();
 
-    check_err(mp_mod(&l.i_->bi, &r.i_->bi, &res.i_->bi));
+    check_err(mp_mod(&l.i_->bi, &r.i_->bi, &res->bi));
 
     return res;
 }
 
 bigint_t operator/(const bigint_t& l, const bigint_t& r) {
-    bigint_t res;
-    bigint_t modl;
+    auto res = bigint_t::construct();
+    auto mod = bigint_t::construct();
 
-    check_err(mp_div(&l.i_->bi, &r.i_->bi, &res.i_->bi, &modl.i_->bi));
+    check_err(mp_div(&l.i_->bi, &r.i_->bi, &res->bi, &mod->bi));
 
     return res;
 }
 
 bigint_t bigint_t::sqrt() const {
-    bigint_t res;
+    auto res = bigint_t::construct();
 
-    check_err(mp_sqrt(&i_->bi, &res.i_->bi));
+    check_err(mp_sqrt(&i_->bi, &res->bi));
 
     return res;
 }
