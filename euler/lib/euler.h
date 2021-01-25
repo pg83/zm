@@ -17,6 +17,7 @@
 #include "mod_int.h"
 #include "dijkstra.h"
 #include "defer.h"
+#include "preproc.h"
 
 #include <map>
 #include <set>

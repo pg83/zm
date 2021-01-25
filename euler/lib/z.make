@@ -20,6 +20,7 @@ srcs:
 - mod_int.cpp
 - dijkstra.cpp
 - defer.cpp
+- preproc.cpp
 
 depends:
 - tp/libs/tommath
