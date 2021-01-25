@@ -51,6 +51,7 @@ public:
     }
 
     //div
+    friend bigint_t operator/(const bigint_t& l, const bigint_t& r);
     friend bigint_t operator%(const bigint_t& l, const bigint_t& r);
 
     // cmp

@@ -115,3 +115,8 @@ struct qir_t {
         return ::eval_pq(cont_fraction_func());
     }
 };
+
+template <class T>
+auto eval_qir(T t) {
+    return qir_t<T>::root_of(t).eval_pq();
+}

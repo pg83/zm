@@ -125,6 +125,15 @@ bigint_t operator%(const bigint_t& l, const bigint_t& r) {
     return res;
 }
 
+bigint_t operator/(const bigint_t& l, const bigint_t& r) {
+    bigint_t res;
+    bigint_t modl;
+
+    check_err(mp_div(&l.i_->bi, &r.i_->bi, &res.i_->bi, &modl.i_->bi));
+
+    return res;
+}
+
 bigint_t bigint_t::sqrt() const {
     bigint_t res;
 
