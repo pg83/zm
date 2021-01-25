@@ -113,7 +113,7 @@ bigint_t::impl_ref_t bigint_t::construct() {
 }
 
 bigint_t::bigint_t()
-    : i_(construct())
+    : i_(construct(0))
 {
 }
 
@@ -178,9 +178,8 @@ bigint_t operator%(const bigint_t& l, const bigint_t& r) {
 
 bigint_t operator/(const bigint_t& l, const bigint_t& r) {
     auto res = bigint_t::construct();
-    auto mod = bigint_t::construct();
 
-    check_err(mp_div(&l.i_->bi, &r.i_->bi, &res->bi, &mod->bi));
+    check_err(mp_div(&l.i_->bi, &r.i_->bi, &res->bi, 0));
 
     return res;
 }
