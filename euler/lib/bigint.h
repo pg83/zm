@@ -4,6 +4,9 @@
 #include <ostream>
 
 class bigint_t {
+    struct impl_t;
+    using impl_ref_t = std::shared_ptr<impl_t>;
+
 public:
     bigint_t();
     bigint_t(long num);
@@ -81,12 +84,17 @@ public:
     size_t digit_count() const;
 
     void swap(bigint_t& v) noexcept {
-        i_.swap(v.i_);
+        auto x = i_;
+        i_ = v.i_;
+        v.i_ = x;
+        //i_.swap(v.i_);
     }
 
 private:
-    struct impl_t;
-    std::shared_ptr<impl_t> i_;
+    impl_ref_t construct(long v);
+
+private:
+    impl_ref_t i_;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const bigint_t& bi) {

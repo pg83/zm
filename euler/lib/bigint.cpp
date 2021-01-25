@@ -62,7 +62,7 @@ struct bigint_t::impl_t: public bignum_holder_t {
     }
 
     std::string to_string_slow() const {
-        size_t nbuf = 10000000;
+        size_t nbuf = digit_count() + 16;
         char* buf = (char*)malloc(nbuf);
 
         defer {
@@ -85,13 +85,38 @@ struct bigint_t::impl_t: public bignum_holder_t {
     }
 };
 
+bigint_t::impl_ref_t bigint_t::construct(long v) {
+    using ref_t = bigint_t::impl_ref_t;
+
+    #define EL(X) ref_t(new impl_t(long(X)))
+
+    static const ref_t small[] = {
+        EL(0),
+        EL(1),
+        EL(2),
+        EL(3),
+        EL(4),
+        EL(5),
+        EL(6),
+        EL(7),
+        EL(8),
+        EL(9),
+    };
+
+    if (v >= 0 && v < 10) {
+        return small[v];
+    }
+
+    return ref_t(new impl_t(v));
+}
+
 bigint_t::bigint_t()
     : i_(new impl_t())
 {
 }
 
 bigint_t::bigint_t(long num)
-    : i_(new impl_t(num))
+    : i_(construct(num))
 {
 }
 
