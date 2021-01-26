@@ -57,6 +57,36 @@ struct ratio_t {
 
         return {a / g, b / g};
     }
+
+    bool to_integer(T& t) const {
+        if (a % b == 0) {
+            t = a / b;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    // add
+    friend ratio_t operator+(const ratio_t& l, const ratio_t& r) {
+        return {l.a * r.b + r.a * l.b, l.b * r.b};
+    }
+
+    // sub
+    friend ratio_t operator-(const ratio_t& l, const ratio_t& r) {
+        return {l.a * r.b - r.a * l.b, l.b * r.b};
+    }
+
+    // mul
+    friend ratio_t operator*(const ratio_t& l, const ratio_t& r) {
+        return {l.a * r.a, l.b * r.b};
+    }
+
+    // div
+    friend ratio_t operator/(const ratio_t& l, const ratio_t& r) {
+        return {l.a * r.b, l.b * r.a};
+    }
 };
 
 template <class T>
