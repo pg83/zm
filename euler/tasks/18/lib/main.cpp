@@ -71,12 +71,7 @@ namespace {
                     }
                 }
 
-                path_t ret;
-
-                ret.push_back(fr);
-                ret.insert(ret.end(), path_maxw->begin(), path_maxw->end());
-
-                return ret;
+                return prepend_el(fr, *path_maxw);
             });
 
             return calc(fr);

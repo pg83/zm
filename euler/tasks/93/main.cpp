@@ -1,15 +1,5 @@
 #include <euler/lib/euler.h>
 
-template <class T, class C>
-C join(T t, C c) {
-    C r;
-
-    r.push_back(t);
-    r.insert(r.end(), c.begin(), c.end());
-
-    return r;
-}
-
 template <class V>
 struct select_k_t {
     using values_t = std::vector<V>;
@@ -197,12 +187,12 @@ static terms_t generate_terms(int n) {
                 auto s = sel.selected();
                 auto o = sel.other();
 
-                calc(join(new_term<add_t>(s[0], s[1]), o));
-                calc(join(new_term<sub_t>(s[0], s[1]), o));
-                calc(join(new_term<sub_t>(s[1], s[0]), o));
-                calc(join(new_term<mul_t>(s[0], s[1]), o));
-                calc(join(new_term<diw_t>(s[0], s[1]), o));
-                calc(join(new_term<diw_t>(s[1], s[0]), o));
+                calc(prepend_el(new_term<add_t>(s[0], s[1]), o));
+                calc(prepend_el(new_term<sub_t>(s[0], s[1]), o));
+                calc(prepend_el(new_term<sub_t>(s[1], s[0]), o));
+                calc(prepend_el(new_term<mul_t>(s[0], s[1]), o));
+                calc(prepend_el(new_term<diw_t>(s[0], s[1]), o));
+                calc(prepend_el(new_term<diw_t>(s[1], s[0]), o));
             } while (sel.next());
         }
     });
