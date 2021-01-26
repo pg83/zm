@@ -48,7 +48,7 @@ struct bigint_t::impl_t: public bignum_holder_t {
         check_err(mp_read_radix(&bi, num, 10));
     }
 
-    std::string to_string() const {
+    std::string to_string_tom() const {
         try {
             char buf[1024 * 16];
             size_t written = 0;
@@ -57,11 +57,11 @@ struct bigint_t::impl_t: public bignum_holder_t {
 
             return std::string(buf, written - 1);
         } catch (...) {
-            return to_string_slow();
+            return to_string_tom_slow();
         }
     }
 
-    std::string to_string_slow() const {
+    std::string to_string_tom_slow() const {
         size_t nbuf = digit_count() + 16;
         char* buf = (char*)malloc(nbuf);
 
@@ -140,8 +140,33 @@ bigint_t::bigint_t(impl_ref_t ref) noexcept
 bigint_t::~bigint_t() noexcept {
 }
 
+static std::string to_string_fast(bigint_t n) {
+    static const bigint_t max = pow_int(bigint_t(10), 200);
+
+    if (n < max) {
+        return n.to_string_tom();
+    }
+
+    auto hdc = n.digit_count() / 2;
+    auto big = pow_int(bigint_t(10), hdc);
+
+    auto a = to_string_fast(n / big);
+    auto b = to_string_fast(n % big);
+    auto c = std::string(hdc - b.size(), '0');
+
+    return a + c + b;
+}
+
 std::string bigint_t::to_string() const {
-    return i_->to_string();
+    if (*this < long(0)) {
+        return "-" + to_string_fast(*this * -1);
+    }
+
+    return to_string_fast(*this);
+}
+
+std::string bigint_t::to_string_tom() const {
+    return i_->to_string_tom();
 }
 
 bigint_t operator+(const bigint_t& l, const bigint_t& r) {
