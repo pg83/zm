@@ -83,6 +83,10 @@ struct bigint_t::impl_t: public bignum_holder_t {
 
         return res - 1;
     }
+
+    bool is_negative() const noexcept {
+        return mp_isneg(&bi);
+    }
 };
 
 bigint_t::impl_ref_t bigint_t::construct(long v) {
@@ -158,8 +162,8 @@ static std::string to_string_fast(bigint_t n) {
 }
 
 std::string bigint_t::to_string() const {
-    if (*this < long(0)) {
-        return "-" + to_string_fast(*this * -1);
+    if (is_negative()) {
+        return "-" + to_string_fast(abs());
     }
 
     return to_string_fast(*this);
@@ -209,6 +213,14 @@ bigint_t operator/(const bigint_t& l, const bigint_t& r) {
     return res;
 }
 
+bigint_t bigint_t::abs() const {
+    auto res = bigint_t::construct();
+
+    check_err(mp_abs(&i_->bi, &res->bi));
+
+    return res;
+}
+
 bigint_t bigint_t::sqrt() const {
     auto res = bigint_t::construct();
 
@@ -239,4 +251,8 @@ size_t bigint_t::digit_sum() const {
 
 size_t bigint_t::digit_count() const {
     return i_->digit_count();
+}
+
+bool bigint_t::is_negative() const noexcept {
+    return i_->is_negative();
 }
