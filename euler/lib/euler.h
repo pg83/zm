@@ -18,6 +18,7 @@
 #include "dijkstra.h"
 #include "defer.h"
 #include "preproc.h"
+#include "timer.h"
 
 #include <map>
 #include <set>

@@ -1,3 +1,4 @@
 recurse:
 - tasks
 - lib
+- tests

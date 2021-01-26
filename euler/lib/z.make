@@ -21,6 +21,7 @@ srcs:
 - dijkstra.cpp
 - defer.cpp
 - preproc.cpp
+- timer.cpp
 
 depends:
 - tp/libs/tommath
