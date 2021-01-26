@@ -175,11 +175,11 @@ static auto& all_terms() {
 
 template <class T, typename... Args>
 T* new_term(Args&&... args) {
-    auto res = new T(std::forward<Args>(args)...);
+    auto res = std::make_unique<T>(std::forward<Args>(args)...);
 
-    all_terms().emplace_back(res);
+    all_terms().emplace_back(res.get());
 
-    return res;
+    return res.release();
 }
 
 using terms_t = std::vector<term_i*>;
@@ -187,7 +187,7 @@ using terms_t = std::vector<term_i*>;
 static terms_t generate_terms(int n) {
     terms_t res;
 
-    auto calc = [&](auto& calc, const terms_t& t) -> void {
+    auto calc = recursive([&](auto& calc, const terms_t& t) -> void {
         if (t.size() == 1) {
             res.push_back(t.back());
         } else {
@@ -197,15 +197,15 @@ static terms_t generate_terms(int n) {
                 auto s = sel.selected();
                 auto o = sel.other();
 
-                calc(calc, join(new_term<add_t>(s[0], s[1]), o));
-                calc(calc, join(new_term<sub_t>(s[0], s[1]), o));
-                calc(calc, join(new_term<sub_t>(s[1], s[0]), o));
-                calc(calc, join(new_term<mul_t>(s[0], s[1]), o));
-                calc(calc, join(new_term<diw_t>(s[0], s[1]), o));
-                calc(calc, join(new_term<diw_t>(s[1], s[0]), o));
+                calc(join(new_term<add_t>(s[0], s[1]), o));
+                calc(join(new_term<sub_t>(s[0], s[1]), o));
+                calc(join(new_term<sub_t>(s[1], s[0]), o));
+                calc(join(new_term<mul_t>(s[0], s[1]), o));
+                calc(join(new_term<diw_t>(s[0], s[1]), o));
+                calc(join(new_term<diw_t>(s[1], s[0]), o));
             } while (sel.next());
         }
-    };
+    });
 
     {
         terms_t vals;
@@ -214,7 +214,7 @@ static terms_t generate_terms(int n) {
             vals.push_back(new_term<val_t>(i));
         }
 
-        calc(calc, vals);
+        calc(vals);
     }
 
     return res;
@@ -231,9 +231,7 @@ int main() {
                 auto x = term->evaluate(ctx);
 
                 if (int n = 0; x.to_integer(n) && n > 0) {
-                    if (res.find(n) == res.end()) {
-                        res.insert(n);
-                    }
+                    res.insert(n);
                 }
             } catch (const zero_div_t&) {
             }
