@@ -10,51 +10,6 @@ C join(T t, C c) {
     return r;
 }
 
-// https://msdn.microsoft.com/en-us/library/aa289166.aspx
-template <class V>
-void first_combination(int k, V& v) {
-    for (int i = 0; i < k; ++i) {
-        v.push_back(i);
-    }
-}
-
-template <class V>
-bool next_combination(int n, V& ans) {
-    auto k = (int)ans.size();
-
-    if (ans[0] == n - k) {
-        return false;
-    }
-
-    auto i = k - 1;
-
-    while (i > 0 && ans[i] == n - k + i) {
-        i -= 1;
-    }
-
-    ans[i] += 1;
-
-    for (int j = i; j < k - 1; ++j) {
-        ans[j + 1] = ans[j] + 1;
-    }
-
-    return true;
-}
-
-struct combination_t: public std::vector<int> {
-    int n;
-
-    combination_t(int kk, int nn)
-        : n(nn)
-    {
-        first_combination(kk, *this);
-    }
-
-    bool next() {
-        return next_combination(n, *this);
-    }
-};
-
 template <class V>
 struct select_k_t {
     using values_t = std::vector<V>;
@@ -278,8 +233,6 @@ int main() {
                 if (int n = 0; x.to_integer(n) && n > 0) {
                     if (res.find(n) == res.end()) {
                         res.insert(n);
-
-                        //std::cout << x << ", " << n << " = " << term->to_string() << std::endl;
                     }
                 }
             } catch (const zero_div_t&) {
