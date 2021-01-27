@@ -90,22 +90,17 @@ struct bigint_t::impl_t: public bignum_holder_t {
 };
 
 bigint_t::impl_ref_t bigint_t::construct(long v) {
-    #define EL(X) impl_ref_t(new impl_t(long(X)))
-
-    static const impl_ref_t small[] = {
-        EL(0),
-        EL(1),
-        EL(2),
-        EL(3),
-        EL(4),
-        EL(5),
-        EL(6),
-        EL(7),
-        EL(8),
-        EL(9),
+    struct small_t: public std::vector<impl_ref_t> {
+        small_t() {
+            for (long i = 0; i < 1000; ++i) {
+                push_back(impl_ref_t(new impl_t(i)));
+            }
+        }
     };
 
-    if (v >= 0 && v < 10) {
+    static const small_t small;
+
+    if (v >= 0 && v < (long)small.size()) {
         return small[v];
     }
 

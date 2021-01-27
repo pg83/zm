@@ -89,7 +89,7 @@ void first_combination(int k, V& v) {
     }
 }
 
-auto first_combination(int k) {
+inline auto first_combination(int k) {
     std::vector<int> tmp;
 
     first_combination(k, tmp);

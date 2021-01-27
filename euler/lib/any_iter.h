@@ -45,7 +45,7 @@ struct any_iterator_t {
 
 private:
     bool at_end() const noexcept {
-        return !cur.has_value();
+        return !cur;
     }
 
     void next() {

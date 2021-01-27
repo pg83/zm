@@ -7,6 +7,8 @@ int main() {
         }
     }
 
+    std::cout << "-------------" << std::endl;
+
     {
         for (const auto& c : combination_sequence(3, 5)) {
             std::cout << c << std::endl;
