@@ -1,11 +1,7 @@
 #include <euler/lib/euler.h>
 
 int main() {
-    std::set<int> squares;
-
-    for (int i = 1; i <= 9; ++i) {
-        squares.insert(i * i);
-    }
+    auto squares = rv::iota(1, 10) | rv::transform([](auto i) {return i * i;}) | rs::to<std::set>;
 
     auto is_ok = [&](const auto& m, const auto& n) -> bool {
         std::set<int> res;

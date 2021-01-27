@@ -11,7 +11,7 @@ auto farey_sequence(T n) {
             throw stop_iteration_t();
         }
 
-        defer {
+        Z_DEFER {
             auto k = (n + b) / d;
 
             auto a1 = c;

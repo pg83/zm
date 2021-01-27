@@ -65,7 +65,7 @@ struct bigint_t::impl_t: public bignum_holder_t {
         size_t nbuf = digit_count() + 16;
         char* buf = (char*)malloc(nbuf);
 
-        defer {
+        Z_DEFER {
             free(buf);
         };
 

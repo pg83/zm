@@ -145,7 +145,7 @@ inline auto combination_sequence(int k, int n) {
             throw stop_iteration_t();
         }
 
-        defer {
+        Z_DEFER {
             at_end = !next_combination(n, tmp);
         };
 
@@ -160,7 +160,7 @@ inline auto permutation_sequence(V v) {
             throw stop_iteration_t();
         }
 
-        defer {
+        Z_DEFER {
             at_end = !std::next_permutation(v.begin(), v.end());
         };
 

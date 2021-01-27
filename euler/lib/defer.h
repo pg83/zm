@@ -25,4 +25,4 @@ struct defer_maker_t {
     }
 };
 
-#define defer [[maybe_unused]] const auto& Z_GENERATE_UNIQUE_ID(defer) = defer_maker_t() | [&]()
+#define Z_DEFER [[maybe_unused]] const auto& Z_GENERATE_UNIQUE_ID(defer) = defer_maker_t() | [&]()

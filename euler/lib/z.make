@@ -23,8 +23,10 @@ srcs:
 - preproc.cpp
 - timer.cpp
 - any_iter.cpp
+- ranges.cpp
 
 depends:
 - tp/libs/tommath
 - tp/libs/memo
+- tp/libs/range-v3
 - libs/io
