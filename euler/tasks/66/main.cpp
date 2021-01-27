@@ -15,13 +15,10 @@ static bigint_t pell_fund_sol(int d) {
 }
 
 int main() {
+    auto sq = rv::iota(1, 1001) | rv::transform([](long i) {return i * i;}) | rs::to<std::set>;
+
     bigint_t x;
     long xd = 0;
-    std::set<long> sq;
-
-    for (long i = 1; i <= 1000; ++i) {
-        sq.insert(i * i);
-    }
 
     for (long d = 2; d <= 1000; ++d) {
         if (sq.find(d) == sq.end()) {

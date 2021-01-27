@@ -1,11 +1,7 @@
 #include <euler/lib/euler.h>
 
 int main() {
-    std::set<int> pows;
-
-    for (size_t i = 0; i <= 100; ++i) {
-        pows.insert(i * i);
-    }
+    auto pows = rv::iota(0, 101) | rv::transform([](auto i) {return i * i;}) | rs::to<std::set>;
 
     size_t res = 0;
 

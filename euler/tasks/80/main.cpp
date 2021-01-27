@@ -11,11 +11,7 @@ static int ss(const bigint_t& v) {
 }
 
 int main() {
-    std::set<int> powers;
-
-    for (int i = 1; i < 100; ++i) {
-        powers.insert(i * i);
-    }
+    auto powers = rv::iota(0, 100) | rv::transform([](auto i) {return i * i;}) | rs::to<std::set>;
 
     int res = 0;
 
