@@ -56,6 +56,7 @@ private:
         }
     }
 
+private:
     F func;
     std::optional<result_of_t<F>> cur;
 };
@@ -63,11 +64,6 @@ private:
 template <class F>
 struct any_sequence_t {
     F func;
-
-    any_sequence_t(const F& f)
-        : func(f)
-    {
-    }
 
     any_iterator_t<F> begin() const {
         return {func};
@@ -79,6 +75,6 @@ struct any_sequence_t {
 };
 
 template <class F>
-auto any_sequence(F&& f) {
-    return any_sequence_t(std::forward<F>(f));
+any_sequence_t<F> any_sequence(F&& f) {
+    return {std::forward<F>(f)};
 }
