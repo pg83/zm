@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <optional>
 
 template <class F>
 struct result_of_f_t {
@@ -13,29 +14,19 @@ using result_of_t = typename result_of_f_t<F>::type_t;
 struct stop_iteration_t {
 };
 
+struct any_iterator_end_t {
+};
+
 template <class F>
 struct any_iterator_t {
-    using res_t = result_of_t<F>;
-
     any_iterator_t(const F& f)
         : func(f)
-        , at_end(false)
     {
         next();
     }
 
-    void next() {
-        if (!at_end) {
-            try {
-                cur = func();
-            } catch (const stop_iteration_t&) {
-                at_end = true;
-            }
-        }
-    }
-
-    const res_t& operator*() noexcept {
-        return cur;
+    const auto& operator*() noexcept {
+        return *cur;
     }
 
     any_iterator_t& operator++() {
@@ -44,23 +35,30 @@ struct any_iterator_t {
         return *this;
     }
 
+    friend bool operator==(const any_iterator_t& l, const any_iterator_end_t&) noexcept {
+        return l.at_end();
+    }
+
+    friend bool operator!=(const any_iterator_t& l, const any_iterator_end_t&) noexcept {
+        return !l.at_end();
+    }
+
+private:
+    bool at_end() const noexcept {
+        return !cur.has_value();
+    }
+
+    void next() {
+        try {
+            cur = func();
+        } catch (const stop_iteration_t&) {
+            cur.reset();
+        }
+    }
+
     F func;
-    res_t cur;
-    bool at_end;
+    std::optional<result_of_t<F>> cur;
 };
-
-struct any_iterator_end_t {
-};
-
-template <class F>
-bool operator==(const any_iterator_t<F>& l, const any_iterator_end_t&) noexcept {
-    return l.at_end;
-}
-
-template <class F>
-bool operator!=(const any_iterator_t<F>& l, const any_iterator_end_t&) noexcept {
-    return !l.at_end;
-}
 
 template <class F>
 struct any_sequence_t {

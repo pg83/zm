@@ -4,7 +4,7 @@
 
 template <class T>
 auto fibo_sequence() {
-    return any_sequence([a = T(1), b = T(1)]() mutable -> T {
+    return any_sequence([a = T(1), b = T(1)]() mutable {
         auto t = a;
 
         a = b;

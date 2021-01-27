@@ -89,8 +89,20 @@ void first_combination(int k, V& v) {
     }
 }
 
+auto first_combination(int k) {
+    std::vector<int> tmp;
+
+    first_combination(k, tmp);
+
+    return tmp;
+}
+
 template <class V>
 bool next_combination(int n, V& ans) {
+    if (ans.empty()) {
+        return false;
+    }
+
     auto k = (int)ans.size();
 
     if (ans[0] == n - k) {
@@ -127,19 +139,13 @@ struct combination_t: public std::vector<int> {
 };
 
 inline auto combination_sequence(int k, int n) {
-    std::vector<int> tmp;
-
-    first_combination(k, tmp);
-
-    return any_sequence([n, tmp]() mutable {
-        if (tmp.empty()) {
+    return any_sequence([n, tmp = first_combination(k), at_end = false]() mutable {
+        if (at_end) {
             throw stop_iteration_t();
         }
 
         defer {
-            if (!next_combination(n, tmp)) {
-                tmp.clear();
-            }
+            at_end = !next_combination(n, tmp);
         };
 
         return tmp;

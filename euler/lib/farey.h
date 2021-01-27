@@ -6,7 +6,11 @@
 
 template <class T>
 auto farey_sequence(T n) {
-    return any_sequence([a = T(0), b = T(1), c = T(1), d = T(n), n]() mutable -> ratio_t<T> {
+    return any_sequence([a = T(0), b = T(1), c = T(1), d = T(n), n]() mutable {
+        if (a > b) {
+            throw stop_iteration_t();
+        }
+
         defer {
             auto k = (n + b) / d;
 
@@ -21,10 +25,6 @@ auto farey_sequence(T n) {
             d = d1;
         };
 
-        if (a > b) {
-            throw stop_iteration_t();
-        }
-
-        return {a, b};
+        return ratio_t(a, b);
     });
 }
