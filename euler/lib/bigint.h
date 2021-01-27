@@ -82,11 +82,16 @@ public:
     bigint_t abs() const;
     bigint_t sqrt() const;
     bigint_t reverse() const;
+
     std::string to_string() const;
     std::string to_string_tom() const;
+
     size_t digit_sum() const;
     size_t digit_count() const;
+
     bool is_negative() const noexcept;
+    bool is_even() const noexcept;
+    bool is_odd() const noexcept;
 
     void swap(bigint_t& v) noexcept {
         i_.swap(v.i_);

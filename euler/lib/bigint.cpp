@@ -251,3 +251,11 @@ size_t bigint_t::digit_count() const {
 bool bigint_t::is_negative() const noexcept {
     return i_->is_negative();
 }
+
+bool bigint_t::is_even() const noexcept {
+    return mp_iseven(&i_->bi);
+}
+
+bool bigint_t::is_odd() const noexcept {
+    return mp_isodd(&i_->bi);
+}
