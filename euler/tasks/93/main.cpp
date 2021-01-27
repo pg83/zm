@@ -49,7 +49,6 @@ struct term_i {
     }
 
     virtual res_t evaluate(const ctx_t& ctx) = 0;
-    virtual std::string to_string() = 0;
 };
 
 struct val_t: public term_i {
@@ -62,10 +61,6 @@ struct val_t: public term_i {
 
     res_t evaluate(const ctx_t& ctx) override {
         return ctx[n];
-    }
-
-    std::string to_string() override {
-        return std::to_string(n + 1);
     }
 };
 
@@ -82,10 +77,6 @@ struct add_t: public term_i {
     res_t evaluate(const ctx_t& ctx) override {
         return lt->evaluate(ctx) + rt->evaluate(ctx);
     }
-
-    std::string to_string() override {
-        return "(" + lt->to_string() + " + " + rt->to_string() + ")";
-    }
 };
 
 struct sub_t: public term_i {
@@ -101,10 +92,6 @@ struct sub_t: public term_i {
     res_t evaluate(const ctx_t& ctx) override {
         return lt->evaluate(ctx) - rt->evaluate(ctx);
     }
-
-    std::string to_string() override {
-        return "(" + lt->to_string() + " - " + rt->to_string() + ")";
-    }
 };
 
 struct mul_t: public term_i {
@@ -119,10 +106,6 @@ struct mul_t: public term_i {
 
     res_t evaluate(const ctx_t& ctx) override {
         return lt->evaluate(ctx) * rt->evaluate(ctx);
-    }
-
-    std::string to_string() override {
-        return "(" + lt->to_string() + " * " + rt->to_string() + ")";
     }
 };
 
@@ -150,10 +133,6 @@ struct diw_t: public term_i {
 
     res_t evaluate(const ctx_t& ctx) override {
         return lt->evaluate(ctx) / check_zero(rt->evaluate(ctx));
-    }
-
-    std::string to_string() override {
-        return "(" + lt->to_string() + " / " + rt->to_string() + ")";
     }
 };
 

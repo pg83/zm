@@ -8,11 +8,6 @@ template <class F>
 struct defer_t {
     F f;
 
-    defer_t(const F& ff)
-        : f(ff)
-    {
-    }
-
     ~defer_t() {
         f();
     }
@@ -21,7 +16,7 @@ struct defer_t {
 struct defer_maker_t {
     template <class F>
     defer_t<F> operator|(F&& f) {
-        return std::forward<F>(f);
+        return {std::forward<F>(f)};
     }
 };
 
