@@ -7,6 +7,7 @@
 #include "defer.h"
 
 #include <vector>
+#include <algorithm>
 
 template <class R>
 auto cnk() {
@@ -149,5 +150,20 @@ inline auto combination_sequence(int k, int n) {
         };
 
         return tmp;
+    });
+}
+
+template <class V>
+inline auto permutation_sequence(V v) {
+    return any_sequence([v, at_end=false]() mutable {
+        if (at_end) {
+            throw stop_iteration_t();
+        }
+
+        defer {
+            at_end = !std::next_permutation(v.begin(), v.end());
+        };
+
+        return v;
     });
 }

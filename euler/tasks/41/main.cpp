@@ -9,15 +9,13 @@ int main() {
     for (int i = 2; i <= 9; ++i) {
         d.push_back(i);
 
-        auto tmp = d;
-
-        do {
+        for (auto tmp : permutation_sequence(d)) {
             auto n = to_number<ui64>(tmp);
 
             if (is_prime_stupid(n)) {
                 res.push_back(n);
             }
-        } while (std::next_permutation(tmp.begin(), tmp.end()));
+        }
     }
 
     std::sort(res.begin(), res.end());
