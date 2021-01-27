@@ -24,12 +24,8 @@ int main() {
     std::map<int, int> klasses;
 
     auto klass_of = [&](int n) {
-        for (auto& sol : calc(n)) {
-            auto rsol = sol;
-
-            rsol.pop_back();
-
-            auto klass = n - std::accumulate(rsol.begin(), rsol.end(), 0) + rsol.size();
+        for (const auto& sol : calc(n)) {
+            auto klass = n - std::accumulate(sol.begin(), sol.end(), 0) /*+1*/ + sol.size() /*+1*/;
 
             if (klass > 0) {
                 if (klasses.find(klass) == klasses.end()) {
