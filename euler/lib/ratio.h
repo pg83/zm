@@ -10,15 +10,21 @@ struct ratio_t {
     T a;
     T b;
 
-    ratio_t(T p, T q)
-        : a(p)
-        , b(q)
+    ratio_t()
+        : a(0)
+        , b(1)
     {
     }
 
     ratio_t(T p)
         : a(p)
         , b(1)
+    {
+    }
+
+    ratio_t(T p, T q)
+        : a(p)
+        , b(q)
     {
     }
 

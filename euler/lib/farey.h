@@ -1,87 +1,30 @@
 #pragma once
 
 #include "ratio.h"
+#include "defer.h"
+#include "any_iter.h"
 
-// farey sequence
 template <class T>
-struct farey_iterator_t {
-    const T n;
+auto farey_sequence(T n) {
+    return any_sequence([a = T(0), b = T(1), c = T(1), d = T(n), n]() mutable -> ratio_t<T> {
+        defer {
+            auto k = (n + b) / d;
 
-    T a;
-    T b;
-    T c;
-    T d;
+            auto a1 = c;
+            auto b1 = d;
+            auto c1 = k * c - a;
+            auto d1 = k * d - b;
 
-    farey_iterator_t(T maxd)
-        : n(maxd)
-        , a(0)
-        , b(1)
-        , c(1)
-        , d(n)
-    {
-    }
+            a = a1;
+            b = b1;
+            c = c1;
+            d = d1;
+        };
 
-    ratio_t<T> operator*() const {
+        if (a > b) {
+            throw stop_iteration_t();
+        }
+
         return {a, b};
-    }
-
-    farey_iterator_t& operator++() {
-        next();
-
-        return *this;
-    }
-
-    void next() {
-        auto k = (n + b) / d;
-
-        auto a1 = c;
-        auto b1 = d;
-        auto c1 = k * c - a;
-        auto d1 = k * d - b;
-
-        a = a1;
-        b = b1;
-        c = c1;
-        d = d1;
-    }
-
-    bool at_end() const {
-        return a > b;
-    }
-};
-
-struct farey_iterator_end_t {
-};
-
-template <class T>
-bool operator==(const farey_iterator_t<T>& l, farey_iterator_end_t) {
-    return l.at_end();
-}
-
-template <class T>
-bool operator!=(const farey_iterator_t<T>& l, farey_iterator_end_t) {
-    return !l.at_end();
-}
-
-template <class T>
-struct farey_seq_t {
-    T n;
-
-    farey_seq_t(T n_)
-        : n(n_)
-    {
-    }
-
-    farey_iterator_t<T> begin() const {
-        return {n};
-    }
-
-    farey_iterator_end_t end() const {
-        return {};
-    }
-};
-
-template <class T>
-farey_seq_t<T> farey_seq(T n) {
-    return {n};
+    });
 }

@@ -5,7 +5,7 @@ int main() {
     auto min = ratio_t(1, 3);
     auto cnt = 0;
 
-    for (auto it : farey_seq(12000)) {
+    for (auto it : farey_sequence(12000)) {
         if (min < it && it < max) {
             ++cnt;
         }

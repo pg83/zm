@@ -3,6 +3,8 @@
 #include "types.h"
 #include "memo.h"
 #include "bigint.h"
+#include "any_iter.h"
+#include "defer.h"
 
 #include <vector>
 
@@ -123,3 +125,23 @@ struct combination_t: public std::vector<int> {
         return next_combination(n, *this);
     }
 };
+
+inline auto combination_sequence(int k, int n) {
+    std::vector<int> tmp;
+
+    first_combination(k, tmp);
+
+    return any_sequence([n, tmp]() mutable {
+        if (tmp.empty()) {
+            throw stop_iteration_t();
+        }
+
+        defer {
+            if (!next_combination(n, tmp)) {
+                tmp.clear();
+            }
+        };
+
+        return tmp;
+    });
+}

@@ -3,7 +3,7 @@
 int main() {
     unsigned sum = 0;
 
-    for (auto x : fibo_seq_t<unsigned>()) {
+    for (auto x : fibo_sequence<unsigned>()) {
         if (x > 4000000) {
             break;
         }
