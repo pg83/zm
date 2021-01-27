@@ -28,11 +28,6 @@ T sqrt_int(T v) noexcept {
 }
 
 template <class T>
-T sqr(T i) {
-    return i * i;
-}
-
-template <class T>
 T factorial(T n) {
     if (n < 2) {
         return 1;

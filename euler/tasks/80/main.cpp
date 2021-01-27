@@ -11,7 +11,7 @@ static int ss(const bigint_t& v) {
 }
 
 int main() {
-    auto powers = rv::iota(0, 100) | rv::transform([](auto i) {return i * i;}) | rs::to<std::set>;
+    auto powers = rv::iota(0, 100) | rv::transform(sqr_fn()) | rs::to<std::set>;
 
     int res = 0;
 

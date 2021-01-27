@@ -15,7 +15,7 @@ static bigint_t pell_fund_sol(int d) {
 }
 
 int main() {
-    auto sq = rv::iota(1, 1001) | rv::transform([](long i) {return i * i;}) | rs::to<std::set>;
+    auto sq = rv::iota(1, 1001) | rv::transform(sqr_fn()) | rs::to<std::set>;
 
     bigint_t x;
     long xd = 0;

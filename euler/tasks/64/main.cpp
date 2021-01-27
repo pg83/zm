@@ -1,7 +1,7 @@
 #include <euler/lib/euler.h>
 
 int main() {
-    auto pows = rv::iota(0, 101) | rv::transform([](auto i) {return i * i;}) | rs::to<std::set>;
+    auto pows = rv::iota(0, 101) | rv::transform(sqr_fn()) | rs::to<std::set>;
 
     size_t res = 0;
 
