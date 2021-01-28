@@ -482,6 +482,16 @@ def run_cmd(cmd, cwd, tmp_dir):
     return out
 
 
+def merge_flags(platform, flags):
+    def it():
+        yield platform
+
+        for f in flags:
+            yield flags[f]
+
+    return ', '.join(it())
+
+
 def join_path(a, b):
     if not a:
         return str(b)
@@ -718,9 +728,10 @@ def uniq_nodes(g):
     return uniq_list_base(g, node_key)
 
 
-def add_platform(g, p):
+def add_platform(g, p, o):
     for n in g:
         n['platform'] = p
+        n['opts'] = o
 
     return g
 
@@ -1068,7 +1079,7 @@ class Module(object):
             yield from self.iter_sub_commands(programs)
             yield from cc
 
-        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr)
+        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr, self.flags)
 
     def calc_main(self, g):
         return [g[-1]['uid']]
@@ -1396,7 +1407,7 @@ class Parser(object):
 
     @cached_method
     def parse_module_impl(self, target, platform, flags):
-        msg('T', 'bc', '{' + platform + '} ' + '$(S)/' + target)
+        msg('T', 'bc', '{' + merge_flags(platform, flags) + '} ' + '$(S)/' + target)
 
         pt = self.platform_by_name(platform)
 
@@ -1706,7 +1717,7 @@ class Builder(object):
                 t = self._p.replace_path(s)
 
                 if args.verbose:
-                    msg('S', 'bb', '{' + n['platform'] + '} ' + s)
+                    msg('S', 'bb', '{' + merge_flags(n['platform'], n['opts']) + '} ' + s)
 
                 try:
                     os.unlink(t)
@@ -1754,7 +1765,7 @@ class Builder(object):
             if ms:
                 m.append(ms)
 
-        app_msg('{' + n['platform'] + '} ' + ' '.join(n['out']))
+        app_msg('{' + merge_flags(n['platform'], n['opts']) + '} ' + ' '.join(n['out']))
 
         for c in n['cmd']:
             cmd = [self.replace_path(x, n, 't') for x in c]
