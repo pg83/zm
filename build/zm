@@ -42,7 +42,7 @@ if __name__ == '__main__':
     argp.add_argument('--host-platform', help='host platform', default='')
     argp.add_argument('--target-platform', help='target platform', default='')
     argp.add_argument('--sanitize', help='sanitize', default='')
-    argp.add_argument('--musl', help='sanitize', default=False, action='store_const', const=True)
+    argp.add_argument('--musl', help='link with musl', default=False, action='store_const', const=True)
 
     args = argp.parse_args(sys.argv[1:])
 
@@ -171,7 +171,7 @@ class CppPlugin(PluginBase):
             {
                 'in': [src],
                 'out': [o],
-                'cmd': module.compiler.cxx_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.cxx_flags, module.flags),
+                'cmd': module.compiler.cxx_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.cxx_flags, module.all_flags),
             },
         ]
 
@@ -190,7 +190,7 @@ class CPlugin(PluginBase):
             {
                 'in': [src],
                 'out': [o],
-                'cmd': module.compiler.c_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.c_flags, module.flags),
+                'cmd': module.compiler.c_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.c_flags, module.all_flags),
             },
         ]
 
@@ -758,12 +758,29 @@ class Module(object):
         self._f = flags
 
     @property
-    def flags(self):
+    @cached_method
+    def all_flags(self):
+        def iter_flags():
+            for f in self._d.get('flags', []):
+                yield f, True
+
+            yield from self.parser_flags.items()
+
+        res = dict(iter_flags())
+
+        if 'no_sanitize' in res:
+            res.pop('sanitize', '')
+            res.pop('no_sanitize')
+
+        return res
+
+    @property
+    def parser_flags(self):
         return self._f
 
     @property
     def platform(self):
-        return self.parser.platform_by_name(self.flags['platform'])
+        return self.parser.platform_by_name(self.parser_flags['platform'])
 
     @property
     def name(self):
@@ -995,7 +1012,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.link_command(srcs, o, self.ld_flags, self.flags),
+            'cmd': self.compiler.link_command(srcs, o, self.ld_flags, self.all_flags),
             'main': True,
         }
 
@@ -1048,7 +1065,7 @@ class Module(object):
 
     def iter_sub_modules(self, deps):
         for d in iter_uniq_list(deps):
-            yield self.parser.parse_module(d, self.flags)
+            yield self.parser.parse_module(d, self.parser_flags)
 
     def iter_sub_commands(self, deps):
         for d in self.iter_sub_modules(deps):
@@ -1091,7 +1108,7 @@ class Module(object):
             yield from self.iter_sub_commands(programs)
             yield from cc
 
-        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.flags)
+        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.all_flags)
 
     def calc_main(self, g):
         return [g[-1]['uid']]
@@ -1269,7 +1286,7 @@ class Program(Module):
             'lf': 'tp/libs/lfalloc',
         }
 
-        if 'sanitize' in self.flags:
+        if 'sanitize' in self.all_flags:
             pass
         else:
             yield alloc[self.allocator]

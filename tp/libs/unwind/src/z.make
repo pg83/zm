@@ -16,6 +16,9 @@ c_flags:
 - -funwind-tables
 - -w
 
+flags:
+- no_sanitize
+
 srcs:
 #if OS_DARWIN
 - Unwind_AppleExtras.cpp
