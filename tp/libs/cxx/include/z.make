@@ -11,5 +11,12 @@ depends:
 - tp/libs/muslinc
 #endif
 
+#if not MUSL and OS_LINUX
+ld_flags:
+- -lc
+- -ldl
+- -lpthread
+#endif
+
 srcs:
 - all.cpp

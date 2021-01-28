@@ -42,6 +42,7 @@ if __name__ == '__main__':
     argp.add_argument('--host-platform', help='host platform', default='')
     argp.add_argument('--target-platform', help='target platform', default='')
     argp.add_argument('--sanitize', help='sanitize', default='')
+    argp.add_argument('--musl', help='sanitize', default=False, action='store_const', const=True)
 
     args = argp.parse_args(sys.argv[1:])
 
@@ -430,8 +431,7 @@ def preprocess(data, flags):
     def iter_lines():
         all_flags = collections.defaultdict(bool)
 
-        for x in flags:
-            all_flags[x] = True
+        all_flags.update(flags)
 
         skip = False
 
@@ -440,6 +440,8 @@ def preprocess(data, flags):
                 skip = False
             elif '#if' in l:
                 skip = not eval(l[3:].strip(), {}, all_flags)
+            elif '#else' in l:
+                skip = not skip
             elif skip:
                 if args.verbose:
                     msg('S', 'by', l)
@@ -484,9 +486,22 @@ def run_cmd(cmd, cwd, tmp_dir):
 
 def merge_flags(flags):
     def it():
-        for f in 'platform', 'sanitize':
-            if f in flags:
-                yield flags[f]
+        if 'os' in flags:
+            yield flags['os']
+
+        if 'arch' in flags:
+            yield flags['arch']
+
+        if 'MUSL' in flags:
+            yield 'musl'
+
+        if 'sanitize' in flags:
+            yield flags['sanitize'][:1] + 'san'
+
+        if 'release' in flags:
+            yield 'rel'
+        else:
+            yield 'dbg'
 
     return ', '.join(it())
 
@@ -1114,7 +1129,7 @@ class SystemCompiler(object):
             yield '-W'
             yield '-Wall'
 
-            if args.release:
+            if 'release' in opts:
                 yield '-O2'
             else:
                 yield '-O0'
@@ -1401,20 +1416,30 @@ class Parser(object):
 
     @cached_method
     def parse_module(self, target, flags):
-        msg('T', 'bc', '{' + merge_flags(flags) + '} ' + '$(S)/' + target)
+        def iter_flags():
+            yield from flags.items()
 
-        pf = self.platform_by_name(flags['platform']).flags
+            pt = self.platform_by_name(flags['platform'])
+
+            for flag in pt.flags:
+                yield flag, True
+
+            yield from pt.flags_dict.items()
+
+        all_flags = dict(iter_flags())
+
+        msg('T', 'bc', '{' + merge_flags(all_flags) + '} ' + '$(S)/' + target)
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = yaml.safe_load(preprocess(f.read(), pf))
+            d = yaml.safe_load(preprocess(f.read(), all_flags))
 
         if 'recurse' in d:
-            return Recurse(d, self, target, flags)
+            return Recurse(d, self, target, all_flags)
 
         def error(*args):
             raise Exception('unsupported module ' + target)
 
-        return self.BY_NAME.get(d['module'], error)(d, self, target, flags)
+        return self.BY_NAME.get(d['module'], error)(d, self, target, all_flags)
 
     def platform_by_name(self, name):
         return self._p[name]
@@ -1808,6 +1833,13 @@ class Target(object):
         return self.os in ['darwin', 'linux', 'freebsd']
 
     @property
+    def flags_dict(self):
+        return {
+            'os': self.os,
+            'arch': self.arch,
+        }
+
+    @property
     @cached_method
     def flags(self):
         def iter_flags_0():
@@ -1817,8 +1849,9 @@ class Target(object):
             if self.is_unix:
                 yield 'os_unix'
 
-            if self.os == 'linux':
-                yield 'musl'
+            if args.musl:
+                if self.os == 'linux':
+                    yield 'musl'
 
         def iter_flags_1():
             for f in iter_flags_0():
@@ -1992,6 +2025,9 @@ def main():
 
         if args.sanitize:
             res['sanitize'] = args.sanitize
+
+        if args.release:
+            res['release'] = True
 
         res['platform'] = p.target_platform.descr
 
