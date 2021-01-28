@@ -29,6 +29,10 @@ struct any_iterator_t {
         return *cur;
     }
 
+    const auto* operator->() noexcept {
+        return &*cur;
+    }
+
     any_iterator_t& operator++() {
         next();
 
@@ -75,6 +79,6 @@ struct any_sequence_t {
 };
 
 template <class F>
-any_sequence_t<F> any_sequence(F&& f) {
-    return {std::forward<F>(f)};
+any_sequence_t<F> any_sequence(F f) {
+    return {f};
 }

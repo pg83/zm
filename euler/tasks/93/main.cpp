@@ -1,45 +1,24 @@
 #include <euler/lib/euler.h>
 
 template <class V>
-struct select_k_t {
-    using values_t = std::vector<V>;
+auto select_k_sequence(int k, const V& values) {
+    return transform_sequence(combination_sequence(k, values.size()), [&values](auto& b) mutable {
+        std::set<int> sel(b.begin(), b.end());
 
-    combination_t comb;
-    values_t values;
-
-    select_k_t(int k, values_t v)
-        : comb(k, v.size())
-    {
-        v.swap(values);
-    }
-
-    auto selected() const {
-        values_t res;
-
-        for (auto i : comb) {
-            res.push_back(values[i]);
-        }
-
-        return res;
-    }
-
-    auto other() const {
-        values_t res;
-        std::set<int> sel(comb.begin(), comb.end());
+        V other;
+        V select;
 
         for (int i = 0; i < (int)values.size(); ++i) {
             if (sel.find(i) == sel.end()) {
-                res.push_back(values[i]);
+                other.push_back(values[i]);
+            } else {
+                select.push_back(values[i]);
             }
         }
 
-        return res;
-    }
-
-    bool next() {
-        return comb.next();
-    }
-};
+        return std::make_pair(select, other);
+    });
+}
 
 using ctx_t = std::vector<int>;
 using res_t = ratio_t<int>;
@@ -156,25 +135,20 @@ using terms_t = std::vector<term_i*>;
 static terms_t generate_terms(int n) {
     terms_t res;
 
-    auto calc = recursive([&](auto& calc, const terms_t& t) -> void {
+    auto calc = [&](auto& calc, terms_t t) -> void {
         if (t.size() == 1) {
             res.push_back(t.back());
         } else {
-            select_k_t<term_i*> sel(2, t);
-
-            do {
-                auto s = sel.selected();
-                auto o = sel.other();
-
-                calc(prepend_el(new_term<add_t>(s[0], s[1]), o));
-                calc(prepend_el(new_term<sub_t>(s[0], s[1]), o));
-                calc(prepend_el(new_term<sub_t>(s[1], s[0]), o));
-                calc(prepend_el(new_term<mul_t>(s[0], s[1]), o));
-                calc(prepend_el(new_term<diw_t>(s[0], s[1]), o));
-                calc(prepend_el(new_term<diw_t>(s[1], s[0]), o));
-            } while (sel.next());
+            for (auto [s, o]: select_k_sequence(2, t)) {
+                calc(calc, prepend_el(new_term<add_t>(s[0], s[1]), o));
+                calc(calc, prepend_el(new_term<sub_t>(s[0], s[1]), o));
+                calc(calc, prepend_el(new_term<sub_t>(s[1], s[0]), o));
+                calc(calc, prepend_el(new_term<mul_t>(s[0], s[1]), o));
+                calc(calc, prepend_el(new_term<diw_t>(s[0], s[1]), o));
+                calc(calc, prepend_el(new_term<diw_t>(s[1], s[0]), o));
+            }
         }
-    });
+    };
 
     {
         terms_t vals;
@@ -183,7 +157,7 @@ static terms_t generate_terms(int n) {
             vals.push_back(new_term<val_t>(i));
         }
 
-        calc(vals);
+        calc(calc, vals);
     }
 
     return res;

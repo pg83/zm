@@ -125,20 +125,6 @@ bool next_combination(int n, V& ans) {
     return true;
 }
 
-struct combination_t: public std::vector<int> {
-    int n;
-
-    combination_t(int kk, int nn)
-        : n(nn)
-    {
-        first_combination(kk, *this);
-    }
-
-    bool next() {
-        return next_combination(n, *this);
-    }
-};
-
 inline auto combination_sequence(int k, int n) {
     return any_sequence([n, tmp = first_combination(k), at_end = false]() mutable {
         if (at_end) {
@@ -165,5 +151,20 @@ inline auto permutation_sequence(V v) {
         };
 
         return v;
+    });
+}
+
+template <class S, class F>
+auto transform_sequence(S s, F f) {
+    return any_sequence([b = s.begin(), e = s.end(), f, s]() mutable {
+        if (b == e) {
+            throw stop_iteration_t();
+        }
+
+        Z_DEFER {
+            ++b;
+        };
+
+        return f(*b);
     });
 }

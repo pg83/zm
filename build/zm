@@ -41,6 +41,7 @@ if __name__ == '__main__':
     argp.add_argument('--flame-graph', help='dump flame graph', default=False, action='store_const', const=True)
     argp.add_argument('--host-platform', help='host platform', default='')
     argp.add_argument('--target-platform', help='target platform', default='')
+    argp.add_argument('--sanitize', help='sanitize', default='')
 
     args = argp.parse_args(sys.argv[1:])
 
@@ -169,7 +170,7 @@ class CppPlugin(PluginBase):
             {
                 'in': [src],
                 'out': [o],
-                'cmd': module.compiler.cxx_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.cxx_flags),
+                'cmd': module.compiler.cxx_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.cxx_flags, module.flags),
             },
         ]
 
@@ -188,7 +189,7 @@ class CPlugin(PluginBase):
             {
                 'in': [src],
                 'out': [o],
-                'cmd': module.compiler.c_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.c_flags),
+                'cmd': module.compiler.c_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.c_flags, module.flags),
             },
         ]
 
@@ -725,12 +726,17 @@ def add_platform(g, p):
 
 
 class Module(object):
-    def __init__(self, data, parser, prefix, platform):
+    def __init__(self, data, parser, prefix, platform, flags):
         self._d = data
         self._p = prefix
         self._parser = parser
         self._c = {}
         self._pl = platform
+        self._f = flags
+
+    @property
+    def flags(self):
+        return self._f
 
     @property
     def platform(self):
@@ -966,7 +972,7 @@ class Module(object):
         return {
             'in': srcs,
             'out': [o],
-            'cmd': self.compiler.link_command(srcs, o, self.ld_flags),
+            'cmd': self.compiler.link_command(srcs, o, self.ld_flags, self.flags),
             'main': True,
         }
 
@@ -1019,7 +1025,7 @@ class Module(object):
 
     def iter_sub_modules(self, deps):
         for d in iter_uniq_list(deps):
-            yield self.parser.parse_module(d, self.platform)
+            yield self.parser.parse_module(d, self.platform, self.flags)
 
     def iter_sub_commands(self, deps):
         for d in self.iter_sub_modules(deps):
@@ -1086,13 +1092,16 @@ class SystemCompiler(object):
     def name(self):
         return 'clang'
 
-    def compile_command(self, cxx, src, out, inc, flags):
+    def compile_command(self, cxx, src, out, inc, flags, opts):
         def it():
             yield from cxx
 
             yield '--target=' + self._t.descr
 
             yield '-fcolor-diagnostics'
+
+            if 'sanitize' in opts:
+                yield '-fsanitize=' + opts['sanitize']
 
             yield '-W'
             yield '-Wall'
@@ -1126,17 +1135,21 @@ class SystemCompiler(object):
     def find_tool(self, t):
         return os.path.join(self._d, t)
 
-    def c_compile_command(self, src, out, inc, flags):
-        return self.compile_command(['clang'], src, out, inc, flags)
+    def c_compile_command(self, src, out, inc, flags, opts):
+        return self.compile_command(['clang'], src, out, inc, flags, opts)
 
-    def cxx_compile_command(self, src, out, inc, flags):
-        return self.compile_command(['clang++'], src, out, inc, ['-std=c++20', '-nostdinc++'] + flags)
+    def cxx_compile_command(self, src, out, inc, flags, opts):
+        return self.compile_command(['clang++'], src, out, inc, ['-std=c++20', '-nostdinc++'] + flags, opts)
 
-    def link_command(self, srcs, out, flags):
+    def link_command(self, srcs, out, flags, opts):
         def iter_flags():
             yield 'clang++'
             yield '--target=' + self._t.descr
             yield '-fcolor-diagnostics'
+
+            if 'sanitize' in opts:
+                yield '-fsanitize=' + opts['sanitize']
+
             yield '-nostdlib++'
             yield from self.extra_ld_flags()
             yield from flags
@@ -1234,7 +1247,11 @@ class Program(Module):
             'lf': 'tp/libs/lfalloc',
         }
 
-        yield alloc[self.allocator]
+        if 'sanitize' in self.flags:
+            pass
+        else:
+            yield alloc[self.allocator]
+
         yield from self.more_deps()
 
     def extra_depends(self):
@@ -1374,11 +1391,11 @@ class Parser(object):
     def replace_path(self, p):
         return p.replace('$(S)', self.root)
 
-    def parse_module(self, target, platform):
-        return self.parse_module_impl(target, platform.descr)
+    def parse_module(self, target, platform, flags):
+        return self.parse_module_impl(target, platform.descr, flags)
 
     @cached_method
-    def parse_module_impl(self, target, platform):
+    def parse_module_impl(self, target, platform, flags):
         msg('T', 'bc', '{' + platform + '} ' + '$(S)/' + target)
 
         pt = self.platform_by_name(platform)
@@ -1387,12 +1404,12 @@ class Parser(object):
             d = yaml.safe_load(preprocess(f.read(), pt.flags))
 
         if 'recurse' in d:
-            return Recurse(d, self, target, pt)
+            return Recurse(d, self, target, pt, flags)
 
         def error(*args):
             raise Exception('unsupported module ' + target)
 
-        return self.BY_NAME.get(d['module'], error)(d, self, target, pt)
+        return self.BY_NAME.get(d['module'], error)(d, self, target, pt, flags)
 
     def platform_by_name(self, name):
         return self._p[name]
@@ -1965,11 +1982,19 @@ def main():
     p = Parser(find_root(), host_platform, target_platform, inc)
     t = strip_prefix(get_target(args.target), p.root)
 
-    mt = p.parse_module(t, p.target_platform)
+    def target_flags():
+        res = {}
+
+        if args.sanitize:
+            res['sanitize'] = args.sanitize
+
+        return res
+
+    mt = p.parse_module(t, p.target_platform, target_flags())
     gt = mt.full_commands()
     mu = mt.calc_main(gt)
 
-    mh = p.parse_module(t, p.host_platform)
+    mh = p.parse_module(t, p.host_platform, {})
     gh = mh.full_commands()
 
     g = strip_uids(merge_tools(gt, gh), mu)
