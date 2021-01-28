@@ -482,12 +482,11 @@ def run_cmd(cmd, cwd, tmp_dir):
     return out
 
 
-def merge_flags(platform, flags):
+def merge_flags(flags):
     def it():
-        yield platform
-
-        for f in flags:
-            yield flags[f]
+        for f in 'platform', 'sanitize':
+            if f in flags:
+                yield flags[f]
 
     return ', '.join(it())
 
@@ -728,21 +727,19 @@ def uniq_nodes(g):
     return uniq_list_base(g, node_key)
 
 
-def add_platform(g, p, o):
+def add_platform(g, o):
     for n in g:
-        n['platform'] = p
         n['opts'] = o
 
     return g
 
 
 class Module(object):
-    def __init__(self, data, parser, prefix, platform, flags):
+    def __init__(self, data, parser, prefix, flags):
         self._d = data
         self._p = prefix
         self._parser = parser
         self._c = {}
-        self._pl = platform
         self._f = flags
 
     @property
@@ -751,7 +748,7 @@ class Module(object):
 
     @property
     def platform(self):
-        return self._pl
+        return self.parser.platform_by_name(self.flags['platform'])
 
     @property
     def name(self):
@@ -1036,7 +1033,7 @@ class Module(object):
 
     def iter_sub_modules(self, deps):
         for d in iter_uniq_list(deps):
-            yield self.parser.parse_module(d, self.platform, self.flags)
+            yield self.parser.parse_module(d, self.flags)
 
     def iter_sub_commands(self, deps):
         for d in self.iter_sub_modules(deps):
@@ -1079,7 +1076,7 @@ class Module(object):
             yield from self.iter_sub_commands(programs)
             yield from cc
 
-        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.platform.descr, self.flags)
+        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.flags)
 
     def calc_main(self, g):
         return [g[-1]['uid']]
@@ -1402,25 +1399,22 @@ class Parser(object):
     def replace_path(self, p):
         return p.replace('$(S)', self.root)
 
-    def parse_module(self, target, platform, flags):
-        return self.parse_module_impl(target, platform.descr, flags)
-
     @cached_method
-    def parse_module_impl(self, target, platform, flags):
-        msg('T', 'bc', '{' + merge_flags(platform, flags) + '} ' + '$(S)/' + target)
+    def parse_module(self, target, flags):
+        msg('T', 'bc', '{' + merge_flags(flags) + '} ' + '$(S)/' + target)
 
-        pt = self.platform_by_name(platform)
+        pf = self.platform_by_name(flags['platform']).flags
 
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = yaml.safe_load(preprocess(f.read(), pt.flags))
+            d = yaml.safe_load(preprocess(f.read(), pf))
 
         if 'recurse' in d:
-            return Recurse(d, self, target, pt, flags)
+            return Recurse(d, self, target, flags)
 
         def error(*args):
             raise Exception('unsupported module ' + target)
 
-        return self.BY_NAME.get(d['module'], error)(d, self, target, pt, flags)
+        return self.BY_NAME.get(d['module'], error)(d, self, target, flags)
 
     def platform_by_name(self, name):
         return self._p[name]
@@ -1717,7 +1711,7 @@ class Builder(object):
                 t = self._p.replace_path(s)
 
                 if args.verbose:
-                    msg('S', 'bb', '{' + merge_flags(n['platform'], n['opts']) + '} ' + s)
+                    msg('S', 'bb', '{' + merge_flags(n['opts']) + '} ' + s)
 
                 try:
                     os.unlink(t)
@@ -1765,7 +1759,7 @@ class Builder(object):
             if ms:
                 m.append(ms)
 
-        app_msg('{' + merge_flags(n['platform'], n['opts']) + '} ' + ' '.join(n['out']))
+        app_msg('{' + merge_flags(n['opts']) + '} ' + ' '.join(n['out']))
 
         for c in n['cmd']:
             cmd = [self.replace_path(x, n, 't') for x in c]
@@ -1999,13 +1993,22 @@ def main():
         if args.sanitize:
             res['sanitize'] = args.sanitize
 
+        res['platform'] = p.target_platform.descr
+
         return res
 
-    mt = p.parse_module(t, p.target_platform, target_flags())
+    def host_flags():
+        res = {}
+
+        res['platform'] = p.host_platform.descr
+
+        return res
+
+    mt = p.parse_module(t, target_flags())
     gt = mt.full_commands()
     mu = mt.calc_main(gt)
 
-    mh = p.parse_module(t, p.host_platform, {})
+    mh = p.parse_module(t, host_flags())
     gh = mh.full_commands()
 
     g = strip_uids(merge_tools(gt, gh), mu)
