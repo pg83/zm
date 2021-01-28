@@ -1184,8 +1184,7 @@ class SystemCompiler(object):
 
     def ar_command(self, srcs, out):
         return [
-            ['llvm-ar', 'q', out] + srcs,
-            ['llvm-ranlib', out],
+            ['llvm-ar', 'qs', out] + srcs,
         ]
 
     def fatobj_command(self, srcs, out):
