@@ -2,7 +2,7 @@
 
 template <class V>
 auto select_k_sequence(int k, const V& values) {
-    return transform_sequence(combination_sequence(k, values.size()), [&values](auto& b) mutable {
+    return transform_sequence(combination_sequence(k, values.size()), [&values](const auto& b) mutable {
         std::set<int> sel(b.begin(), b.end());
 
         V other;
@@ -135,7 +135,7 @@ using terms_t = std::vector<term_i*>;
 static terms_t generate_terms(int n) {
     terms_t res;
 
-    auto calc = [&](auto& calc, terms_t t) -> void {
+    auto calc = [&](auto& calc, const terms_t& t) -> void {
         if (t.size() == 1) {
             res.push_back(t.back());
         } else {
@@ -169,7 +169,7 @@ int main() {
     auto apply = [&](const ctx_t& ctx) -> int {
         std::set<int> res;
 
-        for (auto term : terms) {
+        for (const auto& term : terms) {
             try {
                 auto x = term->evaluate(ctx);
 
