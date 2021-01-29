@@ -84,6 +84,11 @@ class EmptyPlugin(PluginBase):
         return ['']
 
 
+class PyPlugin(PluginBase):
+    def ext(self):
+        return ['py']
+
+
 class PyxPlugin(PluginBase):
     def ext(self):
         return ['pyx']
