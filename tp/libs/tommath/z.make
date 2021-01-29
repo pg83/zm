@@ -1,5 +1,8 @@
 module: library
 
+depends:
+- tp/libs/compiler_rt
+
 srcs:
 - mp_2expt.c
 - mp_abs.c
