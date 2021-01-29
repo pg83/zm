@@ -805,7 +805,14 @@ class Module(object):
     @property
     @cached_method
     def inc_dirs(self):
-        return uniq_list(self.global_inc_dirs + self._d.get('inc_dirs', []))
+        try:
+            print('here', self.depends)
+            res = uniq_list(self.global_inc_dirs + self._d.get('inc_dirs', []))
+            print('xxx', res)
+            return res
+        except Exception as e:
+            print(e, '---------------------')
+            return []
 
     @property
     @cached_method
