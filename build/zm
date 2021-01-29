@@ -492,7 +492,7 @@ def merge_flags(flags):
         if 'arch' in flags:
             yield flags['arch']
 
-        if 'MUSL' in flags:
+        if 'musl' in flags:
             yield 'musl'
 
         if 'sanitize' in flags:
@@ -622,7 +622,8 @@ def cached_method(meth):
 def find_root():
     res = os.path.dirname(os.path.dirname(os.path.normpath(os.path.abspath(__file__))))
 
-    msg('R', 'by', res)
+    if args.verbose:
+        msg('R', 'by', res)
 
     return res
 
@@ -1430,32 +1431,34 @@ class Parser(object):
     def replace_path(self, p):
         return p.replace('$(S)', self.root)
 
-    @cached_method
-    def parse_module(self, target, flags):
+    def preprocessor_flags(self, flags):
         def iter_flags():
-            yield from flags.items()
-
-            pt = self.platform_by_name(flags['platform'])
-
-            for flag in pt.flags:
+            for flag in self.platform_by_name(flags['platform']).flags:
                 yield flag, True
 
-            yield from pt.flags_dict.items()
+            for k, v in flags.items():
+                try:
+                    yield k.upper(), v.upper()
+                except Exception:
+                    yield k.upper(), v
 
-        all_flags = dict(iter_flags())
+        return dict(iter_flags())
 
-        msg('T', 'bc', '{' + merge_flags(all_flags) + '} ' + '$(S)/' + target)
-
+    def load_module(self, target, flags):
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
-            d = yaml.safe_load(preprocess(f.read(), all_flags))
+            return yaml.safe_load(preprocess(f.read(), self.preprocessor_flags(flags)))
+
+    @cached_method
+    def parse_module(self, target, flags):
+        d = self.load_module(target, flags)
 
         if 'recurse' in d:
-            return Recurse(d, self, target, all_flags)
+            return Recurse(d, self, target, flags)
 
         def error(*args):
             raise Exception('unsupported module ' + target)
 
-        return self.BY_NAME.get(d['module'], error)(d, self, target, all_flags)
+        return self.BY_NAME.get(d['module'], error)(d, self, target, flags)
 
     def platform_by_name(self, name):
         return self._p[name]
@@ -1865,10 +1868,6 @@ class Target(object):
             if self.is_unix:
                 yield 'os_unix'
 
-            if args.musl:
-                if self.os == 'linux':
-                    yield 'musl'
-
         def iter_flags_1():
             for f in iter_flags_0():
                 yield f.upper()
@@ -2045,7 +2044,11 @@ def main():
         if args.release:
             res['release'] = True
 
+        if args.musl:
+            res['musl'] = True
+
         res['platform'] = p.target_platform.descr
+        res.update(p.target_platform.flags_dict)
 
         return res
 
@@ -2053,6 +2056,7 @@ def main():
         res = {}
 
         res['platform'] = p.host_platform.descr
+        res.update(p.host_platform.flags_dict)
 
         return res
 
