@@ -4,3 +4,4 @@ recurse:
 - xxhash
 - io
 - io/ut
+- py_runtime

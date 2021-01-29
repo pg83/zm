@@ -8,3 +8,4 @@ recurse:
 - prog7
 - prog8
 - prog9
+- import_hook

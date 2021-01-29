@@ -26,7 +26,31 @@ import multiprocessing
 CACHE_V = '5'
 
 
+def gen_py_reg(args):
+    template = """
+    struct PyObject;
+
+    extern "C" int PyImport_AppendInittab(const char* name, PyObject* (*initfunc)());
+    extern "C" PyObject* PyInit_{name}();
+
+    namespace {
+        struct TRegistrar {
+            inline TRegistrar() {
+                PyImport_AppendInittab("{name}", PyInit_{name});
+            }
+        } REG;
+    }
+    """
+
+    with open(args[1], 'w') as f:
+        f.write(template.replace('{name}', args[0]))
+
+
 if __name__ == '__main__':
+    if len(sys.argv) > 2 and sys.argv[1] == 'command':
+        globals()[sys.argv[2]](sys.argv[3:])
+        sys.exit(0)
+
     argp = argparse.ArgumentParser()
 
     argp.add_argument('target', nargs='?', default='.')
@@ -58,6 +82,32 @@ class PluginBase(object):
 class EmptyPlugin(PluginBase):
     def ext(self):
         return ['']
+
+
+class PyxPlugin(PluginBase):
+    def ext(self):
+        return ['pyx']
+
+    def command(self, src, module):
+        out1 = to_bd(src) + '.module.cpp'
+        out2 = to_bd(src) + '.global.cpp'
+
+        return [
+            {
+                'in': [src],
+                'out': [out1],
+                'cmd': [
+                    [sys.executable, '$(S)/tp/tools/cython/cython.py', '-3', '--cplus', src, '-o', out1],
+                ],
+            },
+            {
+                'in': [src],
+                'out': [out2],
+                'cmd': [
+                    [sys.executable, '$(S)/build/zm', 'command', 'gen_py_reg', os.path.basename(src)[:-4], out2],
+                ],
+            },
+        ]
 
 
 class File2CPlugin(PluginBase):
@@ -805,14 +855,7 @@ class Module(object):
     @property
     @cached_method
     def inc_dirs(self):
-        try:
-            print('here', self.depends)
-            res = uniq_list(self.global_inc_dirs + self._d.get('inc_dirs', []))
-            print('xxx', res)
-            return res
-        except Exception as e:
-            print(e, '---------------------')
-            return []
+        return uniq_list(self.global_inc_dirs + self._d.get('inc_dirs', []))
 
     @property
     @cached_method
@@ -1271,7 +1314,7 @@ class Program(Module):
                 for o in l['out']:
                     if o.endswith('.a'):
                         yield o
-                    elif o.endswith('.global.o'):
+                    elif '.global.' in o:
                         yield o
 
         ls = list(iter_ls())
