@@ -23,6 +23,7 @@ c_flags:
 
 ld_flags:
 - -nostdlib
+- -static
 
 srcs:
 - crt/crt1.c
