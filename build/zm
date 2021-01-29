@@ -97,14 +97,14 @@ class PyxPlugin(PluginBase):
                 'in': [src],
                 'out': [out1],
                 'cmd': [
-                    [sys.executable, '$(S)/tp/tools/cython/cython.py', '-3', '--cplus', src, '-o', out1],
+                    [sys.executable, '-B', '$(S)/tp/tools/cython/cython.py', '-3', '--cplus', src, '-o', out1],
                 ],
             },
             {
                 'in': [src],
                 'out': [out2],
                 'cmd': [
-                    [sys.executable, '$(S)/build/zm', 'command', 'gen_py_reg', os.path.basename(src)[:-4], out2],
+                    [sys.executable, '-B', '$(S)/build/zm', 'command', 'gen_py_reg', os.path.basename(src)[:-4], out2],
                 ],
             },
         ]
