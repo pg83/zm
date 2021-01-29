@@ -92,12 +92,17 @@ class PyxPlugin(PluginBase):
         out1 = to_bd(src) + '.module.cpp'
         out2 = to_bd(src) + '.global.cpp'
 
+        if 'main_module' in src:
+            extra = ['--embed']
+        else:
+            extra = []
+
         return [
             {
                 'in': [src],
                 'out': [out1],
                 'cmd': [
-                    [sys.executable, '-B', '$(S)/tp/tools/cython/cython.py', '-3', '--cplus', src, '-o', out1],
+                    [sys.executable, '-B', '$(S)/tp/tools/cython/cython.py'] + extra + ['-3', '--cplus', src, '-o', out1],
                 ],
             },
             {

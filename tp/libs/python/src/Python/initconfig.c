@@ -637,7 +637,7 @@ _PyConfig_InitCompatConfig(PyConfig *config)
     config->buffered_stdio = -1;
     config->_install_importlib = 1;
     config->check_hash_pycs_mode = NULL;
-    config->pathconfig_warnings = -1;
+    config->pathconfig_warnings = 0;
     config->_init_main = 1;
     config->_isolated_interpreter = 0;
 #ifdef MS_WINDOWS

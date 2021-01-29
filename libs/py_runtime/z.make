@@ -8,3 +8,4 @@ inc_dirs:
 
 srcs:
 - site_import_hook.pyx
+- site_main_module.pyx
