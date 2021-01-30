@@ -1,5 +1,7 @@
 module: program
 
+namespace: top_level
+
 srcs:
 - __main__.py
 
