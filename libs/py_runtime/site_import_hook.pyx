@@ -73,4 +73,4 @@ def excepthook(*args, **kws):
     return traceback.print_exception(*args, **kws)
 
 
-#sys.excepthook = excepthook
+sys.excepthook = excepthook
