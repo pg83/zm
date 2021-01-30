@@ -31,3 +31,5 @@ recurse:
 - range-v3
 - expat
 - python
+- ptpython
+- prompt_toolkit

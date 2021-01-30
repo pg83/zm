@@ -74,3 +74,4 @@ def excepthook(*args, **kws):
 
 
 sys.excepthook = excepthook
+sys.abiflags = ''

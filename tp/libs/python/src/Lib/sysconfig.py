@@ -416,10 +416,13 @@ def _generate_posix_vars():
 def _init_posix(vars):
     """Initialize the module as appropriate for POSIX systems."""
     # _sysconfigdata is generated at build time, see _generate_posix_vars()
-    name = _get_sysconfigdata_name()
-    _temp = __import__(name, globals(), locals(), ['build_time_vars'], 0)
-    build_time_vars = _temp.build_time_vars
-    vars.update(build_time_vars)
+    try:
+        name = _get_sysconfigdata_name()
+        _temp = __import__(name, globals(), locals(), ['build_time_vars'], 0)
+        build_time_vars = _temp.build_time_vars
+        vars.update(build_time_vars)
+    except Exception:
+        pass
 
 def _init_non_posix(vars):
     """Initialize the module as appropriate for NT"""
