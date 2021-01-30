@@ -5,4 +5,5 @@ global_inc_dirs:
 
 depends:
 - tp/libs/python/src
+- tp/libs/python/src/Lib
 - libs/py_runtime

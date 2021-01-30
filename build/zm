@@ -88,6 +88,23 @@ class PyPlugin(PluginBase):
     def ext(self):
         return ['py']
 
+    def command(self, src, module):
+        out = to_bd(src) + '.global.cpp'
+        name = '/_py/' + src[len(module.prefix) + 6:]
+        tool = '$(B)/libs/resource/compiler/compiler'
+
+        return [
+            {
+                'in': [src],
+                'out': [out],
+                'cmd': [
+                    ['/bin/sh', '-c', tool + ' ' + src + ' ' + name  + ' > ' + out],
+                ],
+                'use': [tool, '$(B)/tp/tools/yasm/yasm'],
+                'out_inc': module.parse_includes_md5('$(S)/libs/resource/resource.h', 'cpp'),
+            },
+        ]
+
 
 class PyxPlugin(PluginBase):
     def ext(self):
@@ -1324,7 +1341,7 @@ class Program(Module):
                 for o in l['out']:
                     if o.endswith('.a'):
                         yield o
-                    elif '.global.' in o:
+                    elif '.global.' in o and o.endswith('.o'):
                         yield o
 
         ls = list(iter_ls())
@@ -1507,6 +1524,9 @@ class Parser(object):
     def load_module(self, target, flags):
         with open(os.path.join(self.root, target, 'z.make'), 'r') as f:
             return yaml.safe_load(preprocess(f.read(), self.preprocessor_flags(flags)))
+
+    def fake_recurse(self, tools, flags):
+        return Recurse({'recurse': tools}, self, '', flags)
 
     @cached_method
     def parse_module(self, target, flags):
@@ -2124,7 +2144,14 @@ def main():
     gt = mt.full_commands()
     mu = mt.calc_main(gt)
 
-    mh = p.parse_module(t, host_flags())
+    def iter_use():
+        for n in gt:
+            for x in n.get('use', []):
+                yield os.path.dirname(x)[5:]
+
+    use_tools = list(sorted(frozenset(iter_use())))
+
+    mh = p.fake_recurse(use_tools, host_flags())
     gh = mh.full_commands()
 
     g = strip_uids(merge_tools(gt, gh), mu)

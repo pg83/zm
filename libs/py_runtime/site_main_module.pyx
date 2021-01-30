@@ -12,3 +12,5 @@ for k in srs.keys():
         }
 
         exec(code, glob)
+
+import importlib.util
