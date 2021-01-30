@@ -1,16 +1,25 @@
 module: library
 
+#if OS_LINUX and not MUSL
+ld_flags:
+- -lutil
+- -lrt
+- -lcrypt
+#endif
+
 depends:
 - tp/libs/expat
 - tp/libs/bz2
 - tp/libs/openssl
 - tp/libs/z
+- tp/libs/lzmasdk
 
 inc_dirs:
 - tp/libs/expat
 - tp/libs/bz2
 - tp/libs/openssl
 - tp/libs/z
+- tp/libs/lzmasdk
 - tp/libs/python/src/Include
 - tp/libs/python/src/Include/internal
 - tp/libs/python/src/Modules
@@ -35,14 +44,10 @@ srcs:
 - _blake2/blake2s_impl.c
 - _blake2/impl/blake2-dispatch.c
 - _blake2/impl/blake2b-ref.c
-- _blake2/impl/blake2b-test.c
 - _blake2/impl/blake2b.c
-- _blake2/impl/blake2bp-test.c
 - _blake2/impl/blake2bp.c
 - _blake2/impl/blake2s-ref.c
-- _blake2/impl/blake2s-test.c
 - _blake2/impl/blake2s.c
-- _blake2/impl/blake2sp-test.c
 - _blake2/impl/blake2sp.c
 - _bz2module.c
 - _codecsmodule.c
@@ -84,7 +89,7 @@ srcs:
 - _decimal/libmpdec/transpose.c
 - _elementtree.c
 - _functoolsmodule.c
-- _gdbmmodule.c
+#- _gdbmmodule.c
 - _hashopenssl.c
 - _heapqmodule.c
 - _io/_iomodule.c
@@ -98,7 +103,7 @@ srcs:
 - _json.c
 #- _localemodule.c
 - _lsprof.c
-- _lzmamodule.c
+#- _lzmamodule.c
 - _math.c
 - _multiprocessing/multiprocessing.c
 - _multiprocessing/posixshmem.c
@@ -124,7 +129,7 @@ srcs:
 - _testmultiphase.c
 - _threadmodule.c
 - _tracemalloc.c
-- _uuidmodule.c
+#- _uuidmodule.c
 - _weakref.c
 - _xxsubinterpretersmodule.c
 - _xxtestfuzz/_xxtestfuzz.c
@@ -155,12 +160,12 @@ srcs:
 - mathmodule.c
 - md5module.c
 - mmapmodule.c
-- nismodule.c
+#- nismodule.c
 - parsermodule.c
 - posixmodule.c
 - pwdmodule.c
 - pyexpat.c
-- readline.c
+#- readline.c
 - resource.c
 - rotatingtree.c
 - selectmodule.c
