@@ -1,18 +1,8 @@
 import sys
 
 from _frozen_importlib import spec_from_loader
-from _io import FileIO
 
-
-def file_bytes(path):
-    # 'open' is not avaiable yet.
-    with FileIO(path, 'r') as f:
-        return f.read()
-
-
-where = '/Users/pg/zm/tp/libs/python/src/Lib'
-#sys.dont_write_bytecode = True
-#sys.path.append(where)
+import site_res_wrapper as srw
 
 
 class Finder(object):
@@ -38,28 +28,34 @@ class Finder(object):
         exec(code, module.__dict__)
 
     def get_source(self, fullname):
-        path = where + '/' + fullname.replace('.', '/') + '.py'
+        return srw.from_utf8(self.get_data(fullname)[0])[0]
 
-        return file_bytes(path), path
+    def get_src(self, fullname):
+        path = fullname.replace('.', '/') + '.py'
+
+        return srw.value_by_key('/_py/' + path), path
+
+    def get_data(self, fullname):
+        try:
+            return self.get_src(fullname)
+        except KeyError:
+            return self.get_src(fullname + '.__init__')
 
     def get_code(self, fullname):
-        try:
-            data, path = self.get_source(fullname)
-        except:
-            data, path = self.get_source(fullname + '.__init__')
+        data, path = self.get_data(fullname)
 
-        return compile(data, path, 'exec')
+        return compile(data, path, 'exec', dont_inherit=True)
 
     def is_package(self, fullname):
         try:
-            self.get_source(fullname)
+            self.get_src(fullname)
 
             return False
         except:
             pass
 
         try:
-            self.get_source(fullname + '.__init__')
+            self.get_src(fullname + '.__init__')
 
             return True
         except:
@@ -69,3 +65,12 @@ class Finder(object):
 
 
 sys.meta_path.insert(0, Finder())
+
+
+def excepthook(*args, **kws):
+    import traceback
+
+    return traceback.print_exception(*args, **kws)
+
+
+#sys.excepthook = excepthook

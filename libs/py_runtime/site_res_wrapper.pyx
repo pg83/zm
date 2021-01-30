@@ -1,4 +1,4 @@
-from _codecs import utf_8_decode, utf_8_encode
+from _codecs import utf_8_decode
 
 
 cdef extern from "wrapper.h":
@@ -9,12 +9,16 @@ cdef extern from "wrapper.h":
     cdef int resource_value_size(int n);
 
 
+def from_utf8(x):
+    return utf_8_decode(x)[0]
+
+
 def count():
     return resource_count()
 
 
 def key(n):
-    return utf_8_decode(resource_key_data(n)[:resource_key_size(n)])[0]
+    return from_utf8(resource_key_data(n)[:resource_key_size(n)])
 
 
 def value(n):

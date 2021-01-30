@@ -100,7 +100,7 @@ class PyPlugin(PluginBase):
                 'cmd': [
                     ['/bin/sh', '-c', tool + ' ' + src + ' ' + name  + ' > ' + out],
                 ],
-                'use': [tool, '$(B)/tp/tools/yasm/yasm'],
+                'use': [tool],
                 'out_inc': module.parse_includes_md5('$(S)/libs/resource/resource.h', 'cpp'),
             },
         ]
@@ -1147,7 +1147,7 @@ class Module(object):
 
     def iter_sub_commands(self, deps):
         for d in self.iter_sub_modules(deps):
-            yield from d.commands()
+            yield from d.all_commands()
 
     @cached_method
     def calc_simple_commands(self):
@@ -1172,7 +1172,7 @@ class Module(object):
 
         return cc, ss, dc
 
-    def full_commands(self):
+    def all_commands(self):
         cc = self.commands()
 
         def iter_programs():
@@ -1186,7 +1186,10 @@ class Module(object):
             yield from self.iter_sub_commands(programs)
             yield from cc
 
-        return add_platform(build_uids(output_includes(uniq_nodes(iter_nodes()))), self.all_flags)
+        return uniq_nodes(iter_nodes())
+
+    def full_commands(self):
+        return add_platform(build_uids(output_includes(self.all_commands())), self.all_flags)
 
     def calc_main(self, g):
         return [g[-1]['uid']]
@@ -2152,6 +2155,7 @@ def main():
     use_tools = list(sorted(frozenset(iter_use())))
 
     mh = p.fake_recurse(use_tools, host_flags())
+    #mh = p.parse_module(t, host_flags())
     gh = mh.full_commands()
 
     g = strip_uids(merge_tools(gt, gh), mu)

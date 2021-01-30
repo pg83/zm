@@ -30,7 +30,6 @@ srcs:
 - _abc.c
 - _asynciomodule.c
 - _bisectmodule.c
-#if BLAKE
 - _blake2/blake2b_impl.c
 - _blake2/blake2module.c
 - _blake2/blake2s_impl.c
@@ -45,7 +44,6 @@ srcs:
 - _blake2/impl/blake2s.c
 - _blake2/impl/blake2sp-test.c
 - _blake2/impl/blake2sp.c
-#endif
 - _bz2module.c
 - _codecsmodule.c
 - _collectionsmodule.c
@@ -112,14 +110,8 @@ srcs:
 - _posixsubprocess.c
 - _queuemodule.c
 - _randommodule.c
-#if SHA3
-- _scproxy.c
-- _sha3/kcp/KeccakHash.c
-- _sha3/kcp/KeccakP-1600-inplace32BI.c
-- _sha3/kcp/KeccakP-1600-opt64.c
-- _sha3/kcp/KeccakSponge.c
+#- _scproxy.c
 - _sha3/sha3module.c
-#endif
 - _sre.c
 - _ssl.c
 - _stat.c

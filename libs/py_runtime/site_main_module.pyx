@@ -1,16 +1,5 @@
 import site_res_wrapper as srs
 
+__file__ = '__main__.py'
 
-for k in srs.keys():
-    if k.endswith('__main__.py'):
-        path = k[5:]
-        code = compile(srs.value_by_key(k), path, 'exec')
-
-        glob = {
-            '__name__': __name__,
-            '__file__': path,
-        }
-
-        exec(code, glob)
-
-import importlib.util
+exec(compile(srs.value_by_key('/_py/' + __file__), __file__, 'exec'))
