@@ -29,3 +29,5 @@ recurse:
 - benchmark
 - re2
 - range-v3
+- expat
+- python
