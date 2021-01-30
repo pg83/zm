@@ -2210,6 +2210,7 @@ class ModuleScanner:
     """An interruptible scanner that searches module synopses."""
 
     def run(self, callback, key=None, completer=None, onerror=None):
+        print('here')
         if key: key = key.lower()
         self.quit = False
         seen = {}
@@ -2242,6 +2243,7 @@ class ModuleScanner:
                 if hasattr(loader, 'get_source'):
                     try:
                         source = loader.get_source(modname)
+                        print(source)
                     except Exception:
                         if onerror:
                             onerror(modname)

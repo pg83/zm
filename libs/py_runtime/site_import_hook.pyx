@@ -28,7 +28,7 @@ class Finder(object):
         exec(code, module.__dict__)
 
     def get_source(self, fullname):
-        return srw.from_utf8(self.get_data(fullname)[0])[0]
+        return srw.from_utf8(self.get_data(fullname)[0])
 
     def get_src(self, fullname):
         path = fullname.replace('.', '/') + '.py'
@@ -65,13 +65,3 @@ class Finder(object):
 
 
 sys.meta_path.insert(0, Finder())
-
-
-def excepthook(*args, **kws):
-    import traceback
-
-    return traceback.print_exception(*args, **kws)
-
-
-sys.excepthook = excepthook
-sys.abiflags = ''
