@@ -89,7 +89,7 @@ class PyPlugin(PluginBase):
         return ['py']
 
     def command(self, src, module):
-        out = to_bd(src) + '.global.cpp'
+        out = to_bd(src) + '.cpp'
         rel_src = src[len(module.prefix) + 6:]
         name = os.path.join('/_py', module.namespace, rel_src)
         tool = '$(B)/libs/resource/compiler/compiler'
@@ -129,7 +129,7 @@ class PyxPlugin(PluginBase):
                 ],
             },
             {
-                'in': [src],
+                'in': [],
                 'out': [out2],
                 'cmd': [
                     [sys.executable, '-B', '$(S)/build/zm', 'command', 'gen_py_reg', os.path.basename(src)[:-4], out2],
@@ -869,7 +869,10 @@ class Module(object):
 
     @property
     def name(self):
-        return self._d.get('name', '') or os.path.basename(self.prefix.replace('/src', ''))
+        return self._d.get('name', '') or self.gen_name()
+
+    def gen_name(self):
+        return os.path.basename(self.prefix.lower().replace('/src', ''))
 
     def extra_depends(self):
         return []
@@ -1328,6 +1331,7 @@ class DarwinCompiler(SystemCompiler):
 
     @property
     def linker(self):
+        return 'ld'
         return 'ld64.lld'
 
     def extra_ld_flags(self):
@@ -1413,10 +1417,11 @@ class Library(Module):
     def commands(self):
         cc, ss, dc = self.calc_commands()
 
-        if ss:
-            return cc + dc + [self.ar_command(ss, ('lib' + self.name + '.a').replace('liblib', 'lib'))]
+        def iter_ar():
+            if ss:
+                yield self.ar_command(ss, ('lib' + self.name + '.a').replace('liblib', 'lib'))
 
-        return dc
+        return cc + dc + list(iter_ar())
 
     def extra_depends(self):
         if self.prefix not in self.exclude:
@@ -1475,6 +1480,7 @@ class Parser(object):
         'program': Program,
         'library': Library,
         'object': FatObj,
+        'python': FatObj,
         'recurse': Recurse,
         'gtest': GTest,
         'benchmark': BenchMark,

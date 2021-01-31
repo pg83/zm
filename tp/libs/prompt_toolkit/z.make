@@ -1,4 +1,4 @@
-module: library
+module: python
 
 namespace: top_level
 

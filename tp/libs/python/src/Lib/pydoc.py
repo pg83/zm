@@ -1554,6 +1554,7 @@ def pager(text):
     pager(text)
 
 def getpager():
+    return plainpager
     """Decide what method to use for paging through text."""
     if not hasattr(sys.stdin, "isatty"):
         return plainpager
@@ -1675,6 +1676,7 @@ def ttypager(text):
             tty.tcsetattr(fd, tty.TCSAFLUSH, old)
 
 def plainpager(text):
+    print(text)
     """Simply print unformatted text.  This is the ultimate fallback."""
     sys.stdout.write(plain(_escape_stdout(text)))
 
