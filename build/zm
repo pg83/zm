@@ -1009,6 +1009,7 @@ class Module(object):
         for x in self.inc_dirs:
             yield '$(S)/' + x
 
+    @cached_method
     def parse_includes_md5(self, p, ext):
         def it():
             md5 = self.parser.md5_calcer
