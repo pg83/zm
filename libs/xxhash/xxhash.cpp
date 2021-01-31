@@ -7,5 +7,5 @@ ui32 xx::hash32(const void* data, size_t len, ui32 seed) noexcept {
 }
 
 ui64 xx::hash64(const void* data, size_t len, ui64 seed) noexcept {
-    return XXH64(data, len, seed);
+    return XXH3_64bits_withSeed(data, len, seed);
 }
