@@ -12,22 +12,20 @@ depends:
 - tp/libs/bz2
 - tp/libs/openssl
 - tp/libs/z
-- tp/libs/lzmasdk
+- tp/libs/mpdec
 
 inc_dirs:
 - tp/libs/expat
 - tp/libs/bz2
 - tp/libs/openssl
 - tp/libs/z
-- tp/libs/lzmasdk
+- tp/libs/mpdec
 - tp/libs/python/src/Include
 - tp/libs/python/src/Include/internal
 - tp/libs/python/src/Modules
-- tp/libs/python/src/Modules/_decimal/libmpdec
 
 c_flags:
 - -DPy_BUILD_CORE_MODULE
-- -DUNIVERSAL=1
 - -DPREFIX="/var/empty"
 - -DEXEC_PREFIX="/var/empty"
 - -DPYTHONPATH="/var/empty"
@@ -73,20 +71,6 @@ srcs:
 #endif
 - _datetimemodule.c
 - _decimal/_decimal.c
-- _decimal/libmpdec/basearith.c
-- _decimal/libmpdec/constants.c
-- _decimal/libmpdec/context.c
-- _decimal/libmpdec/convolute.c
-- _decimal/libmpdec/crt.c
-- _decimal/libmpdec/difradix2.c
-- _decimal/libmpdec/fnt.c
-- _decimal/libmpdec/fourstep.c
-- _decimal/libmpdec/io.c
-- _decimal/libmpdec/mpalloc.c
-- _decimal/libmpdec/mpdecimal.c
-- _decimal/libmpdec/numbertheory.c
-- _decimal/libmpdec/sixstep.c
-- _decimal/libmpdec/transpose.c
 - _elementtree.c
 - _functoolsmodule.c
 #- _gdbmmodule.c

@@ -39,3 +39,4 @@ recurse:
 - xxhash
 - z
 - zstd
+- mpdec

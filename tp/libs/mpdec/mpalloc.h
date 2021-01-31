@@ -26,21 +26,28 @@
  */
 
 
-#ifndef LIBMPDEC_CRT_H_
-#define LIBMPDEC_CRT_H_
+#ifndef LIBMPDEC_MPALLOC_H_
+#define LIBMPDEC_MPALLOC_H_
 
 
 #include "mpdecimal.h"
+
+#include <stdint.h>
 
 
 /* Internal header file: all symbols have local scope in the DSO */
 MPD_PRAGMA(MPD_HIDE_SYMBOLS_START)
 
 
-void crt3(mpd_uint_t *x1, mpd_uint_t *x2, mpd_uint_t *x3, mpd_size_t nmemb);
+int mpd_switch_to_dyn(mpd_t *result, mpd_ssize_t nwords, uint32_t *status);
+int mpd_switch_to_dyn_zero(mpd_t *result, mpd_ssize_t nwords, uint32_t *status);
+int mpd_realloc_dyn(mpd_t *result, mpd_ssize_t nwords, uint32_t *status);
+
+int mpd_switch_to_dyn_cxx(mpd_t *result, mpd_ssize_t nwords);
+int mpd_realloc_dyn_cxx(mpd_t *result, mpd_ssize_t nwords);
 
 
 MPD_PRAGMA(MPD_HIDE_SYMBOLS_END) /* restore previous scope rules */
 
 
-#endif /* LIBMPDEC_CRT_H_ */
+#endif /* LIBMPDEC_MPALLOC_H_ */

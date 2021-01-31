@@ -14,10 +14,6 @@ c_flags:
 - -DPy_BUILD_CORE
 - -w
 
-#ld_flags:
-#- -framework CoreFoundation
-#- -framework SystemConfiguration
-
 srcs:
 - Objects/abstract.c
 - Objects/accu.c
