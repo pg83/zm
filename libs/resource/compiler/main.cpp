@@ -11,9 +11,9 @@ template <class T>
 static void gen_one(const char* fpath, const char* key, T& out) {
     out << "#include <libs/resource/resource.h>\n\n";
 
-    const auto name = "data_" + to_string(xxhash::hash64(key, 0));
+    const auto name = "data_" + to_string(xx::hash64(key, 0));
 
-    out << "static const unsigned char " << name << "[] = {\n";
+    out << "namespace {\nstatic const unsigned char " << name << "[] = {\n";
 
     const auto data = io::read_file(fpath);
 
@@ -35,7 +35,8 @@ static void gen_one(const char* fpath, const char* key, T& out) {
         ++b;
     }
 
-    out << "\n};\n\nnamespace {\n    static const resource::reg_helper_t register_" << name << "(\"" << key << "\", std::string_view((const char*)"
+    out << "\n};\n\nstatic const resource::reg_helper_t register_" << name
+        << "(\"" << key << "\", std::string_view((const char*)"
         << name << ", sizeof(" << name << ")" << "));\n}\n";
 }
 

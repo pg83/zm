@@ -20,7 +20,6 @@ srcs:
 - mod_int.cpp
 - dijkstra.cpp
 - defer.cpp
-- preproc.cpp
 - timer.cpp
 - any_iter.cpp
 - ranges.cpp
@@ -30,3 +29,4 @@ depends:
 - tp/libs/memo
 - tp/libs/range-v3
 - libs/io
+- libs/platform

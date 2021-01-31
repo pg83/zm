@@ -5,3 +5,4 @@ recurse:
 - io
 - io/ut
 - py_runtime
+- platform

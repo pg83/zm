@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
+#include <libs/platform/types.h>
 
-#include <stddef.h>
+#include <string>
 
 namespace io {
     class output_i;
@@ -26,7 +26,7 @@ namespace io {
 
         size_t read_exact(void* data, size_t len);
         std::string read_all();
-        uint64_t read_all(output_i& out);
+        ui64 read_all(output_i& out);
         bool read_line(std::string& l);
         size_t read_to(std::string& l, char to);
 
@@ -47,5 +47,5 @@ namespace io {
         virtual void do_write(const void* data, size_t len) = 0;
     };
 
-    uint64_t transfer_data(input_i& in, output_i& out);
+    ui64 transfer_data(input_i& in, output_i& out);
 }

@@ -1,5 +1,8 @@
 module: library
 
+depends:
+- libs/platform
+
 srcs:
 - misc.cpp
 - base.cpp

@@ -36,7 +36,7 @@ std::string input_i::read_all() {
     return ret;
 }
 
-uint64_t input_i::read_all(output_i& out) {
+ui64 input_i::read_all(output_i& out) {
     return transfer_data(*this, out);
 }
 
@@ -74,9 +74,9 @@ size_t input_i::read_to(std::string& l, char to) {
     return result;
 }
 
-uint64_t io::transfer_data(input_i& in, output_i& out) {
+ui64 io::transfer_data(input_i& in, output_i& out) {
     char buf[1024];
-    uint64_t ret = 0;
+    ui64 ret = 0;
 
     while (size_t res = in.read(buf, sizeof(buf))) {
         out.write(buf, res);
