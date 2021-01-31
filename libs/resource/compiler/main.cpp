@@ -5,13 +5,11 @@
 #include <string>
 #include <iostream>
 
-using namespace std;
-
 template <class T>
 static void gen_one(const char* fpath, const char* key, T& out) {
     out << "#include <libs/resource/resource.h>\n\n";
 
-    const auto name = "data_" + to_string(xx::hash64(key, 0));
+    const auto name = "data_" + std::to_string(xx::hash64(key, 0));
 
     out << "namespace {\nstatic const unsigned char " << name << "[] = {\n";
 
@@ -42,6 +40,6 @@ static void gen_one(const char* fpath, const char* key, T& out) {
 
 int main(int argc, char** argv) {
     for (int i = 1; i < argc; i += 2) {
-        gen_one(argv[i], argv[i + 1], cout);
+        gen_one(argv[i], argv[i + 1], std::cout);
     }
 }

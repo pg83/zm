@@ -5,3 +5,4 @@ srcs:
 
 depends:
 - libs/xxhash
+- libs/platform

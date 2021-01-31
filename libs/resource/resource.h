@@ -1,5 +1,7 @@
 #pragma once
 
+#include <libs/platform/types.h>
+
 #include <string_view>
 
 namespace resource {
