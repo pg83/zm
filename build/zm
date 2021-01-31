@@ -89,7 +89,7 @@ class PyPlugin(PluginBase):
         return ['py']
 
     def command(self, src, module):
-        out = to_bd(src) + '.cpp'
+        out = to_bd(src) + '.global.cpp'
         rel_src = src[len(module.prefix) + 6:]
         name = os.path.join('/_py', module.namespace, rel_src)
         tool = '$(B)/libs/resource/compiler/compiler'
@@ -1355,7 +1355,7 @@ class Program(Module):
                 for o in l['out']:
                     if o.endswith('.a'):
                         yield o
-                    elif '.global.' in o and o.endswith('.o'):
+                    elif o.endswith('.global.o'):
                         yield o
 
         ls = list(iter_ls())
@@ -1418,8 +1418,20 @@ class Library(Module):
         cc, ss, dc = self.calc_commands()
 
         def iter_ar():
-            if ss:
-                yield self.ar_command(ss, ('lib' + self.name + '.a').replace('liblib', 'lib'))
+            ar_ss = []
+            fo_ss = []
+
+            for o in ss:
+                if '.global.' in o:
+                    fo_ss.append(o)
+                else:
+                    ar_ss.append(o)
+
+            if fo_ss:
+                yield self.fatobj_command(fo_ss, self.name + '.global.o')
+
+            if ar_ss:
+                yield self.ar_command(ar_ss, ('lib' + self.name + '.a').replace('liblib', 'lib'))
 
         return cc + dc + list(iter_ar())
 
@@ -1480,7 +1492,6 @@ class Parser(object):
         'program': Program,
         'library': Library,
         'object': FatObj,
-        'python': FatObj,
         'recurse': Recurse,
         'gtest': GTest,
         'benchmark': BenchMark,
