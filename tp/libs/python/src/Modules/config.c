@@ -21,7 +21,7 @@ redistribution of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 extern "C" {
 #endif
 
-
+extern PyObject* PyInit__lzma(void);
 extern PyObject* PyInit__abc(void); // _abc
 extern PyObject* PyInit__asyncio(void); // _asyncio
 extern PyObject* PyInit__bisect(void); // _bisect
@@ -152,7 +152,7 @@ extern PyObject* _PyWarnings_Init(void);
 extern PyObject* PyInit__string(void);
 
 struct _inittab _PyImport_Inittab[] = {
-
+    {"_lzma", PyInit__lzma},
     {"_abc", PyInit__abc},
     {"_asyncio", PyInit__asyncio},
     {"_bisect", PyInit__bisect},

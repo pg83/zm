@@ -40,3 +40,4 @@ recurse:
 - z
 - zstd
 - mpdec
+- lzma

@@ -13,6 +13,7 @@ depends:
 - tp/libs/openssl
 - tp/libs/z
 - tp/libs/mpdec
+- tp/libs/lzma
 
 inc_dirs:
 - tp/libs/expat
@@ -20,6 +21,7 @@ inc_dirs:
 - tp/libs/openssl
 - tp/libs/z
 - tp/libs/mpdec
+- tp/libs/lzma/api
 - tp/libs/python/src/Include
 - tp/libs/python/src/Include/internal
 - tp/libs/python/src/Modules
@@ -87,7 +89,7 @@ srcs:
 - _json.c
 #- _localemodule.c
 - _lsprof.c
-#- _lzmamodule.c
+- _lzmamodule.c
 - _math.c
 - _multiprocessing/multiprocessing.c
 - _multiprocessing/posixshmem.c

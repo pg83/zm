@@ -5,6 +5,9 @@ c_flags:
 - -DASM
 - -w
 
+depends:
+- tp/libs/compiler_rt
+
 srcs:
 - context.c
 - constants.c
