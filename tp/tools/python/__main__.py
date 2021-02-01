@@ -1,8 +1,7 @@
-def old():
-    import code
-
-    code.interact(local=locals())
-
+import code
 from ptpython.repl import embed
+
+def old():
+    code.interact(local=locals())
 
 embed(globals(), locals())
