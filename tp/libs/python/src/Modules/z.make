@@ -14,6 +14,7 @@ depends:
 - tp/libs/z
 - tp/libs/mpdec
 - tp/libs/lzma
+- tp/libs/python/src/Modules/_sqlite
 
 inc_dirs:
 - tp/libs/expat

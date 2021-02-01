@@ -45,6 +45,7 @@ extern PyObject* PyInit__sha3();
 extern PyObject* PyInit__sha512();
 extern PyObject* PyInit__signal();
 extern PyObject* PyInit__socket();
+extern PyObject* PyInit__sqlite3();
 extern PyObject* PyInit__sre();
 extern PyObject* PyInit__ssl();
 extern PyObject* PyInit__stat();
@@ -138,6 +139,7 @@ struct _inittab _PyImport_Inittab[] = {
     {"_sha512", PyInit__sha512},
     {"_signal", PyInit__signal},
     {"_socket", PyInit__socket},
+    {"_sqlite3", PyInit__sqlite3},
     {"_sre", PyInit__sre},
     {"_ssl", PyInit__ssl},
     {"_stat", PyInit__stat},

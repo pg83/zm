@@ -4,7 +4,7 @@ win = set(['nt', '_overlapped', '_winapi', 'msvcrt', 'winreg', 'winsound'])
 unix = set([])
 linux = set(['spwd'])
 darwin = set(['_scproxy'])
-disabled = set(['_ctypes', '_locale', 'readline', '_curses', '_curses_panel', '_dbm', '_gdbm', '_sqlite3', '_tkinter', '_uuid', 'nis', 'ossaudiodev'])
+disabled = set(['_ctypes', '_locale', 'readline', '_curses', '_curses_panel', '_dbm', '_gdbm', '_tkinter', '_uuid', 'nis', 'ossaudiodev'])
 
 modules = set(['posix'])
 
