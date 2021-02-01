@@ -919,10 +919,14 @@ class Module(object):
         def iter_flags():
             yield from self._d.get('ld_flags', [])
 
+            for f in self._d.get('framework', []):
+                yield '-framework'
+                yield f
+
             for sm in self.iter_sub_modules(self.depends):
                 yield from sm.ld_flags
 
-        return uniq_list(iter_flags())
+        return iter_flags()
 
     @property
     def parser(self):
@@ -1271,7 +1275,7 @@ class SystemCompiler(object):
         return self.compile_command(['clang'], src, out, inc, flags, opts)
 
     def cxx_compile_command(self, src, out, inc, flags, opts):
-        return self.compile_command(['clang++'], src, out, inc, ['-std=c++20', '-nostdinc++'] + flags, opts)
+        return self.compile_command(['clang++'], src, out, inc, ['-std=c++2a', '-nostdinc++'] + flags, opts)
 
     def link_command(self, srcs, out, flags, opts):
         def iter_flags():
@@ -1291,9 +1295,12 @@ class SystemCompiler(object):
 
         return [list(iter_flags())]
 
+    def ar(self):
+        return 'llvm-ar'
+
     def ar_command(self, srcs, out):
         return [
-            ['llvm-ar', 'qs', out] + srcs,
+            [self.ar(), 'qs', out] + srcs,
         ]
 
     def fatobj_command(self, srcs, out):
@@ -1333,13 +1340,15 @@ class DarwinCompiler(SystemCompiler):
     @property
     def linker(self):
         return 'ld'
-        return 'ld64.lld'
 
     def extra_ld_flags(self):
         yield '-L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib'
 
     def extra_c_flags(self):
         yield '-isystem/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include'
+
+    def ar(self):
+        return 'ar'
 
 
 class Program(Module):

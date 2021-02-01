@@ -7,6 +7,12 @@ ld_flags:
 - -lcrypt
 #endif
 
+#if OS_DARWIN
+framework:
+- CoreFoundation
+- SystemConfiguration
+#endif
+
 depends:
 - tp/libs/expat
 - tp/libs/bz2
@@ -102,7 +108,9 @@ srcs:
 - _posixsubprocess.c
 - _queuemodule.c
 - _randommodule.c
-#- _scproxy.c
+#if OS_DARWIN
+- _scproxy.c
+#endif
 - _sha3/sha3module.c
 - _sre.c
 - _ssl.c

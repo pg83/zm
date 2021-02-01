@@ -7,6 +7,7 @@ c_flags:
 - -DMI_INTERPOSE
 - -DMI_MALLOC_OVERRIDE
 - -DMI_STATIC_LIB
+- -DMI_DEBUG=0
 
 inc_dirs:
 - tp/libs/mimalloc/include
