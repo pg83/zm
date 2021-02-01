@@ -1,6 +1,5 @@
 from _codecs import utf_8_decode
 
-
 cdef extern from "wrapper.h":
     cdef int resource_count();
     cdef const char* resource_key_data(int n);

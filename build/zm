@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
 
 class PluginBase(object):
-    def parse(self, data):
+    def parse(self, data, ext):
         return []
 
     def depends(self):
@@ -109,7 +109,7 @@ class PyPlugin(PluginBase):
 
 class PyxPlugin(PluginBase):
     def ext(self):
-        return ['pyx']
+        return ['pyx', '_pyx']
 
     def command(self, src, module):
         out1 = to_bd(src) + '.module.cpp'
@@ -127,6 +127,7 @@ class PyxPlugin(PluginBase):
                 'cmd': [
                     [sys.executable, '-B', '$(S)/tp/tools/cython/cython.py'] + extra + ['-3', '--cplus', src, '-o', out1],
                 ],
+                'out_inc': module.parse_includes_md5(src, '_pyx'),
             },
             {
                 'in': [],
@@ -136,6 +137,20 @@ class PyxPlugin(PluginBase):
                 ],
             },
         ]
+
+    def parse(self, data, ext):
+        for l in data.splitlines():
+            l = l.strip()
+
+            if ext == 'pyx':
+                if l.startswith('include'):
+                    if res := get_substr(l, '"', '"'):
+                        yield res
+            else:
+                if 'cdef' in l:
+                    if 'extern' in l:
+                        if res := get_substr(l, '"', '"'):
+                            yield res
 
 
 class File2CPlugin(PluginBase):
@@ -181,7 +196,7 @@ class Ragel6Plugin(PluginBase):
             },
         ]
 
-    def parse(self, data):
+    def parse(self, data, ext):
         for l in data.splitlines():
             l = l.strip()
 
@@ -222,7 +237,7 @@ class ProtoBufPlugin(PluginBase):
             },
         ]
 
-    def parse(self, data):
+    def parse(self, data, ext):
         for l in data.splitlines():
             l = l.strip()
 
@@ -253,7 +268,7 @@ class CppPlugin(PluginBase):
             },
         ]
 
-    def parse(self, data):
+    def parse(self, data, ext):
         return parse_cpp_includes(data)
 
 
@@ -272,7 +287,7 @@ class CPlugin(PluginBase):
             },
         ]
 
-    def parse(self, data):
+    def parse(self, data, ext):
         return parse_cpp_includes(data)
 
 
@@ -302,7 +317,7 @@ class YasmPlugin(PluginBase):
             },
         ]
 
-    def parse(self, data):
+    def parse(self, data, ext):
         for l in data.splitlines():
             l = l.strip()
 
@@ -2090,7 +2105,7 @@ class IncParser(object):
     def parse_includes_0(self, p, md5, ext):
         msg('P', 'bm', p)
 
-        return list(plugins().find_ext(ext).parse(self.loader.get_data(p)))
+        return list(plugins().find_ext(ext).parse(self.loader.get_data(p), ext))
 
     @property
     def loader(self):
