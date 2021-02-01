@@ -55,7 +55,7 @@ p2 = ''
 
 def fmt(m, d):
     if m in disabled:
-        return '// ' + d
+        return ''
 
     if m in win:
         return '#if defined(_MSC_VER)\n' + d + '\n#endif'
@@ -99,15 +99,15 @@ extra2 = """
     {0, 0}
 """
 
-data = '#include "Python.h"\n\n\n'
+data = '#include "Python.h"\n\n\n\n\n'
 data += p1
 data += extra1
-data += '\n\n'
+data += '\n\n\n\n\n'
 data += 'struct _inittab _PyImport_Inittab[] = {\n'
 data += p2
 data += extra2
 data += '\n};'
 
-data = data.replace('\n\n', '\n')
+data = data.replace('\n\n', '\n').replace('\n\n', '\n')
 
 print(data)

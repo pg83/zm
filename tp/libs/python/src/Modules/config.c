@@ -11,21 +11,15 @@ extern PyObject* PyInit__collections();
 extern PyObject* PyInit__contextvars();
 extern PyObject* PyInit__crypt();
 extern PyObject* PyInit__csv();
-// extern PyObject* PyInit__ctypes();
-// extern PyObject* PyInit__curses();
-// extern PyObject* PyInit__curses_panel();
 extern PyObject* PyInit__datetime();
-// extern PyObject* PyInit__dbm();
 extern PyObject* PyInit__decimal();
 extern PyObject* PyInit__elementtree();
 extern PyObject* PyInit__functools();
-// extern PyObject* PyInit__gdbm();
 extern PyObject* PyInit__hashlib();
 extern PyObject* PyInit__heapq();
 extern PyObject* PyInit__imp();
 extern PyObject* PyInit__io();
 extern PyObject* PyInit__json();
-// extern PyObject* PyInit__locale();
 extern PyObject* PyInit__lsprof();
 extern PyObject* PyInit__lzma();
 extern PyObject* PyInit__md5();
@@ -51,7 +45,6 @@ extern PyObject* PyInit__sha3();
 extern PyObject* PyInit__sha512();
 extern PyObject* PyInit__signal();
 extern PyObject* PyInit__socket();
-// extern PyObject* PyInit__sqlite3();
 extern PyObject* PyInit__sre();
 extern PyObject* PyInit__ssl();
 extern PyObject* PyInit__stat();
@@ -60,9 +53,7 @@ extern PyObject* PyInit__string();
 extern PyObject* PyInit__struct();
 extern PyObject* PyInit__symtable();
 extern PyObject* PyInit__thread();
-// extern PyObject* PyInit__tkinter();
 extern PyObject* PyInit__tracemalloc();
-// extern PyObject* PyInit__uuid();
 extern PyObject* PyInit__weakref();
 #if defined(_MSC_VER)
 extern PyObject* PyInit__winapi();
@@ -82,12 +73,9 @@ extern PyObject* PyInit_grp();
 extern PyObject* PyInit_itertools();
 extern PyObject* PyInit_math();
 extern PyObject* PyInit_mmap();
-// extern PyObject* PyInit_nis();
-// extern PyObject* PyInit_ossaudiodev();
 extern PyObject* PyInit_parser();
 extern PyObject* PyInit_posix();
 extern PyObject* PyInit_pwd();
-// extern PyObject* PyInit_readline();
 extern PyObject* PyInit_resource();
 extern PyObject* PyInit_select();
 #if defined(__linux__)
@@ -116,21 +104,15 @@ struct _inittab _PyImport_Inittab[] = {
     {"_contextvars", PyInit__contextvars},
     {"_crypt", PyInit__crypt},
     {"_csv", PyInit__csv},
-//     {"_ctypes", PyInit__ctypes},
-//     {"_curses", PyInit__curses},
-//     {"_curses_panel", PyInit__curses_panel},
     {"_datetime", PyInit__datetime},
-//     {"_dbm", PyInit__dbm},
     {"_decimal", PyInit__decimal},
     {"_elementtree", PyInit__elementtree},
     {"_functools", PyInit__functools},
-//     {"_gdbm", PyInit__gdbm},
     {"_hashlib", PyInit__hashlib},
     {"_heapq", PyInit__heapq},
     {"_imp", PyInit__imp},
     {"_io", PyInit__io},
     {"_json", PyInit__json},
-//     {"_locale", PyInit__locale},
     {"_lsprof", PyInit__lsprof},
     {"_lzma", PyInit__lzma},
     {"_md5", PyInit__md5},
@@ -156,7 +138,6 @@ struct _inittab _PyImport_Inittab[] = {
     {"_sha512", PyInit__sha512},
     {"_signal", PyInit__signal},
     {"_socket", PyInit__socket},
-//     {"_sqlite3", PyInit__sqlite3},
     {"_sre", PyInit__sre},
     {"_ssl", PyInit__ssl},
     {"_stat", PyInit__stat},
@@ -165,9 +146,7 @@ struct _inittab _PyImport_Inittab[] = {
     {"_struct", PyInit__struct},
     {"_symtable", PyInit__symtable},
     {"_thread", PyInit__thread},
-//     {"_tkinter", PyInit__tkinter},
     {"_tracemalloc", PyInit__tracemalloc},
-//     {"_uuid", PyInit__uuid},
     {"_weakref", PyInit__weakref},
 #if defined(_MSC_VER)
     {"_winapi", PyInit__winapi},
@@ -187,12 +166,9 @@ struct _inittab _PyImport_Inittab[] = {
     {"itertools", PyInit_itertools},
     {"math", PyInit_math},
     {"mmap", PyInit_mmap},
-//     {"nis", PyInit_nis},
-//     {"ossaudiodev", PyInit_ossaudiodev},
     {"parser", PyInit_parser},
     {"posix", PyInit_posix},
     {"pwd", PyInit_pwd},
-//     {"readline", PyInit_readline},
     {"resource", PyInit_resource},
     {"select", PyInit_select},
 #if defined(__linux__)
