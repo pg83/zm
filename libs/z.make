@@ -6,3 +6,4 @@ recurse:
 - io/ut
 - py_runtime
 - platform
+- py_main

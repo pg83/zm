@@ -1,10 +1,5 @@
 module: program
 
-namespace: top_level
-
-srcs:
-- __main__.py
-
 depends:
-- tp/libs/ptpython
-- tp/libs/python
+- tp/libs/python/lib
+- tp/libs/python/src/Programs

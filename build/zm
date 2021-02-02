@@ -103,6 +103,10 @@ class PyPlugin(PluginBase):
                 ],
                 'use': [tool],
                 'out_inc': module.parse_includes_md5('$(S)/libs/resource/resource.h', 'cpp'),
+                'dis': {
+                    'l': 'P',
+                    'c': 'by',
+                },
             },
         ]
 
@@ -128,6 +132,10 @@ class PyxPlugin(PluginBase):
                     [sys.executable, '-B', '$(S)/tp/tools/cython/cython.py'] + extra + ['-3', '--cplus', src, '-o', out1],
                 ],
                 'out_inc': module.parse_includes_md5(src, '_pyx'),
+                'dis': {
+                    'l': 'X',
+                    'c': 'by',
+                },
             },
             {
                 'in': [],
@@ -135,6 +143,10 @@ class PyxPlugin(PluginBase):
                 'cmd': [
                     [sys.executable, '-B', '$(S)/build/zm', 'command', 'gen_py_reg', os.path.basename(src)[:-4], out2],
                 ],
+                'dis': {
+                    'l': 'X',
+                    'c': 'by',
+                },
             },
         ]
 
@@ -169,6 +181,10 @@ class File2CPlugin(PluginBase):
                     ['/bin/sh', '-c', tool + ' < ' + src + ' > ' + o],
                 ],
                 'use': [tool],
+                'dis': {
+                    'l': 'F',
+                    'c': 'by',
+                },
             },
         ]
 
@@ -192,7 +208,11 @@ class Ragel6Plugin(PluginBase):
                     [tool, '-G1', src, '-o', o],
                 ],
                 'use': [tool],
-                'out_inc': module.parse_includes_md5(src, fext(o))
+                'out_inc': module.parse_includes_md5(src, fext(o)),
+                'dis': {
+                    'l': 'R',
+                    'c': 'by',
+                },
             },
         ]
 
@@ -234,6 +254,10 @@ class ProtoBufPlugin(PluginBase):
                 'use': [tool],
                 'out_inc': module.parse_includes_md5(f1, 'cpp') + module.parse_includes_md5(f2, 'cpp'),
                 'cwd': '$(S)',
+                'dis': {
+                    'l': 'P',
+                    'c': 'by',
+                },
             },
         ]
 
@@ -259,12 +283,17 @@ class CppPlugin(PluginBase):
 
     def command(self, src, module):
         o = to_bd(src + '.o')
+        cmd = module.compiler.cxx_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.cxx_flags, module.all_flags)
 
         return [
             {
                 'in': [src],
                 'out': [o],
-                'cmd': module.compiler.cxx_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.cxx_flags, module.all_flags),
+                'cmd': cmd,
+                'dis': {
+                    'l': 'C',
+                    'c': 'bg',
+                },
             },
         ]
 
@@ -278,12 +307,17 @@ class CPlugin(PluginBase):
 
     def command(self, src, module):
         o = to_bd(src + '.o')
+        cmd = module.compiler.c_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.c_flags, module.all_flags)
 
         return [
             {
                 'in': [src],
                 'out': [o],
-                'cmd': module.compiler.c_compile_command(src, o, list(module.iter_inc_dirs()) + ['$(B)'], module.c_flags, module.all_flags),
+                'cmd': cmd,
+                'dis': {
+                    'l': 'C',
+                    'c': 'bg',
+                },
             },
         ]
 
@@ -314,6 +348,10 @@ class YasmPlugin(PluginBase):
                     [tool, '-f', t.complete_exe_format] + list(iter_flags()) + ['-D', '_YASM_', '-I', '$(S)', '-o', o, src],
                 ],
                 'use': [tool],
+                'dis': {
+                    'l': 'Y',
+                    'c': 'bg',
+                },
             },
         ]
 
@@ -941,7 +979,7 @@ class Module(object):
             for sm in self.iter_sub_modules(self.depends):
                 yield from sm.ld_flags
 
-        return iter_flags()
+        return list(iter_flags())
 
     @property
     def parser(self):
@@ -1099,6 +1137,10 @@ class Module(object):
             ],
             'use': [tool],
             'out_inc': self.parse_includes_md5('$(S)/libs/resource/resource.h', 'cpp'),
+            'dis': {
+                'l': 'R',
+                'c': 'by',
+            },
         }
 
     def join_srcs_command(self, srcs):
@@ -1112,6 +1154,10 @@ class Module(object):
             'in': srcs,
             'out': [o],
             'cmd': list(iter_cmds()),
+            'dis': {
+                'l': 'J',
+                'c': 'by',
+            },
         }
 
     def link_command(self, srcs, out):
@@ -1122,6 +1168,10 @@ class Module(object):
             'out': [o],
             'cmd': self.compiler.link_command(srcs, o, self.ld_flags, self.all_flags),
             'main': True,
+            'dis': {
+                'l': 'L',
+                'c': 'bb',
+            },
         }
 
     def fatobj_command(self, srcs, out):
@@ -1132,6 +1182,10 @@ class Module(object):
             'out': [o],
             'cmd': self.compiler.fatobj_command(srcs, o),
             'main': True,
+            'dis': {
+                'l': 'F',
+                'c': 'br',
+            },
         }
 
     def ar_command(self, srcs, out):
@@ -1142,6 +1196,10 @@ class Module(object):
             'out': [o],
             'cmd': self.compiler.ar_command(srcs, o),
             'main': True,
+            'dis': {
+                'l': 'A',
+                'c': 'br',
+            },
         }
 
     def iter_commands(self):
@@ -1955,7 +2013,7 @@ class Builder(object):
         shutil.rmtree(where_t)
         shutil.move(where_p, where_c)
 
-        msg('B', 'g', '\n'.join(m).strip())
+        msg(n['dis']['l'], n['dis']['c'], '\n'.join(m).strip())
 
 
 class Target(object):
@@ -2187,6 +2245,9 @@ def main():
     def host_flags():
         res = {}
 
+        if args.musl:
+            res['musl'] = True
+
         res['platform'] = p.host_platform.descr
         res.update(p.host_platform.flags_dict)
 
@@ -2203,8 +2264,8 @@ def main():
 
     use_tools = list(sorted(frozenset(iter_use())))
 
-    mh = p.fake_recurse(use_tools, host_flags())
-    #mh = p.parse_module(t, host_flags())
+    #mh = p.fake_recurse(use_tools, host_flags())
+    mh = p.parse_module(t, host_flags())
     gh = mh.full_commands()
 
     g = strip_uids(merge_tools(gt, gh), mu)

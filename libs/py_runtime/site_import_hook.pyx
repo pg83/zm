@@ -5,6 +5,10 @@ from _frozen_importlib import spec_from_loader
 import site_res_wrapper as srw
 
 
+def fmt(*args):
+    sys.stderr.write(' '.join([str(x) for x in args]))
+
+
 class Finder(object):
     def find_spec(self, fullname, path, target=None):
         try:

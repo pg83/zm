@@ -2,6 +2,5 @@ module: library
 
 depends:
 - tp/libs/python/src
-
-srcs:
-- python.c
+- tp/libs/python/src/Lib
+- libs/py_runtime

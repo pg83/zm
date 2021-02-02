@@ -6,8 +6,9 @@ depends:
 inc_dirs:
 - tp/libs/python/src/Include
 - tp/libs/python/src/Include/internal
-- tp/libs/python/src/Modules
-- tp/libs/python/src/Modules/_decimal/libmpdec
+
+global_inc_dirs:
+- tp/libs/python/src/Include
 
 c_flags:
 - -DPLATLIBDIR="/var/empty"
