@@ -49,6 +49,10 @@ namespace {
     };
 }
 
+void resource::store(const void* key_data, int key_size, const void* value_data, int value_size) {
+    store(std::string_view((const char*)key_data, key_size), std::string_view((const char*)value_data, value_size));
+}
+
 void resource::store(std::string_view path, std::string_view data) {
     res_holder_t::instance().store(path, data);
 }

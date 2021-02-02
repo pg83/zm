@@ -9,3 +9,4 @@ recurse:
 - prog8
 - prog9
 - import_hook
+- res_comp

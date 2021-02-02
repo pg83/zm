@@ -102,7 +102,6 @@ class PyPlugin(PluginBase):
                     ['/bin/sh', '-c', tool + ' ' + src + ' ' + name  + ' > ' + out],
                 ],
                 'use': [tool],
-                'out_inc': module.parse_includes_md5('$(S)/libs/resource/resource.h', 'cpp'),
                 'dis': {
                     'l': 'P',
                     'c': 'by',
@@ -1136,7 +1135,6 @@ class Module(object):
                 ['/bin/sh', '-c', tool + ' ' + ' '.join(lines) + ' > ' + out],
             ],
             'use': [tool],
-            'out_inc': self.parse_includes_md5('$(S)/libs/resource/resource.h', 'cpp'),
             'dis': {
                 'l': 'R',
                 'c': 'by',
