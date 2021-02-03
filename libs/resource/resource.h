@@ -12,10 +12,4 @@ namespace resource {
     std::string_view key(size_t n) noexcept;
     std::string_view index(size_t n) noexcept;
     size_t count() noexcept;
-
-    struct reg_helper_t {
-        reg_helper_t(std::string_view path, std::string_view data) {
-            store(path, data);
-        }
-    };
 }

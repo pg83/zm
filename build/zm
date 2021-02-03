@@ -34,8 +34,8 @@ def gen_py_reg(args):
     extern "C" PyObject* PyInit_{name}();
 
     namespace {
-        struct TRegistrar {
-            inline TRegistrar() {
+        struct reg_t {
+            reg_t() {
                 PyImport_AppendInittab("{name}", PyInit_{name});
             }
         } REG;

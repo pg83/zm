@@ -5,5 +5,4 @@ srcs:
 
 depends:
 - libs/resource
-- libs/xxhash
 - libs/io
