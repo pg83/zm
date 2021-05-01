@@ -41,3 +41,4 @@ recurse:
 - zstd
 - mpdec
 - lzma
+- jinja2
