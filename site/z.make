@@ -7,4 +7,5 @@ srcs:
 
 depends:
 - tp/libs/python/lib
+- tp/libs/jinja2
 - libs/py_main

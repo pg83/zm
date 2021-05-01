@@ -3,3 +3,4 @@ recurse:
 - tp
 - euler
 - libs
+- site

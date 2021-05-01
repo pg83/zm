@@ -10,4 +10,4 @@ g = {
     '__name__': '__main__',
 }
 
-exec(compile(srw.value_by_key('/_py/' + __file__), __file__, 'exec'), g)
+exec(compile(srw.value_by_key('/_py/' + g['__file__']), g['__file__'], 'exec'), g)
