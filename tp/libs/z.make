@@ -42,3 +42,4 @@ recurse:
 - mpdec
 - lzma
 - jinja2
+- bottle
