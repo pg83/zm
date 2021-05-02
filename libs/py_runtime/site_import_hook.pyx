@@ -6,7 +6,7 @@ import site_res_wrapper as srw
 
 
 def fmt(*args):
-    sys.stderr.write(' '.join([str(x) for x in args]))
+    sys.stderr.write(' '.join([str(x) for x in args]) + '\n')
 
 
 class Finder(object):
@@ -37,7 +37,14 @@ class Finder(object):
     def get_src(self, fullname):
         path = fullname.replace('.', '/') + '.py'
 
-        return srw.value_by_key('/_py/' + path), path
+        try:
+            return srw.value_by_key('/_py/' + path), path
+        except Exception as e:
+            if path.endswith('__init__.py'):
+                if 'libs' in path:
+                    return '', path
+
+            raise e
 
     def get_data(self, fullname):
         try:

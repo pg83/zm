@@ -81,7 +81,7 @@ class PluginBase(object):
 
 class EmptyPlugin(PluginBase):
     def ext(self):
-        return ['']
+        return ['', 'html']
 
 
 class PyPlugin(PluginBase):

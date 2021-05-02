@@ -7,3 +7,4 @@ recurse:
 - py_runtime
 - platform
 - py_main
+- py_resource

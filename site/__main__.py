@@ -1,14 +1,14 @@
-from jinja2 import Template
+import jinja2
 
-tmpl = Template(u'''\
-<html>
-<head><title>{{ variable|escape }}</title></head>
-<body>
-{% for item in item_list %}
-   {{ item }}{% if not loop.last %},{% endif %}
-{% endfor %}
-</body>
-</html>'''
-)
+import libs.py_resource as lp
 
-print(tmpl.render(variable='Value with <unsafe> data', item_list=[1, 2, 3, 4, 5, 6]))
+
+def get_source(name):
+    print(name)
+
+    return lp.load(name).decode('utf-8'), name, lambda: True
+
+
+env = jinja2.Environment(loader=jinja2.FunctionLoader(get_source))
+
+print(env.get_template('/index.html').render(variable='Value with <unsafe> data', item_list=[1, 2, 3, 4, 5, 6]))
