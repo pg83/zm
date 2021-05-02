@@ -1109,7 +1109,10 @@ class Module(object):
     def resource_command(self, data):
         def iter_res():
             for l in data:
-                f, k = l.split(' ')
+                try:
+                    f, k = l.split(' ')
+                except ValueError:
+                    f, k = l, l
 
                 if k[0] != '/':
                     k = '/' + k

@@ -6,8 +6,17 @@ import libs.py_resource as lp
 
 
 class Iface:
+    def __init__(self):
+        d = {}
+
+        for k in lp.keys():
+            if k.startswith('/site/'):
+                d[k[6:]] = lp.load(k)
+
+        self._d = d
+
     def data(self, name):
-        return lp.load('/' + name)
+        return self._d[name]
 
     def text(self, name):
         return self.data(name).decode('utf-8')
@@ -25,9 +34,15 @@ app = bottle.Bottle()
 
 
 @app.route('/')
-@app.route('/<name>')
-def route(name='index.html'):
-    return env.get_template('index.html').render(iface=iface)
+@app.route('/templates/<name>')
+def templates(name='index.html'):
+    return env.get_template('templates/' + name).render(iface=iface)
 
 
-bottle.run(app, host='localhost', port=8080)
+@app.route('/static/<name>')
+def templates(name):
+    return iface.data('static/' + name)
+
+
+if __name__ == '__main__':
+    bottle.run(app, host='localhost', port=8080)

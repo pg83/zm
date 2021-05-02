@@ -6,9 +6,9 @@ srcs:
 - __main__.py
 
 resource:
-- site/site.html site.html
-- site/index.html index.html
-- site/items.json items.json
+- site/templates/site.html
+- site/templates/index.html
+- site/data/items.json
 
 depends:
 - tp/libs/python/lib

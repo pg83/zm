@@ -1,9 +1,9 @@
-{% extends "site.html" %}
+{% extends "templates/site.html" %}
 
 {% block title %}Main{% endblock %}
 
 {% block content %}
-{% for item in iface.json('items.json') %}
+{% for item in iface.json('data/items.json') %}
    {{ item }}{% if not loop.last %},{% endif %}
 {% endfor %}
 {% endblock %}
