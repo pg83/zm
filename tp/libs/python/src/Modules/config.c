@@ -37,7 +37,7 @@ extern PyObject* PyInit__posixsubprocess();
 extern PyObject* PyInit__queue();
 extern PyObject* PyInit__random();
 #if defined(__APPLE__)
-extern PyObject* PyInit__scproxy();
+//extern PyObject* PyInit__scproxy();
 #endif
 extern PyObject* PyInit__sha1();
 extern PyObject* PyInit__sha256();
@@ -131,7 +131,7 @@ struct _inittab _PyImport_Inittab[] = {
     {"_queue", PyInit__queue},
     {"_random", PyInit__random},
 #if defined(__APPLE__)
-    {"_scproxy", PyInit__scproxy},
+//    {"_scproxy", PyInit__scproxy},
 #endif
     {"_sha1", PyInit__sha1},
     {"_sha256", PyInit__sha256},

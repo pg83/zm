@@ -109,7 +109,7 @@ srcs:
 - _queuemodule.c
 - _randommodule.c
 #if OS_DARWIN
-- _scproxy.c
+#- _scproxy.c
 #endif
 - _sha3/sha3module.c
 - _sre.c

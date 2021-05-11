@@ -15,6 +15,14 @@ class Iface:
 
         self._d = d
 
+    def ls(self, prefix):
+        def do():
+            for k in self._d.keys():
+                if k.startswith(prefix):
+                    yield k
+
+        return list(do())
+
     def data(self, name):
         return self._d[name]
 
