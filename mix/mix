@@ -1,0 +1,10 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+
+sys.dont_write_bytecode = True
+
+import core.main as cm
+
+cm.main(sys.argv[1:], os.path.normpath(os.path.abspath(__file__)))
