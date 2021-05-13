@@ -101,6 +101,19 @@ for url in sys.argv[1:]:
 '''.strip()
 
 
+BUILD_PSH_SCRIPT = '''
+newdir $out
+newdir $tmp
+
+cd $tmp
+
+{build_script}
+
+rm $tmp
+touch $out/touch
+'''.strip()
+
+
 class Package:
     def __init__(self, where, mngr):
         self._w = where
@@ -138,11 +151,11 @@ class Package:
 
     @property
     def tmp_dir(self):
-        return self.mix_dir + '/workdir/' + self.uid
+        return self.mix_dir + '/tmp/build/' + self.uid
 
     @property
     def src_dir(self):
-        return self.out_dir + '-src'
+        return self.mix_dir + '/tmp/fetch/' + struct_hash(self._d['build']['fetch'])
 
     def depends(self):
         return self._d['build'].get('depends', [])
@@ -157,7 +170,7 @@ class Package:
         for p in self.iter_depends():
             yield p.name.replace('-', '_'), p.out_dir
 
-            path.append(p.out_dir)
+            path.append(p.out_dir + '/bin')
 
         yield 'PATH', ':'.join(path)
 
@@ -188,10 +201,18 @@ class Package:
             'env': env,
         }
 
+    def build_psh_script(self, data, env, args=[]):
+        return {
+            'args': [sys.executable, self.manager.binary, 'misc', 'runpsh'] + args,
+            'stdin': BUILD_PSH_SCRIPT.format(build_script=data),
+            'env': env,
+        }
+
     def build_script(self):
         by_kind = {
             'sh': self.build_sh_script,
             'py': self.build_py_script,
+            'psh': self.build_psh_script,
         }
 
         build = self._d['build']['script']

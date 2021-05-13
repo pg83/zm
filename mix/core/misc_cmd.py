@@ -1,31 +1,16 @@
 import os
 import sys
-import subprocess
 
-import urllib.request as ur
+import core.shell as cs
+import core.shell_cmd as csc
 
 
 class Iface:
+    def untar(self, path):
+        csc.untar(path)
+
     def fetch_url(self, url, out):
-        print('fetch ' + url + ' into ' + out)
-
-        try:
-            self.fetch_curl(url, out)
-        except FileNotFoundError:
-            self.fetch_urllib(url, out)
-
-    def fetch_curl(self, url, out):
-        subprocess.check_call(['curl', '--output', out, url])
-
-    def fetch_urllib(self, url, out):
-        import ssl
-
-        ssl._create_default_https_context = ssl._create_unverified_context
-
-        data = ur.urlopen(url).read()
-
-        with open(out, 'wb') as f:
-            f.write(data)
+        csc.fetch_url(url, out)
 
 
 def cli_misc_runpy(ctx):
@@ -36,3 +21,13 @@ def cli_misc_runpy(ctx):
     }
 
     exec(sys.stdin.read(), g, g)
+
+
+def cli_misc_runpsh(ctx):
+    def iter_env():
+        yield from os.environ.items()
+
+        for k, v in enumerate(['runpsh'] + ctx['args']):
+            yield str(k), v
+
+    cs.interpret(sys.stdin.read(), dict(iter_env()))
