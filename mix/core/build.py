@@ -16,8 +16,14 @@ def execute_cmd(c):
 
 
 def execute_node(n):
-    for c in n['cmd']:
-        execute_cmd(c)
+    for o in n['out']:
+        if os.path.exists(o):
+            print(o + ' complete')
+        else:
+            for c in n['cmd']:
+                execute_cmd(c)
+
+            return
 
 
 def execute(g):

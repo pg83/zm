@@ -1,5 +1,4 @@
 import os
-import getpass
 
 import core.package as cp
 
@@ -12,7 +11,7 @@ class Manager:
 
     @property
     def mix_dir(self):
-        return os.path.join(getpass.getuser(), 'mix')
+        return os.path.expanduser('~/mix')
 
     @property
     def binary(self):
