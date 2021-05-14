@@ -1,5 +1,6 @@
 def package(mix):
     deps = [
+        'darwin-env',
         'bin-darwin-coreutils',
         'bin-darwin-sed',
         'bin-darwin-clang',
@@ -8,7 +9,7 @@ def package(mix):
 
     return {
         'build': {
-            'script': mix.files.build_ph,
+            'script': mix.files.build_sh,
             'depends': deps,
         },
         'runtime': {

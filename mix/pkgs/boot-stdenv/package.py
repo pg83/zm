@@ -1,5 +1,6 @@
 def package(mix):
     deps = [
+        'darwin-env',
         'boot-coreutils',
         'boot-dash',
         'boot-gawk',
@@ -11,7 +12,7 @@ def package(mix):
 
     return {
         'build': {
-            'script': mix.files.build_ph,
+            'script': mix.files.build_sh,
             'depends': deps,
         },
         'runtime': {

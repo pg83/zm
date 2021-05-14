@@ -1,17 +1,9 @@
 cd $out
 
----
-data = '''
-export CPPFLAGS="-isystem/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include"
-export LDFLAGS="-L/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib"
-export GREP=grep
-'''
+echo '. $darwin_env/env' >> env
+echo 'export GREP=grep' >> env
 
-with open('env', 'w') as f:
-    f.write(data)
----
-
-mkcd $out/bin
+mkdir bin && cd bin
 
 ln -s $bin_darwin_clang/bin/clang gcc
 ln -s $bin_darwin_clang/bin/clang++ g++
