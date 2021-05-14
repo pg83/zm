@@ -1,0 +1,15 @@
+mkcd $out/bin
+
+ln -s $clang_bin/bin/clang gcc
+ln -s $clang_bin/bin/clang++ g++
+ln -s $clang_bin/bin/clang-cpp cpp
+
+ln -s $clang_bin/bin/llvm-ar ar
+ln -s $clang_bin/bin/llvm-ranlib ranlib
+ln -s $clang_bin/bin/llvm-strip strip
+ln -s $clang_bin/bin/llvm-nm nm
+
+ln -s /usr/bin/grep grep
+ln -s /usr/bin/egrep egrep
+ln -s /usr/bin/awk awk
+ln -s /usr/bin/ld ld

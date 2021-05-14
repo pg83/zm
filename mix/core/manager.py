@@ -1,5 +1,6 @@
 import os
 
+import core.utils as cu
 import core.package as cp
 
 
@@ -28,21 +29,13 @@ class Manager:
         return self._c[name]
 
     def iter_packages(self, names):
-        v = set()
+        def iter_deps():
+            for name in names:
+                yield name
+                yield from self.load_package(name).all_depends()
 
-        def visit(name):
-            if name not in v:
-                v.add(name)
-
-                pkg = self.load_package(name)
-
-                yield pkg
-
-                for n in pkg.depends():
-                    yield from visit(n)
-
-        for name in names:
-            yield from visit(name)
+        for d in cu.iter_uniq_list(iter_deps()):
+            yield self.load_package(d)
 
     def iter_build_commands(self, names):
         for pkg in self.iter_packages(names):

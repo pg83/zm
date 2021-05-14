@@ -1,18 +1,13 @@
+mkcd $out/bin
 untar $src/coreutils-*
 set files coreutils/*/bin/*
-mkdir $out/bin
 
 ---
 import os
-import shutil
 
 for f in files:
     n = os.path.basename(f)
 
     if n[0] == 'g':
-        n = n[1:]
-
-    shutil.copyfile(f, out + '/bin/' + n)
+        os.symlink(f, n[1:])
 ---
-
-chmod 0555 $out/bin/*

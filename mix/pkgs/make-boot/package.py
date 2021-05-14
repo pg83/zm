@@ -8,7 +8,7 @@ def package(mix):
                 },
             ],
             'depends': [
-                'coreutils-bin',
+                'stdenv-boot',
             ],
         },
     }

@@ -31,3 +31,8 @@ def cli_misc_runpsh(ctx):
             yield str(k), v
 
     cs.interpret(sys.stdin.read(), dict(iter_env()))
+
+
+def cli_misc_untar(ctx):
+    for a in ctx['args']:
+        csc.untar(a)

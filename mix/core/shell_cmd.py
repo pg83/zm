@@ -4,6 +4,8 @@ import subprocess
 def untar(path):
     print('untar ' + path)
 
+    return untar_tarfile(path)
+
     try:
         untar_tar(path)
     except FileNotFoundError:
@@ -40,7 +42,23 @@ def fetch_urllib(url, out):
 
     ssl._create_default_https_context = ssl._create_unverified_context
 
-    data = ur.urlopen(url).read()
+    def iter_chunks():
+        r = ur.urlopen(url)
+
+        while True:
+            c = r.read(1 * 1024 * 1024)
+
+            if c:
+                yield c
+            else:
+                return
 
     with open(out, 'wb') as f:
-        f.write(data)
+        cnt = 0
+
+        for c in iter_chunks():
+            cnt += len(c)
+
+            print('got ' + str(cnt) + ' bytes')
+
+            f.write(c)

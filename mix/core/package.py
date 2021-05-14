@@ -3,6 +3,8 @@ import sys
 import json
 import hashlib
 
+import core.utils as cu
+
 
 class File:
     def __init__(self, name, data):
@@ -50,6 +52,7 @@ def struct_hash(d):
 BUILD_SH_SCRIPT = '''
 set -e
 set -x
+set -u
 
 (rm -rf $out || 1) && mkdir -p $out
 (rm -rf $tmp || 1) && mkdir -p $tmp
@@ -160,36 +163,32 @@ class Package:
     def depends(self):
         return self._d['build'].get('depends', [])
 
-    def iter_depends(self):
-        for d in self.depends():
+    def all_depends(self):
+        def iter_deps():
+            for d in self.depends():
+                yield d
+
+                yield from self.manager.load_package(d).all_depends()
+
+        return cu.uniq_list(iter_deps())
+
+    def iter_all_depends(self):
+        for d in self.all_depends():
             yield self.manager.load_package(d)
 
     def iter_env(self):
         path = ['/nowhere']
 
-        for p in self.iter_depends():
+        for p in self.iter_all_depends():
             yield p.name.replace('-', '_'), p.out_dir
 
             path.append(p.out_dir + '/bin')
 
         yield 'PATH', ':'.join(path)
 
-    def iter_full_env(self):
-        yield from self.iter_env()
-
-        yield 'out', self.out_dir
-        yield 'src', self.src_dir
-        yield 'tmp', self.tmp_dir
-
-    def iter_src_env(self):
-        yield from self.iter_env()
-
-        yield 'out', self.src_dir
-        yield 'tmp', self.tmp_dir
-
     def build_sh_script(self, data, env):
         return {
-            'args': ['/bin/sh', '-s'],
+            'args': ['dash', '-s'],
             'stdin': BUILD_SH_SCRIPT.format(build_script=data),
             'env': env,
         }
@@ -209,6 +208,18 @@ class Package:
         }
 
     def build_script(self):
+        def iter_env():
+            yield from self.iter_env()
+
+            if 'fetch' in self._d['build']:
+                yield 'src', self.src_dir
+
+            yield 'out', self.out_dir
+            yield 'tmp', self.tmp_dir
+            yield 'mix', self.manager.binary
+
+            yield 'exe', sys.executable
+
         by_kind = {
             'sh': self.build_sh_script,
             'py': self.build_py_script,
@@ -217,21 +228,34 @@ class Package:
 
         build = self._d['build']['script']
 
-        return by_kind[build.kind](build.data, dict(self.iter_full_env()))
+        return by_kind[build.kind](build.data, dict(self.iter_env()))
 
     def fetch_src_script(self):
+        def iter_env():
+            yield from self.iter_env()
+
+            yield 'out', self.src_dir
+            yield 'tmp', self.tmp_dir
+
         urls = [x['url'] for x in self._d['build']['fetch']]
 
-        return self.build_py_script(FETCH_SRC_SCRIPT, dict(self.iter_src_env()), urls)
+        return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), urls)
 
     def iter_commands(self):
-        yield {
-            'out': [self.src_dir + '/touch'],
-            'cmd': [self.fetch_src_script()],
-        }
+        if 'fetch' in self._d['build']:
+            touch = self.src_dir + '/touch'
+
+            yield {
+                'out': [touch],
+                'cmd': [self.fetch_src_script()],
+            }
+
+            extra = [touch]
+        else:
+            extra = []
 
         yield {
-            'in': [x.out_dir + '/touch' for x in self.iter_depends()] + [self.src_dir + '/touch'],
+            'in': [x.out_dir + '/touch' for x in self.iter_all_depends()] + extra,
             'out': [self.out_dir + '/touch'],
             'cmd': [self.build_script()],
         }

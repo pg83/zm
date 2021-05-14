@@ -41,6 +41,11 @@ def cmd_mkdir(env, path):
     os.makedirs(path)
 
 
+def cmd_mkcd(env, path):
+    cmd_mkdir(env, path)
+    cmd_cd(env, path)
+
+
 def cmd_touch(env, path):
     with open(path, 'w') as f:
         pass
@@ -53,6 +58,19 @@ def cmd_set(env, name, *args):
 def cmd_chmod(env, mode, *args):
     for a in args:
         os.chmod(a, int(mode, 8))
+
+
+def cmd_install(env, fr, to):
+    os.link(fr, to)
+
+
+def cmd_ln(env, *args):
+    if args[0] == '-s':
+        fn, fr, to = os.symlink, args[1], args[2]
+    else:
+        fn, fr, to = os.link, args[0], args[1]
+
+    fn(fr, to)
 
 
 def interpret_sh(text, env):
