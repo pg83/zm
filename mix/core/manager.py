@@ -11,6 +11,7 @@ class Manager:
         self._c = {}
 
     @property
+    @cu.cached_method
     def mix_dir(self):
         return os.path.expanduser('~/mix')
 
@@ -23,10 +24,11 @@ class Manager:
         return self._w
 
     def load_package(self, name):
-        if name not in self._c:
-            self._c[name] = cp.Package(os.path.join(self.where, name), self)
-
-        return self._c[name]
+        while True:
+            try:
+                return self._c[name]
+            except KeyError:
+                self._c[name] = cp.Package(os.path.join(self.where, name), self)
 
     def iter_packages(self, names):
         def iter_deps():

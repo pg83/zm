@@ -52,7 +52,6 @@ def struct_hash(d):
 BUILD_SH_SCRIPT = '''
 set -e
 set -x
-set -u
 
 (rm -rf $out || 1) && mkdir -p $out
 (rm -rf $tmp || 1) && mkdir -p $tmp
@@ -104,7 +103,7 @@ for url in sys.argv[1:]:
 '''.strip()
 
 
-BUILD_PSH_SCRIPT = '''
+BUILD_PH_SCRIPT = '''
 newdir $out
 newdir $tmp
 
@@ -137,6 +136,7 @@ class Package:
         return self._w
 
     @property
+    @cu.cached_method
     def files(self):
         return FileLoader(self.where)
 
@@ -149,37 +149,73 @@ class Package:
         return self.manager.mix_dir
 
     @property
+    @cu.cached_method
     def out_dir(self):
         return self.mix_dir + '/store/' + self.uid + '-' + self.name
 
     @property
+    @cu.cached_method
     def tmp_dir(self):
         return self.mix_dir + '/tmp/build/' + self.uid
 
     @property
+    @cu.cached_method
     def src_dir(self):
         return self.mix_dir + '/tmp/fetch/' + struct_hash(self._d['build']['fetch'])
 
-    def depends(self):
+    # build
+    def build_depends(self):
         return self._d['build'].get('depends', [])
 
+    @cu.cached_method
+    def all_build_depends(self):
+        def iter_deps():
+            yield from self.build_depends()
+
+            for d in self.build_depends():
+                yield from self.manager.load_package(d).all_runtime_depends()
+
+        return cu.uniq_list(iter_deps())
+
+    def iter_all_build_depends(self):
+        for d in self.all_build_depends():
+            yield self.manager.load_package(d)
+
+    # runtime
+    def runtime_depends(self):
+        return self._d.get('runtime', {}).get('depends', [])
+
+    @cu.cached_method
+    def all_runtime_depends(self):
+        def iter_deps():
+            yield from self.runtime_depends()
+
+            for d in self.runtime_depends():
+                yield from self.manager.load_package(d).all_runtime_depends()
+
+        return cu.uniq_list(iter_deps())
+
+    def iter_all_runtime_depends(self):
+        for d in self.all_runtime_depends():
+            yield self.manager.load_package(d)
+
+    # all
+    def depends(self):
+        return self.build_depends() + self.runtime_depends()
+
+    @cu.cached_method
     def all_depends(self):
         def iter_deps():
             for d in self.depends():
                 yield d
-
                 yield from self.manager.load_package(d).all_depends()
 
         return cu.uniq_list(iter_deps())
 
-    def iter_all_depends(self):
-        for d in self.all_depends():
-            yield self.manager.load_package(d)
-
     def iter_env(self):
         path = ['/nowhere']
 
-        for p in self.iter_all_depends():
+        for p in self.iter_all_build_depends():
             yield p.name.replace('-', '_'), p.out_dir
 
             path.append(p.out_dir + '/bin')
@@ -200,10 +236,10 @@ class Package:
             'env': env,
         }
 
-    def build_psh_script(self, data, env, args=[]):
+    def build_ph_script(self, data, env, args=[]):
         return {
-            'args': [sys.executable, self.manager.binary, 'misc', 'runpsh'] + args,
-            'stdin': BUILD_PSH_SCRIPT.format(build_script=data),
+            'args': [sys.executable, self.manager.binary, 'misc', 'runph'] + args,
+            'stdin': BUILD_PH_SCRIPT.format(build_script=data),
             'env': env,
         }
 
@@ -223,12 +259,12 @@ class Package:
         by_kind = {
             'sh': self.build_sh_script,
             'py': self.build_py_script,
-            'psh': self.build_psh_script,
+            'ph': self.build_ph_script,
         }
 
         build = self._d['build']['script']
 
-        return by_kind[build.kind](build.data, dict(self.iter_env()))
+        return by_kind[build.kind](build.data, dict(iter_env()))
 
     def fetch_src_script(self):
         def iter_env():
@@ -255,7 +291,7 @@ class Package:
             extra = []
 
         yield {
-            'in': [x.out_dir + '/touch' for x in self.iter_all_depends()] + extra,
+            'in': [x.out_dir + '/touch' for x in self.iter_all_build_depends()] + extra,
             'out': [self.out_dir + '/touch'],
             'cmd': [self.build_script()],
         }

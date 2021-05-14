@@ -4,11 +4,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'https://ftp.gnu.org/gnu/sed/sed-4.8.tar.xz',
                 },
             ],
             'depends': [
-                'stdenv-boot',
+                'bin-stdenv',
             ],
         },
     }

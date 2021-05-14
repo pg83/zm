@@ -3,7 +3,7 @@ def package(mix):
 
     return {
         'build': {
-            'script': mix.files.build_psh,
+            'script': mix.files.build_ph,
             'fetch': [
                 {
                     'url': url,

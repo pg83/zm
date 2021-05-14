@@ -73,6 +73,11 @@ def cmd_ln(env, *args):
     fn(fr, to)
 
 
+def cmd_env(env):
+    for k, v in env.items():
+        print(str(k) + '=' + str(v))
+
+
 def interpret_sh(text, env):
     def expand_vars(t):
         for k, v in env.items():

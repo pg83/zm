@@ -6,6 +6,8 @@ import core.manager as cm
 
 
 def execute_cmd(c):
+    print(c)
+
     a = c['args']
     p = subprocess.Popen(a, stdin=subprocess.PIPE, env=c.get('env', {}))
 

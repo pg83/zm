@@ -4,7 +4,7 @@ import importlib
 CLIS = [
     ('core.build', 'build'),
     ('core.misc_cmd', 'misc_runpy'),
-    ('core.misc_cmd', 'misc_runpsh'),
+    ('core.misc_cmd', 'misc_runph'),
     ('core.misc_cmd', 'misc_untar'),
 ]
 
