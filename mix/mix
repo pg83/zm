@@ -2,8 +2,10 @@
 
 import os
 import sys
+import traceback
 
 sys.dont_write_bytecode = True
+sys.excepthook = traceback.print_exception
 
 import core.main as cm
 

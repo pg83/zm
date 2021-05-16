@@ -7,7 +7,7 @@ def package(mix):
         'boot-grep',
         'boot-make',
         'boot-sed',
-        'bin-darwin-clang',
+        'boot-clang',
     ]
 
     return {

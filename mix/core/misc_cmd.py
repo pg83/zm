@@ -1,8 +1,18 @@
 import os
 import sys
+import shutil
 
 import core.shell as cs
 import core.shell_cmd as csc
+
+
+def prepare_dir(d):
+    try:
+        shutil.rmtree(d)
+    except FileNotFoundError:
+        pass
+
+    os.makedirs(d)
 
 
 class Iface:
@@ -11,6 +21,24 @@ class Iface:
 
     def fetch_url(self, url, out):
         csc.fetch_url(url, out)
+
+    def header(self):
+        out = os.environ['out']
+        tmp = os.environ['tmp']
+
+        prepare_dir(out)
+        prepare_dir(tmp)
+
+        os.chdir(tmp)
+
+    def footer(self):
+        out = os.environ['out']
+        tmp = os.environ['tmp']
+
+        shutil.rmtree(tmp)
+
+        with open(out + '/touch', 'w') as f:
+            pass
 
 
 def cli_misc_runpy(ctx):

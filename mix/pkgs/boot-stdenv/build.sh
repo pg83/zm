@@ -1,6 +1,8 @@
 cd $out
 
-echo '. $darwin_env/env' >> env
+tee env << EOF
+export untar='$exe $mix misc untar'
+EOF
 
 mkdir bin && cd bin
 

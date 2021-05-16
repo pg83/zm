@@ -1,6 +1,4 @@
-. $bin_stdenv/env
-
-$exe $mix misc untar $src/gawk-* && cd gawk-*
+$untar $src/gawk-* && cd gawk-*
 
 export CFLAGS="-Derr=gawk_err -Dxmalloc=gawk_xmalloc -Dxrealloc=Dgawk_xrealloc -Dregcomp=gawk_regcomp -Dregfree=gawk_regfree  $CFLAGS"
 

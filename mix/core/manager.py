@@ -28,7 +28,9 @@ class Manager:
             try:
                 return self._c[name]
             except KeyError:
-                self._c[name] = cp.Package(os.path.join(self.where, name), self)
+                pass
+
+            self._c[name] = cp.Package(os.path.join(self.where, name), self)
 
     def iter_packages(self, names):
         def iter_deps():

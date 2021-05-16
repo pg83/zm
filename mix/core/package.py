@@ -6,22 +6,6 @@ import hashlib
 import core.utils as cu
 
 
-class File:
-    def __init__(self, name, data):
-        self.name = name
-        self.data = data
-
-    @property
-    def kind(self):
-        return self.name.split('.')[-1]
-
-    def __json__(self):
-        return {
-            'kind': self.kind,
-            'data': self.data,
-        }
-
-
 class FileLoader:
     def __init__(self, where):
         self._w = where
@@ -30,7 +14,10 @@ class FileLoader:
         path = os.path.join(self._w, name.replace('_', '.'))
 
         with open(path, 'r') as f:
-            return File(os.path.basename(path), f.read())
+            return {
+                'kind': os.path.basename(path).split('.')[-1],
+                'data': f.read(),
+            }
 
 
 def exec_mod(text, iface):
@@ -46,51 +33,41 @@ def string_hash(s):
 
 
 def struct_hash(d):
-    return string_hash(json.dumps(d, sort_keys=True, default=lambda x: x.__json__()))
+    return string_hash(json.dumps(d, sort_keys=True))
 
 
 BUILD_SH_SCRIPT = '''
 set -e
 set -x
 
-(rm -rf $out || 1) && mkdir -p $out
-(rm -rf $tmp || 1) && mkdir -p $tmp
+(rm -rf "$out" || 1) && mkdir -p "$out"
+(rm -rf "$tmp" || 1) && mkdir -p "$tmp"
 
-cd $tmp
+cd "$tmp"
+
+echo "$PATH" | tr ':' '\n' | tac | while read p; do
+    env=$(realpath -m "$p/../env")
+
+    if test -f "$env"; then
+        cat "$env" >> "$tmp/tmpenv"
+    fi
+done
+
+. "$tmp/tmpenv" && rm "$tmp/tmpenv" && env
 
 {build_script}
 
-rm -rf $tmp
-touch $out/touch
+rm -rf "$tmp"
+touch "$out/touch"
 '''.strip()
 
 
 BUILD_PY_SCRIPT = '''
-import os
-import shutil
-
-def prepare_dir(d):
-    try:
-        shutil.rmtree(d)
-    except FileNotFoundError:
-        pass
-
-    os.makedirs(d)
-
-out = os.environ['out']
-tmp = os.environ['tmp']
-
-prepare_dir(out)
-prepare_dir(tmp)
-
-os.chdir(tmp)
+mix.header()
 
 {build_script}
 
-shutil.rmtree(tmp)
-
-with open(out + '/touch', 'w') as f:
-    pass
+mix.footer()
 '''.strip()
 
 
@@ -120,7 +97,7 @@ class Package:
     def __init__(self, where, mngr):
         self._w = where
         self._m = mngr
-        self._d = exec_mod(self.files.package_py.data, self)
+        self._d = exec_mod(self.files.package_py['data'], self)
         self._u = struct_hash([self._d, list(self.iter_env())])
 
     @property
@@ -165,7 +142,7 @@ class Package:
 
     # build
     def build_depends(self):
-        return self._d['build'].get('depends', [])
+        return self._d.get('build', {}).get('depends', [])
 
     @cu.cached_method
     def all_build_depends(self):
@@ -216,9 +193,11 @@ class Package:
         path = ['/nowhere']
 
         for p in self.iter_all_build_depends():
-            yield p.name.replace('-', '_'), p.out_dir
+            od = p.out_dir
 
-            path.append(p.out_dir + '/bin')
+            yield p.name.replace('-', '_'), od
+
+            path.append(od + '/bin')
 
         yield 'PATH', ':'.join(path)
 
@@ -264,7 +243,7 @@ class Package:
 
         build = self._d['build']['script']
 
-        return by_kind[build.kind](build.data, dict(iter_env()))
+        return by_kind[build['kind']](build['data'], dict(iter_env()))
 
     def fetch_src_script(self):
         def iter_env():
@@ -278,6 +257,14 @@ class Package:
         return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), urls)
 
     def iter_commands(self):
+        if 'build' not in self._d:
+            yield {
+                'out': [self.out_dir + '/touch'],
+                'cmd': [self.build_ph_script('', dict(out=self.out_dir, tmp=self.tmp_dir))],
+            }
+
+            return
+
         if 'fetch' in self._d['build']:
             touch = self.src_dir + '/touch'
 

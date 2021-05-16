@@ -22,7 +22,9 @@ def singleton(f):
             try:
                 return f.__cache__
             except AttributeError:
-                f.__cache__ = f()
+                pass
+
+            f.__cache__ = f()
 
     return wrapper
 
@@ -36,6 +38,8 @@ def cached_method(m):
             try:
                 return self.__dict__[key]
             except KeyError:
-                self.__dict__[key] = m(self)
+                pass
+
+            self.__dict__[key] = m(self)
 
     return wrapper

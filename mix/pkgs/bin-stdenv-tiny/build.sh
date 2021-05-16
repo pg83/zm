@@ -1,7 +1,8 @@
 cd $out
 
-echo '. $darwin_env/env' >> env
-echo 'export GREP=grep' >> env
+tee env << EOF
+export untar='$exe $mix misc untar'
+EOF
 
 mkdir bin && cd bin
 
@@ -15,7 +16,7 @@ ln -s $bin_darwin_clang/bin/llvm-strip strip
 ln -s $bin_darwin_clang/bin/llvm-nm nm
 
 ln -s /usr/bin/grep grep
-ln -s /usr/bin/egrep egrep
+ln -s /usr/bin/diff diff
 ln -s /usr/bin/awk awk
 
 ln -s /usr/bin/ld ld

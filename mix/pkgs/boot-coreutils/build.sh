@@ -1,6 +1,4 @@
-. $bin_stdenv/env
-
-$exe $mix misc untar $src/coreutils-* && cd coreutils-*
+$untar $src/coreutils-* && cd coreutils-*
 
 export FORCE_UNSAFE_CONFIGURE=1
 export CFLAGS="$CFLAGS $LDFLAGS $LIBS -w"
