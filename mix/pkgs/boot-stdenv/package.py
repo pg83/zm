@@ -2,6 +2,7 @@ def package(mix):
     deps = [
         'darwin-env',
         'boot-coreutils',
+        'boot-diffutils',
         'boot-dash',
         'boot-gawk',
         'boot-grep',

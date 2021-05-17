@@ -1,15 +1,24 @@
 import subprocess
 
 
+def unzip(path):
+    print('unzip ' + path)
+
+    import zipfile
+
+    with zipfile.ZipFile(path, 'r') as f:
+        f.extractall()
+
+
 def untar(path):
     print('untar ' + path)
 
-    return untar_tarfile(path)
-
     try:
-        untar_tar(path)
+        return untar_tar(path)
     except FileNotFoundError:
-        untar_tarfile(path)
+        pass
+
+    return untar_tarfile(path)
 
 
 def untar_tar(path):
@@ -27,9 +36,11 @@ def fetch_url(url, out):
     print('fetch ' + url + ' into ' + out)
 
     try:
-        fetch_curl(url, out)
+        return fetch_curl(url, out)
     except FileNotFoundError:
-        fetch_urllib(url, out)
+        pass
+
+    return fetch_urllib(url, out)
 
 
 def fetch_curl(url, out):

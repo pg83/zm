@@ -1,3 +1,4 @@
+import sys
 import importlib
 
 
@@ -6,6 +7,7 @@ CLIS = [
     ('core.misc_cmd', 'misc_runpy'),
     ('core.misc_cmd', 'misc_runph'),
     ('core.misc_cmd', 'misc_untar'),
+    ('core.misc_cmd', 'misc_unzip'),
 ]
 
 
@@ -44,3 +46,4 @@ def main(args, binary):
         importlib.import_module(k).__dict__['cli_' + v](ctx)
     else:
         print_help()
+        sys.exit(1)

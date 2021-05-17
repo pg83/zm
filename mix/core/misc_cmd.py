@@ -19,6 +19,9 @@ class Iface:
     def untar(self, path):
         csc.untar(path)
 
+    def unzip(self, path):
+        csc.unzip(path)
+
     def fetch_url(self, url, out):
         csc.fetch_url(url, out)
 
@@ -64,3 +67,8 @@ def cli_misc_runph(ctx):
 def cli_misc_untar(ctx):
     for a in ctx['args']:
         csc.untar(a)
+
+
+def cli_misc_unzip(ctx):
+    for a in ctx['args']:
+        csc.unzip(a)

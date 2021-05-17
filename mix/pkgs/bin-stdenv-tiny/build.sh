@@ -2,6 +2,7 @@ cd $out
 
 tee env << EOF
 export untar='$exe $mix misc untar'
+export unzip='$exe $mix misc unzip'
 EOF
 
 mkdir bin && cd bin
