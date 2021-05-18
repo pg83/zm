@@ -1,9 +1,8 @@
 def package(mix):
     deps = [
-        'darwin-env',
+        'bin-clang',
         'bin-darwin-coreutils',
         'bin-darwin-sed',
-        'bin-darwin-clang',
         'bin-darwin-dash',
     ]
 
@@ -13,6 +12,8 @@ def package(mix):
             'depends': deps,
         },
         'runtime': {
-            'depends': deps,
+            'depends': deps + [
+                'env-bootstrap',
+            ],
         },
     }

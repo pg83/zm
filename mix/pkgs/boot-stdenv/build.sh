@@ -1,18 +1,15 @@
-cd $out
+cd $out && mkdir bin && cd bin
 
-tee env << EOF
-export untar='$exe $mix misc untar'
-EOF
+clang_path=$(which clang)
+clang_dir=$(dirname $clang_path)
 
-mkdir bin && cd bin
+ln -s $clang_dir/clang gcc
+ln -s $clang_dir/clang++ g++
+ln -s $clang_dir/clang-cpp cpp
 
-ln -s $bin_darwin_clang/bin/clang gcc
-ln -s $bin_darwin_clang/bin/clang++ g++
-ln -s $bin_darwin_clang/bin/clang-cpp cpp
-
-ln -s $bin_darwin_clang/bin/llvm-ar ar
-ln -s $bin_darwin_clang/bin/llvm-ranlib ranlib
-ln -s $bin_darwin_clang/bin/llvm-strip strip
-ln -s $bin_darwin_clang/bin/llvm-nm nm
+ln -s $clang_dir/llvm-ar ar
+ln -s $clang_dir/llvm-ranlib ranlib
+ln -s $clang_dir/llvm-strip strip
+ln -s $clang_dir/llvm-nm nm
 
 ln -s /usr/bin/ld ld

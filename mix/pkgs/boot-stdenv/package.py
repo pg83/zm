@@ -1,6 +1,6 @@
 def package(mix):
     deps = [
-        'darwin-env',
+        'boot-which',
         'boot-coreutils',
         'boot-diffutils',
         'boot-dash',
@@ -9,6 +9,7 @@ def package(mix):
         'boot-make',
         'boot-sed',
         'boot-clang',
+        'boot-cmake',
     ]
 
     return {
@@ -17,6 +18,8 @@ def package(mix):
             'depends': deps,
         },
         'runtime': {
-            'depends': deps,
+            'depends': deps + [
+                'env-bootstrap',
+            ],
         },
     }

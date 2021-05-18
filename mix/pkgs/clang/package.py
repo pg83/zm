@@ -10,10 +10,7 @@ def package(mix):
                 },
             ],
             'depends': [
-                'boot-which',
-                'boot-libcxx',
-                'boot-cmake',
-                'bin-stdenv',
+                'boot-stdenv',
             ],
         },
         'runtime': {

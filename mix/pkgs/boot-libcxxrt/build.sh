@@ -26,4 +26,5 @@ cp src/*.h $out/include/
 
 cat << EOF > $out/env
 export CPPFLAGS="-I$out/include \$CPPFLAGS"
+export LIBS="$out/lib/libcxxrt.a \$LIBS"
 EOF
