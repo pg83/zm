@@ -13,6 +13,8 @@ def package(mix):
                 'boot-which',
                 'boot-libcxx',
                 'boot-cmake',
+                'boot-python',
+                'boot-ninja',
                 'bin-stdenv',
             ],
         },

@@ -40,8 +40,8 @@ BUILD_SH_SCRIPT = '''
 set -e
 set -x
 
-(rm -rf "$out" || 1) && mkdir -p "$out"
-(rm -rf "$tmp" || 1) && mkdir -p "$tmp"
+(rm -rf "$out" || true) && mkdir -p "$out"
+(rm -rf "$tmp" || true) && mkdir -p "$tmp"
 
 cd "$tmp"
 
@@ -58,7 +58,6 @@ done
 {build_script}
 
 rm -rf "$tmp"
-touch "$out/touch"
 '''.strip()
 
 
@@ -72,11 +71,20 @@ mix.footer()
 
 
 FETCH_SRC_SCRIPT = '''
-import os
 import sys
 
-for url in sys.argv[1:]:
-    mix.fetch_url(url, os.path.join(os.environ['out'], os.path.basename(url)))
+mix.fetch_url(sys.argv[1], sys.argv[2])
+'''.strip()
+
+
+LINK_SRCS_SCRIPT = '''
+import sys
+import os
+
+os.chdir(os.environ['out'])
+
+for f in sys.argv[1:]:
+    os.link(f, os.path.basename(f))
 '''.strip()
 
 
@@ -89,7 +97,6 @@ cd $tmp
 {build_script}
 
 rm $tmp
-touch $out/touch
 '''.strip()
 
 
@@ -135,10 +142,12 @@ class Package:
     def tmp_dir(self):
         return self.mix_dir + '/tmp/build/' + self.uid
 
+    def src_dir_for(self, url):
+        return self.mix_dir + '/tmp/fetch/' + struct_hash(url)
+
     @property
-    @cu.cached_method
     def src_dir(self):
-        return self.mix_dir + '/tmp/fetch/' + struct_hash(self._d['build']['fetch'])
+        return self.src_dir_for(self._d['build']['fetch'])
 
     # build
     def build_depends(self):
@@ -232,54 +241,83 @@ class Package:
             yield 'out', self.out_dir
             yield 'tmp', self.tmp_dir
             yield 'mix', self.manager.binary
-
             yield 'exe', sys.executable
-
-        by_kind = {
-            'sh': self.build_sh_script,
-            'py': self.build_py_script,
-            'ph': self.build_ph_script,
-        }
 
         build = self._d['build']['script']
 
-        return by_kind[build['kind']](build['data'], dict(iter_env()))
+        return {
+            'sh': self.build_sh_script,
+            'py': self.build_py_script,
+            'ph': self.build_ph_script,
+        }[build['kind']](build['data'], dict(iter_env()))
 
-    def fetch_src_script(self):
+    def fetch_src_script(self, url):
+        path = os.path.join(self.src_dir_for(url), os.path.basename(url))
+
         def iter_env():
             yield from self.iter_env()
 
-            yield 'out', self.src_dir
-            yield 'tmp', self.tmp_dir
+            yield 'out', os.path.dirname(path)
 
-        urls = [x['url'] for x in self._d['build']['fetch']]
+        return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), [url, path])
 
-        return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), urls)
+    def empty_script(self):
+        return self.build_py_script('', dict(out=self.out_dir))
+
+    def empty_command(self):
+        script = self.empty_script()
+
+        return {
+            'out_dir': [script['env']['out']],
+            'cmd': [script],
+        }
+
+    def link_srcs_script(self, files, out):
+        def iter_env():
+            yield from self.iter_env()
+
+            yield 'out', out
+
+        return self.build_py_script(LINK_SRCS_SCRIPT, dict(iter_env()), files)
 
     def iter_commands(self):
         if 'build' not in self._d:
-            yield {
-                'out': [self.out_dir + '/touch'],
-                'cmd': [self.build_ph_script('', dict(out=self.out_dir, tmp=self.tmp_dir))],
-            }
+            yield self.empty_command()
 
             return
 
-        if 'fetch' in self._d['build']:
-            touch = self.src_dir + '/touch'
+        extra = []
 
-            yield {
-                'out': [touch],
-                'cmd': [self.fetch_src_script()],
+        for ui in self._d['build'].get('fetch', []):
+            script = self.fetch_src_script(ui['url'])
+            path = script['args'][-1]
+
+            cmd = {
+                'out_dir': [os.path.dirname(path)],
+                'cmd': [script],
+                'path': path,
             }
 
-            extra = [touch]
-        else:
-            extra = []
+            yield cmd
+
+            extra.append(cmd)
+
+        if extra:
+            script = self.link_srcs_script([x['path'] for x in extra], self.src_dir)
+
+            cmd = {
+                'in_dir': sum([x['out_dir'] for x in extra], []),
+                'out_dir': [script['env']['out']],
+                'cmd': [script],
+            }
+
+            yield cmd
+
+            extra = cmd['out_dir']
 
         yield {
-            'in': [x.out_dir + '/touch' for x in self.iter_all_build_depends()] + extra,
-            'out': [self.out_dir + '/touch'],
+            'in_dir': [x.out_dir for x in self.iter_all_build_depends()] + extra,
+            'out_dir': [self.out_dir],
             'cmd': [self.build_script()],
         }
 

@@ -26,22 +26,16 @@ class Iface:
         csc.fetch_url(url, out)
 
     def header(self):
-        out = os.environ['out']
-        tmp = os.environ['tmp']
+        if out := os.environ.get('out'):
+            prepare_dir(out)
 
-        prepare_dir(out)
-        prepare_dir(tmp)
-
-        os.chdir(tmp)
+        if tmp := os.environ.get('tmp'):
+            prepare_dir(tmp)
+            os.chdir(tmp)
 
     def footer(self):
-        out = os.environ['out']
-        tmp = os.environ['tmp']
-
-        shutil.rmtree(tmp)
-
-        with open(out + '/touch', 'w') as f:
-            pass
+        if tmp := os.environ.get('tmp'):
+            shutil.rmtree(tmp)
 
 
 def cli_misc_runpy(ctx):

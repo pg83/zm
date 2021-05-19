@@ -4,17 +4,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://github.com/Kitware/CMake/releases/download/v3.20.2/cmake-3.20.2.tar.gz',
+                    'url': 'https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tar.xz',
                 },
             ],
             'depends': [
-                'boot-libcxx',
                 'bin-stdenv',
-            ],
-        },
-        'runtime': {
-            'depends': [
-                'env-cmake',
             ],
         },
     }

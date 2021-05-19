@@ -8,6 +8,7 @@ def package(mix):
                 },
             ],
             'depends': [
+                'clang',
                 'boot-stdenv',
             ],
         },

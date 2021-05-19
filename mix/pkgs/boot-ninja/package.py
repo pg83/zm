@@ -4,17 +4,13 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://github.com/Kitware/CMake/releases/download/v3.20.2/cmake-3.20.2.tar.gz',
+                    'url': 'https://github.com/ninja-build/ninja/archive/refs/tags/v1.10.2.tar.gz',
                 },
             ],
             'depends': [
+                'boot-python',
                 'boot-libcxx',
                 'bin-stdenv',
-            ],
-        },
-        'runtime': {
-            'depends': [
-                'env-cmake',
             ],
         },
     }
