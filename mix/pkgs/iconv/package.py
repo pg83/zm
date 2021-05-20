@@ -4,13 +4,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'https://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.16.tar.gz',
                 },
             ],
             'depends': [
                 'clang',
-                'iconv',
-                'gettext',
                 'boot-stdenv',
             ],
         },

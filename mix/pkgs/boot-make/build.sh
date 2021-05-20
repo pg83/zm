@@ -1,4 +1,4 @@
-export CPPFLAGS="$CPPFLAGS -I./glob -Dglob=make_glob -Dglobfree=make_globfree -Dfnmatch=make_fnmatch -w"
+export CPPFLAGS="-w -I./glob -Dglob=make_glob -Dglobfree=make_globfree -Dfnmatch=make_fnmatch $CPPFLAGS"
 
 $untar $src/make-* && cd make-*
 
@@ -7,5 +7,3 @@ dash ./build.sh
 
 ./make
 ./make install
-
-#mkdir $out/bin && cp make $out/bin/ && chmod +x $out/bin/make

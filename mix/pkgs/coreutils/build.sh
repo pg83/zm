@@ -3,7 +3,7 @@ $untar $src/coreutils-* && cd coreutils-*
 export FORCE_UNSAFE_CONFIGURE=1
 export CFLAGS="$CFLAGS $LDFLAGS $LIBS -w"
 
-dash ./configure --prefix=$out --libexecdir=$out/bin --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks
+dash ./configure $COFLAGS --prefix=$out --libexecdir=$out/bin --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks
 
 make -j $make_thrs || true
 

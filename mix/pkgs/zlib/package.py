@@ -4,14 +4,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'http://zlib.net/zlib-1.2.11.tar.xz',
                 },
             ],
             'depends': [
-                'clang',
-                'iconv',
-                'gettext',
-                'boot-stdenv',
+                'stdenv-tiny',
             ],
         },
     }

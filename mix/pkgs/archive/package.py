@@ -4,14 +4,16 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'https://libarchive.org/downloads/libarchive-3.5.1.tar.xz',
                 },
             ],
             'depends': [
-                'clang',
+                'zlib',
+                'bzip2',
+                'xz',
                 'iconv',
                 'gettext',
-                'boot-stdenv',
+                'stdenv-tiny',
             ],
         },
     }

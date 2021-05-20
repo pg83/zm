@@ -4,7 +4,7 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'https://mirror.tochlab.net/pub/gnu/gawk/gawk-5.1.0.tar.xz',
                 },
             ],
             'depends': [

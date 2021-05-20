@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import hashlib
+import multiprocessing
 
 import core.utils as cu
 
@@ -56,6 +57,10 @@ done
 . "$tmp/tmpenv" && rm "$tmp/tmpenv" && env
 
 {build_script}
+
+rm -rf $out/lib/*.so* || true
+rm -rf $out/lib/*.la* || true
+rm -rf $out/lib/*.dylib* || true
 
 rm -rf "$tmp"
 '''.strip()
@@ -242,6 +247,8 @@ class Package:
             yield 'tmp', self.tmp_dir
             yield 'mix', self.manager.binary
             yield 'exe', sys.executable
+
+            yield 'make_thrs', str(multiprocessing.cpu_count() + 2)
 
         build = self._d['build']['script']
 

@@ -4,14 +4,13 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'https://tukaani.org/xz/xz-5.2.5.tar.xz',
                 },
             ],
             'depends': [
-                'clang',
                 'iconv',
                 'gettext',
-                'boot-stdenv',
+                'stdenv-tiny',
             ],
         },
     }

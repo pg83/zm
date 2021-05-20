@@ -4,7 +4,7 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'https://ftp.gnu.org/gnu/coreutils/coreutils-8.32.tar.xz',
                 },
             ],
             'depends': [

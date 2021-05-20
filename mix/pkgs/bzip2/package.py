@@ -4,14 +4,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://mirror.keystealth.org/gnu/make/make-4.3.tar.gz',
+                    'url': 'https://www.sourceware.org/pub/bzip2/bzip2-latest.tar.gz',
                 },
             ],
             'depends': [
-                'clang',
-                'iconv',
-                'gettext',
-                'boot-stdenv',
+                'stdenv-tiny',
             ],
         },
     }

@@ -1,22 +1,22 @@
 def package(mix):
-    url = 'https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.0/llvm-project-12.0.0.src.tar.xz'
-
     return {
         'build': {
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': url,
+                    'url': 'https://github.com/Kitware/CMake/releases/download/v3.20.2/cmake-3.20.2.tar.gz',
                 },
             ],
             'depends': [
+                'boot-cmake',
                 'boot-ninja',
+                'boot-libcxx',
                 'boot-stdenv',
             ],
         },
         'runtime': {
             'depends': [
-                'env-system',
+                'env-cmake',
             ],
         },
     }
