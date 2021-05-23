@@ -12,4 +12,5 @@ cat << EOF > $out/env
 export CPPFLAGS="-I$out/include \$CPPFLAGS"
 export LDFLAGS="-L$out/lib -lz \$LDFLAGS"
 export COFLAGS="--with-z=$out \$COFLAGS"
+export PKG_CONFIG_PATH="$out/lib/pkgconfig:\$PKG_CONFIG_PATH"
 EOF

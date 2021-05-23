@@ -8,10 +8,10 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot-stdenv',
                 'clang',
                 'iconv',
                 'gettext',
-                'boot-stdenv',
             ],
         },
     }

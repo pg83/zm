@@ -1,15 +1,9 @@
 def package(mix):
     deps = [
+        'dash',
+        'clang',
         'which',
         'coreutils',
-        'diffutils',
-        'dash',
-        'gawk',
-        'grep',
-        'make',
-        'sed',
-        'clang',
-        'cmake',
     ]
 
     return {
@@ -19,6 +13,14 @@ def package(mix):
         },
         'runtime': {
             'depends': deps + [
+                'sed',
+                'file',
+                'gawk',
+                'grep',
+                'make',
+                'patch',
+                'findutils',
+                'diffutils',
                 'env-bootstrap',
             ],
         },

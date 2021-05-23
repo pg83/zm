@@ -8,7 +8,7 @@ def package(mix):
                 },
             ],
             'depends': [
-                'stdenv-tiny',
+                'boot-stdenv',
             ],
         },
     }

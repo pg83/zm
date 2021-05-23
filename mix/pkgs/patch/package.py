@@ -4,16 +4,14 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://libarchive.org/downloads/libarchive-3.5.1.tar.xz',
+                    'url': 'https://ftp.gnu.org/gnu/patch/patch-2.7.6.tar.xz',
                 },
             ],
             'depends': [
-                'zlib',
-                'bzip2',
-                'xz',
+                'clang',
                 'iconv',
                 'gettext',
-                'stdenv-tiny',
+                'boot-stdenv',
             ],
         },
     }

@@ -5,6 +5,8 @@ export CFLAGS="$CFLAGS $LDFLAGS $LIBS -w"
 
 dash ./configure $COFLAGS --prefix=$out --libexecdir=$out/bin --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks
 
+cat Makefile | grep -v 'LIBINTL = ' > tmp && mv tmp Makefile
+
 make -j $make_thrs || true
 
 echo >> src/libstdbuf.c

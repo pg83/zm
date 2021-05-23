@@ -4,5 +4,5 @@ dash ./configure --prefix=$out --disable-gcc-warnings
 
 echo 'all install:' > man/Makefile
 
-make
+make -j $make_thrs
 make install

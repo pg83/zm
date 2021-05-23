@@ -8,10 +8,10 @@ def package(mix):
                 },
             ],
             'depends': [
+                'ninja',
+                'libcxx',
+                'stdenv',
                 'boot-cmake',
-                'boot-ninja',
-                'boot-libcxx',
-                'boot-stdenv',
             ],
         },
         'runtime': {

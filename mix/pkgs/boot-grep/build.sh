@@ -1,5 +1,5 @@
 $untar $src/grep-* && cd grep-*
 
 dash ./configure --prefix=$out
-make
+make -j $make_thrs
 make install

@@ -16,4 +16,5 @@ ln -s /usr/bin/grep grep
 ln -s /usr/bin/diff diff
 ln -s /usr/bin/awk awk
 
+ln -s /usr/bin/lipo lipo
 ln -s /usr/bin/ld ld

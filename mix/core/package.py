@@ -145,10 +145,10 @@ class Package:
     @property
     @cu.cached_method
     def tmp_dir(self):
-        return self.mix_dir + '/tmp/build/' + self.uid
+        return self.mix_dir + '/build/' + self.uid
 
     def src_dir_for(self, url):
-        return self.mix_dir + '/tmp/fetch/' + struct_hash(url)
+        return self.mix_dir + '/fetch/' + struct_hash(url)
 
     @property
     def src_dir(self):

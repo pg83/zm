@@ -8,9 +8,11 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot-stdenv',
+                'findutils',
+                'gzip',
                 'clang',
                 'iconv',
-                'boot-stdenv',
             ],
         },
         'runtime': {

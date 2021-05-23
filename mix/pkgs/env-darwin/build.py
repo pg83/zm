@@ -19,5 +19,16 @@ os.symlink(sdk + '/System', 'System')
 os.makedirs('usr/lib')
 os.symlink(sdk + '/usr/include', 'usr/include')
 
-for x in ('libSystem.B.tbd', 'libSystem.tbd', 'libc.tbd', 'libdl.tbd', 'libm.tbd', 'libpthread.tbd', 'libobjc.A.tbd'):
+libs = (
+    'libSystem.B.tbd',
+    'libSystem.tbd',
+    'libc.tbd',
+    'libdl.tbd',
+    'libm.tbd',
+    'libpthread.tbd',
+    'libobjc.A.tbd',
+    'libresolv.tbd',
+)
+
+for x in libs:
     os.symlink(sdk + '/usr/lib/' + x, 'usr/lib/' + x)

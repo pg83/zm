@@ -5,5 +5,5 @@ $untar $src/make-* && cd make-*
 dash ./configure --prefix=$out --disable-load --disable-dependency-tracking
 dash ./build.sh
 
-./make
+./make -j $make_thrs
 ./make install

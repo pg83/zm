@@ -13,3 +13,4 @@ ln -s $clang_dir/llvm-strip strip
 ln -s $clang_dir/llvm-nm nm
 
 ln -s /usr/bin/ld ld
+ln -s /usr/bin/lipo lipo
