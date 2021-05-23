@@ -1,7 +1,6 @@
 def package(mix):
     libs = [
         'iconv',
-        'libunistring',
     ]
 
     return {
@@ -9,13 +8,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/pub/gnu/gettext/gettext-0.21.tar.gz',
+                    'url': 'https://ftp.gnu.org/gnu/libunistring/libunistring-0.9.10.tar.xz',
                 },
             ],
             'depends': libs + [
-                'gzip',
                 'clang',
-                'findutils',
                 'boot-stdenv',
             ],
         },

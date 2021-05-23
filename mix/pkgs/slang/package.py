@@ -1,7 +1,8 @@
 def package(mix):
     libs = [
+        'zlib',
         'iconv',
-        'libunistring',
+        'readline',
     ]
 
     return {
@@ -9,14 +10,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/pub/gnu/gettext/gettext-0.21.tar.gz',
+                    'url': 'https://www.jedsoft.org/snapshots/slang-pre2.3.3-54.tar.gz',
                 },
             ],
             'depends': libs + [
-                'gzip',
-                'clang',
-                'findutils',
-                'boot-stdenv',
+                'stdenv',
             ],
         },
         'runtime': {

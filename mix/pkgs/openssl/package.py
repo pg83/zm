@@ -4,15 +4,12 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.11.3.tar.gz',
+                    'url': 'https://www.openssl.org/source/old/1.1.1/openssl-1.1.1j.tar.gz',
                 },
             ],
             'depends': [
-                'iconv',
-                'gettext',
-                'libedit',
+                'perl5',
                 'stdenv',
-                'pkg-config',
             ],
         },
     }

@@ -4,15 +4,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.11.3.tar.gz',
+                    'url': 'https://ftp.gnu.org/gnu/termcap/termcap-1.3.1.tar.gz',
                 },
             ],
             'depends': [
-                'iconv',
-                'gettext',
-                'libedit',
                 'stdenv',
-                'pkg-config',
             ],
         },
     }

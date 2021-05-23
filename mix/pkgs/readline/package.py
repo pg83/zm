@@ -1,7 +1,7 @@
 def package(mix):
     libs = [
-        'iconv',
-        'libunistring',
+        'ncurses',
+        'termcap',
     ]
 
     return {
@@ -9,14 +9,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/pub/gnu/gettext/gettext-0.21.tar.gz',
+                    'url': 'https://ftp.gnu.org/gnu/readline/readline-8.1.tar.gz',
                 },
             ],
             'depends': libs + [
-                'gzip',
-                'clang',
-                'findutils',
-                'boot-stdenv',
+                'stdenv',
             ],
         },
         'runtime': {

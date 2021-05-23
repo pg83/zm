@@ -3,7 +3,7 @@ $untar $src/pkg* && cd pkg*
 export LDFLAGS="$LDFLAGS $LIBS"
 export GLIB_LIBS="$LIBS"
 
-dash ./configure $COFLAGS --prefix=$out --enable-static --disable-shared --with-internal-glib
+dash ./configure $COFLAGS --prefix=$out --enable-static --disable-shared --with-internal-glib --disable-host-tool
 
 (
     cd glib

@@ -4,15 +4,15 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.11.3.tar.gz',
+                    'url': 'https://ftp.gnu.org/gnu/bash/bash-5.1.tar.gz',
                 },
             ],
             'depends': [
+                'readline',
+                'ncurses',
                 'iconv',
                 'gettext',
-                'libedit',
                 'stdenv',
-                'pkg-config',
             ],
         },
     }

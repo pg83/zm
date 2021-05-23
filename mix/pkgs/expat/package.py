@@ -4,15 +4,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.11.3.tar.gz',
+                    'url': 'https://github.com/libexpat/libexpat/releases/download/R_2_4_1/expat-2.4.1.tar.xz',
                 },
             ],
             'depends': [
-                'iconv',
-                'gettext',
-                'libedit',
                 'stdenv',
-                'pkg-config',
             ],
         },
     }

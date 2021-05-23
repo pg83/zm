@@ -4,15 +4,12 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.11.3.tar.gz',
+                    'url': 'https://www.sqlite.org/2021/sqlite-autoconf-3350500.tar.gz',
                 },
             ],
             'depends': [
-                'iconv',
-                'gettext',
-                'libedit',
+                'readline',
                 'stdenv',
-                'pkg-config',
             ],
         },
     }

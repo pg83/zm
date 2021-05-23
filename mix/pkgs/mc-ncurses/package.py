@@ -4,13 +4,14 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.11.3.tar.gz',
+                    'url': 'http://ftp.midnight-commander.org/mc-4.8.26.tar.xz',
                 },
             ],
             'depends': [
+                'glib',
                 'iconv',
                 'gettext',
-                'libedit',
+                'ncurses',
                 'stdenv',
                 'pkg-config',
             ],

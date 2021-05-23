@@ -1,9 +1,9 @@
 def package(mix):
     deps = [
-        'dash',
         'clang',
         'which',
         'coreutils',
+        'dash-minimal',
     ]
 
     return {

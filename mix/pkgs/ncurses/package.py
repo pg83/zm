@@ -4,15 +4,12 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://gondor.apana.org.au/~herbert/dash/files/dash-0.5.11.3.tar.gz',
+                    'url': 'https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.2.tar.gz',
                 },
             ],
             'depends': [
-                'iconv',
-                'gettext',
-                'libedit',
                 'stdenv',
-                'pkg-config',
+                'boot-pkg-config',
             ],
         },
     }
