@@ -10,7 +10,7 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://www.jedsoft.org/snapshots/slang-pre2.3.3-54.tar.gz',
+                    'url': 'https://storage.yandexcloud.net/mix-cache/slang-pre2.3.3-56.tar.gz',
                 },
             ],
             'depends': libs + [
