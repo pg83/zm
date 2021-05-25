@@ -1,18 +1,8 @@
 def package(mix):
     libs = [
         'lib/z',
-        'lib/xz',
-        'lib/ffi',
-        'lib/intl',
-        'lib/gdbm',
-        'lib/bzip2',
-        'lib/iconv',
-        'lib/expat',
-        'lib/sqlite3',
-        'lib/ncurses',
+        'lib/idn2',
         'lib/openssl',
-        'lib/readline',
-        'lib/mpdecimal',
     ]
 
     return {
@@ -20,11 +10,11 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://www.python.org/ftp/python/3.9.5/Python-3.9.5.tar.xz',
+                    'url': 'https://github.com/curl/curl/releases/download/curl-7_76_1/curl-7.76.1.tar.xz',
                 },
             ],
             'depends': libs + [
-                'boot/pkg-config',
+                'tool/build/pkg-config',
                 'stdenv',
             ],
         },

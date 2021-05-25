@@ -1,6 +1,6 @@
 $untar $src/gdbm* && cd gdbm*
 
-dash ./configure --prefix=$out --enable-static --disable-shared --enable-libgdbm-compat
+dash ./configure $COFLAGS --prefix=$out --enable-static --disable-shared --enable-libgdbm-compat --with-readline
 make -j $make_thrs
 make install
 

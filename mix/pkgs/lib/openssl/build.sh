@@ -22,7 +22,7 @@ make install
 cat << EOF > $out/env
 export COFLAGS="--with-openssl=$out --with-openssldir=$out --with-ssl-dir=$out \$COFLAGS"
 export OPENSSL_INCLUDES="-I$out/include"
-export OPENSSL_LIBS="-L$out/lib -lssl"
+export OPENSSL_LIBS="-L$out/lib -lssl -lcrypto"
 export CPPFLAGS="\$OPENSSL_INCLUDES \$CPPFLAGS"
 export LDFLAGS="\$OPENSSL_LIBS \$LDFLAGS"
 export PKG_CONFIG_PATH="$out/lib/pkgconfig:\$PKG_CONFIG_PATH"
