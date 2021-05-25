@@ -106,8 +106,8 @@ rm $tmp
 
 
 class Package:
-    def __init__(self, where, mngr):
-        self._w = where
+    def __init__(self, name, mngr):
+        self._n = name
         self._m = mngr
         self._d = exec_mod(self.files.package_py['data'], self)
         self._u = struct_hash([self._d, list(self.iter_env())])
@@ -118,11 +118,11 @@ class Package:
 
     @property
     def name(self):
-        return os.path.basename(self.where)
+        return self._n
 
     @property
     def where(self):
-        return self._w
+        return os.path.join(self.manager.where, self.name)
 
     @property
     @cu.cached_method
@@ -140,7 +140,7 @@ class Package:
     @property
     @cu.cached_method
     def out_dir(self):
-        return self.mix_dir + '/store/' + self.uid + '-' + self.name
+        return self.mix_dir + '/store/' + self.uid + '-' + self.name.replace('/', '-')
 
     @property
     @cu.cached_method
@@ -209,7 +209,7 @@ class Package:
         for p in self.iter_all_build_depends():
             od = p.out_dir
 
-            yield p.name.replace('-', '_'), od
+            yield p.name.replace('-', '_').replace('/', '_'), od
 
             path.append(od + '/bin')
 

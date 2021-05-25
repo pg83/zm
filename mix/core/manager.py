@@ -30,7 +30,7 @@ class Manager:
             except KeyError:
                 pass
 
-            self._c[name] = cp.Package(os.path.join(self.where, name), self)
+            self._c[name] = cp.Package(name, self)
 
     def iter_packages(self, names):
         def iter_deps():

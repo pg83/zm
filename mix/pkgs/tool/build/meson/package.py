@@ -2,18 +2,18 @@ def package(mix):
     return {
         'build': {
             'script': mix.files.build_sh,
+            'fetch': [
+                {
+                    'url': 'https://github.com/mesonbuild/meson/releases/download/0.58.0/meson-0.58.0.tar.gz',
+                },
+            ],
             'depends': [
                 'stdenv/tiny',
             ],
         },
         'runtime': {
             'depends': [
-                'tool/compress/xz',
-                'tool/compress/gzip',
-                'tool/compress/bzip2',
-                'tool/compress/unzip',
-                'tool/compress/bsdtar',
-                'stdenv/tiny',
+                'dev/lang/python3',
             ],
         },
     }
