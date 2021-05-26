@@ -1,9 +1,9 @@
 def package(mix):
     deps = [
         'boot/bin/clang',
-        'boot/bin/darwin-coreutils',
-        'boot/bin/darwin-sed',
-        'boot/bin/darwin-dash',
+        'boot/bin/darwin/coreutils',
+        'boot/bin/darwin/sed',
+        'boot/bin/darwin/dash',
     ]
 
     return {

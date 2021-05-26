@@ -8,9 +8,9 @@ def package(mix):
                 },
             ],
             'depends': [
-                'tool/build/autoconf',
-                'tool/build/automake',
-                'tool/build/libtool',
+                'dev/build/autoconf',
+                'dev/build/automake',
+                'dev/build/libtool',
                 'stdenv',
             ],
         },

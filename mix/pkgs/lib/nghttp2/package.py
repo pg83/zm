@@ -1,8 +1,8 @@
 def package(mix):
     libs = [
-        'lib/intl',
-        'lib/iconv',
-        'lib/unistring',
+        'lib/z',
+        'lib/c-ares',
+        'lib/openssl',
     ]
 
     return {
@@ -10,7 +10,7 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/gnu/libidn/libidn2-2.3.1.tar.gz',
+                    'url': 'https://github.com/nghttp2/nghttp2/releases/download/v1.43.0/nghttp2-1.43.0.tar.xz',
                 },
             ],
             'depends': libs + [

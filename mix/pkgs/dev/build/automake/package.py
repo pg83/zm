@@ -9,7 +9,7 @@ def package(mix):
             ],
             'depends': [
                 'dev/lang/perl5',
-                'tool/build/autoconf',
+                'dev/build/autoconf',
                 'stdenv',
             ],
         },

@@ -2,6 +2,7 @@ def package(mix):
     libs = [
         'lib/z',
         'lib/idn2',
+        'lib/nghttp2',
         'lib/openssl',
     ]
 
@@ -14,7 +15,7 @@ def package(mix):
                 },
             ],
             'depends': libs + [
-                'tool/build/pkg-config',
+                'dev/build/pkg-config',
                 'stdenv',
             ],
         },

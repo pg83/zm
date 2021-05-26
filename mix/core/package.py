@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import jinja2
 import hashlib
 import multiprocessing
 
@@ -8,16 +9,19 @@ import core.utils as cu
 
 
 class FileLoader:
-    def __init__(self, where):
-        self._w = where
+    def __init__(self, pkg):
+        self._p = pkg
 
     def __getattr__(self, name):
-        path = os.path.join(self._w, name.replace('_', '.'))
+        path = os.path.join(self._p.where, name.replace('_', '.'))
 
         with open(path, 'r') as f:
+            data = f.read()
+            tmpl = jinja2.Template(data, keep_trailing_newline=True).render(mix=self._p)
+
             return {
                 'kind': os.path.basename(path).split('.')[-1],
-                'data': f.read(),
+                'data': tmpl,
             }
 
 
@@ -127,7 +131,7 @@ class Package:
     @property
     @cu.cached_method
     def files(self):
-        return FileLoader(self.where)
+        return FileLoader(self)
 
     @property
     def uid(self):

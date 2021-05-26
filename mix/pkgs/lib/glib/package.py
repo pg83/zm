@@ -16,8 +16,8 @@ def package(mix):
                 },
             ],
             'depends': libs + [
-                'tool/build/meson',
-                'tool/build/ninja',
+                'dev/build/meson',
+                'dev/build/ninja',
                 'boot/pkg-config',
                 'stdenv',
             ],

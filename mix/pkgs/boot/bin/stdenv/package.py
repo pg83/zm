@@ -3,7 +3,7 @@ def package(mix):
         'runtime': {
             'depends': [
                 'boot/make',
-                'boot/bin/stdenv-tiny',
+                'boot/bin/stdenv/tiny',
             ],
         },
     }

@@ -20,7 +20,7 @@ def package(mix):
                 'tool/gnu/patch',
                 'tool/gnu/findutils',
                 'tool/gnu/diffutils',
-                'tool/build/make',
+                'dev/build/make',
                 'env/bootstrap',
             ],
         },

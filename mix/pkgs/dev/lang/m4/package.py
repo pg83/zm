@@ -13,7 +13,7 @@ def package(mix):
             'depends': [
                 'lib/intl',
                 'lib/sigsegv',
-                'tool/build/help2man',
+                'dev/build/help2man',
                 'stdenv',
             ],
         },
