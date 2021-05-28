@@ -28,6 +28,7 @@ libs = (
     'libpthread.tbd',
     'libobjc.A.tbd',
     'libresolv.tbd',
+    'libutil.tbd',
 )
 
 for x in libs:

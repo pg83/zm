@@ -14,3 +14,4 @@ ln -s $clang_dir/llvm-nm nm
 
 ln -s /usr/bin/ld ld
 ln -s /usr/bin/lipo lipo
+ln -s /usr/bin/install_name_tool install_name_tool

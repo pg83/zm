@@ -29,5 +29,5 @@ cp -R include $out/
 
 cat << EOF > $out/env
 export CPPFLAGS="-I$out/include \$CPPFLAGS"
-export LIBS="$out/lib/libunwind.a \$LIBS"
+export LDFLAGS="-L$out/lib -lunwind \$LDFLAGS"
 EOF

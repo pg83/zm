@@ -30,5 +30,5 @@ mkdir $out/lib && mv obj/libc++.a $out/lib/
 
 cat << EOF > $out/env
 export CPPFLAGS="-I$out/include \$CPPFLAGS"
-export LIBS="$out/lib/libc++.a \$LIBS"
+export LDFLAGS="-L$out/lib -lc++ \$LDFLAGS"
 EOF

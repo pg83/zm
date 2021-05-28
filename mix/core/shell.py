@@ -33,6 +33,11 @@ def cmd_rm(env, path):
     shutil.rmtree(path)
 
 
+def cmd_unlink(env, *args):
+    for path in args:
+        os.unlink(path)
+
+
 def cmd_cd(env, path):
     os.chdir(path)
 

@@ -5,9 +5,6 @@ gcc -c empty.c -o empty.o
 ar q libdl.a empty.o
 
 ln -s $(which bash) sh
-ln -s /usr/bin/install_name_tool ./
-#ln -s /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libdbm.tbd ./
-ln -s /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libutil.tbd ./
 
 export PATH="$(pwd):$PATH"
 export LDFLAGS="-L$(pwd) $LDFLAGS"
