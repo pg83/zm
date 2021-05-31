@@ -13,6 +13,7 @@ def package(mix):
         },
         'runtime': {
             'depends': deps + [
+                'boot/cctools',
                 'tool/gnu/sed',
                 'tool/gnu/file',
                 'tool/gnu/gawk',

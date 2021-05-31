@@ -7,11 +7,14 @@ def package(mix):
             'fetch': [
                 {
                     'url': url,
+                    'md5': '30c0321c2099e3eac31110e5aaf56fbe',
                 },
             ],
             'depends': [
+                'boot/ninja',
                 'boot/cmake',
                 'boot/which',
+                'boot/python',
                 'boot/libcxx',
                 'boot/diffutils',
                 'boot/bin/stdenv',

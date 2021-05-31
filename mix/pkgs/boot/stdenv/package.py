@@ -2,13 +2,8 @@ def package(mix):
     deps = [
         'boot/which',
         'boot/coreutils',
-        'boot/diffutils',
-        'boot/dash',
-        'boot/gawk',
-        'boot/grep',
-        'boot/make',
-        'boot/sed',
         'boot/clang',
+        'boot/dash',
     ]
 
     return {
@@ -18,6 +13,12 @@ def package(mix):
         },
         'runtime': {
             'depends': deps + [
+                'boot/diffutils',
+                'boot/cctools',
+                'boot/gawk',
+                'boot/grep',
+                'boot/make',
+                'boot/sed',
                 'env/bootstrap',
             ],
         },

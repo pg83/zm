@@ -83,6 +83,7 @@ FETCH_SRC_SCRIPT = '''
 import sys
 
 mix.fetch_url(sys.argv[1], sys.argv[2])
+mix.check_md5(sys.argv[2], sys.argv[3])
 '''.strip()
 
 
@@ -262,15 +263,15 @@ class Package:
             'ph': self.build_ph_script,
         }[build['kind']](build['data'], dict(iter_env()))
 
-    def fetch_src_script(self, url):
-        path = os.path.join(self.src_dir_for(url), os.path.basename(url))
+    def fetch_src_script(self, url, md5):
+        path = os.path.join(self.src_dir_for([url, md5]), os.path.basename(url))
 
         def iter_env():
             yield from self.iter_env()
 
             yield 'out', os.path.dirname(path)
 
-        return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), [url, path])
+        return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), [url, path, md5])
 
     def empty_script(self):
         return self.build_py_script('', dict(out=self.out_dir))
@@ -300,8 +301,8 @@ class Package:
         extra = []
 
         for ui in self._d['build'].get('fetch', []):
-            script = self.fetch_src_script(ui['url'])
-            path = script['args'][-1]
+            script = self.fetch_src_script(ui['url'], ui.get('md5', ''))
+            path = script['args'][-2]
 
             cmd = {
                 'out_dir': [os.path.dirname(path)],

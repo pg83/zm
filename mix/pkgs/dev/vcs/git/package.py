@@ -5,6 +5,7 @@ def package(mix):
             'fetch': [
                 {
                     'url': 'https://github.com/git/git/archive/refs/tags/v2.32.0-rc1.tar.gz',
+                    'md5': '5977037fe36445a5b57872cb48335004',
                 },
             ],
             'depends': [

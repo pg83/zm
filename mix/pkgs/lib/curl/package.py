@@ -12,6 +12,7 @@ def package(mix):
             'fetch': [
                 {
                     'url': 'https://github.com/curl/curl/releases/download/curl-7_76_1/curl-7.76.1.tar.xz',
+                    'md5': '5296108646ca7f318b468a7a9d4a0eb2',
                 },
             ],
             'depends': libs + [

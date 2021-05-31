@@ -11,6 +11,7 @@ def package(mix):
             'fetch': [
                 {
                     'url': 'https://storage.yandexcloud.net/mix-cache/slang-pre2.3.3-56.tar.gz',
+                    'md5': 'e60945d04da8c71a4a888d6c4a8c3fc8',
                 },
             ],
             'depends': libs + [

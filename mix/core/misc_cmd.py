@@ -1,6 +1,7 @@
 import os
 import sys
 import shutil
+import hashlib
 
 import core.shell as cs
 import core.shell_cmd as csc
@@ -24,6 +25,13 @@ class Iface:
 
     def fetch_url(self, url, out):
         csc.fetch_url(url, out)
+
+    def check_md5(self, path, old_md5):
+        with open(path, 'rb') as f:
+            new_md5 = hashlib.md5(f.read()).hexdigest()
+
+            if new_md5 != old_md5:
+                raise Exception('expected ' + new_md5 + ' checksum')
 
     def header(self):
         if out := os.environ.get('out'):

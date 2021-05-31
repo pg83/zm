@@ -13,6 +13,7 @@ def package(mix):
             'fetch': [
                 {
                     'url': 'https://download-fallback.gnome.org/sources/glib/2.68/glib-2.68.2.tar.xz',
+                    'md5': '8d288416da38476c71998e5c2d3602ed',
                 },
             ],
             'depends': libs + [

@@ -7,10 +7,12 @@ def package(mix):
             'fetch': [
                 {
                     'url': url,
+                    'md5': '3ba3b9f5e6ebc2afe77cdafeaaeeb981',
                 },
             ],
             'depends': [
                 'boot/libcxx',
+                'boot/cctools/libtapi',
                 'boot/diffutils',
                 'boot/bin/stdenv',
             ],
