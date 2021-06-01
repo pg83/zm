@@ -18,6 +18,7 @@ def package(mix):
         },
         'runtime': {
             'depends': [
+                'dev/lang/cctools',
                 'env/system',
             ],
         },

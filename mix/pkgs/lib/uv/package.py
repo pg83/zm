@@ -11,6 +11,7 @@ def package(mix):
                 'dev/build/autoconf',
                 'dev/build/automake',
                 'dev/build/libtool',
+                'dev/build/make',
                 'stdenv',
             ],
         },

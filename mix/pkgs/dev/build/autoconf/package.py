@@ -10,6 +10,7 @@ def package(mix):
             'depends': [
                 'dev/lang/m4',
                 'dev/lang/perl5',
+                'dev/build/make',
                 'stdenv',
             ],
         },

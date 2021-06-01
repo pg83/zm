@@ -11,6 +11,7 @@ def package(mix):
             'depends': [
                 'lib/glib',
                 'lib/iconv',
+                'dev/build/make',
                 'boot/pkg-config',
                 'stdenv',
             ],

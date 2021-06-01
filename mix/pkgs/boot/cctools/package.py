@@ -11,6 +11,7 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/make',
                 'boot/libcxx',
                 'boot/cctools/libtapi',
                 'boot/diffutils',

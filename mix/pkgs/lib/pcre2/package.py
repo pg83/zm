@@ -11,6 +11,7 @@ def package(mix):
             'depends': [
                 'lib/z',
                 'lib/bzip2',
+                'dev/build/make',
                 'boot/pkg-config',
                 'stdenv',
             ],

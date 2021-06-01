@@ -9,6 +9,7 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/make',
                 'boot/libcxx',
                 'boot/bin/stdenv',
             ],

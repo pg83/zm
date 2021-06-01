@@ -21,6 +21,7 @@ def package(mix):
         },
         'runtime': {
             'depends': [
+                'boot/cctools',
                 'env/system',
             ],
         },

@@ -12,6 +12,7 @@ def package(mix):
                 'lib/intl',
                 'lib/iconv',
                 'lib/readline',
+                'dev/build/make',
                 'stdenv',
             ],
         },

@@ -17,6 +17,7 @@ def package(mix):
                 },
             ],
             'depends': libs + [
+                'dev/build/make',
                 'stdenv/tiny',
             ],
         },

@@ -13,8 +13,7 @@ def package(mix):
                 },
             ],
             'depends': libs + [
-                'dev/lang/clang',
-                'boot/stdenv',
+                'stdenv/mini',
             ],
         },
         'runtime': {

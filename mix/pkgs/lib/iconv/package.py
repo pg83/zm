@@ -9,8 +9,8 @@ def package(mix):
                 },
             ],
             'depends': [
-                'dev/lang/clang',
-                'boot/stdenv',
+                'boot/make',
+                'stdenv/mini',
             ],
         },
     }

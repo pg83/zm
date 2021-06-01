@@ -62,8 +62,6 @@ def execute_node(n):
         if os.path.exists(o):
             print(o + ' complete')
         else:
-            print(n)
-
             for c in iter_cmd(n):
                 execute_cmd(c)
 

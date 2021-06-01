@@ -13,6 +13,7 @@ def package(mix):
                 'lib/glib',
                 'lib/iconv',
                 'lib/slang',
+                'dev/build/make',
                 'dev/build/pkg-config',
                 'stdenv',
             ],

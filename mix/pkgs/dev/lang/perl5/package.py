@@ -12,6 +12,7 @@ def package(mix):
                 'lib/z',
                 'lib/iconv',
                 'lib/gdbm',
+                'dev/build/make',
                 'tool/gnu/coreutils',
                 'shell/bash',
                 'stdenv',

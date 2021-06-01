@@ -13,6 +13,7 @@ def package(mix):
                 'lib/ncurses',
                 'lib/iconv',
                 'lib/intl',
+                'dev/build/make',
                 'stdenv',
             ],
         },

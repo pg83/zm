@@ -1,9 +1,16 @@
 def package(mix):
+    deps = [
+        'boot/bin/darwin',
+    ]
+
     return {
+        'build': {
+            'script': mix.files.build_sh,
+            'depends': deps,
+        },
         'runtime': {
-            'depends': [
-                'boot/make',
-                'boot/bin/stdenv/tiny',
+            'depends': deps + [
+                'env/bootstrap',
             ],
         },
     }

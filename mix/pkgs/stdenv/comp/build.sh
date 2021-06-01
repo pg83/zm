@@ -11,8 +11,3 @@ ln -s $clang_dir/llvm-ar ar
 ln -s $clang_dir/llvm-ranlib ranlib
 ln -s $clang_dir/llvm-strip strip
 ln -s $clang_dir/llvm-nm nm
-
-ln -s /usr/bin/ld ld
-ln -s /usr/bin/lipo lipo
-ln -s /usr/bin/install_name_tool install_name_tool
-ln -s /usr/bin/libtool libtool

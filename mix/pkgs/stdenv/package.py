@@ -1,10 +1,7 @@
 def package(mix):
     return {
         'build': {
-            'script': mix.files.build_sh,
-            'depends': [
-                'stdenv/tiny',
-            ],
+            'script': mix.files.build_py,
         },
         'runtime': {
             'depends': [
@@ -13,7 +10,7 @@ def package(mix):
                 'tool/compress/bzip2',
                 'tool/compress/unzip',
                 'tool/compress/bsdtar',
-                'stdenv/tiny',
+                'stdenv/tiny', # todo: remove env/bootstrap
             ],
         },
     }

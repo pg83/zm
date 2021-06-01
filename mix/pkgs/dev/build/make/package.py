@@ -11,8 +11,8 @@ def package(mix):
             'depends': [
                 'lib/intl',
                 'lib/iconv',
-                'dev/lang/clang',
-                'boot/stdenv',
+                'boot/make',
+                'stdenv/mini',
             ],
         },
     }

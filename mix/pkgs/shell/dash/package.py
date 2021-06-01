@@ -12,6 +12,7 @@ def package(mix):
                 'lib/intl',
                 'lib/edit',
                 'lib/iconv',
+                'dev/build/make',
                 'dev/build/pkg-config',
                 'stdenv',
             ],

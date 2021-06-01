@@ -15,6 +15,7 @@ def package(mix):
                 'lib/expat',
                 'lib/pcre2',
                 'lib/openssl',
+                'dev/build/make',
                 'dev/lang/perl5',
                 'dev/lang/python3',
                 'stdenv',

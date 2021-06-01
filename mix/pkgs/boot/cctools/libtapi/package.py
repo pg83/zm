@@ -11,6 +11,7 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/make',
                 'boot/ninja',
                 'boot/cmake',
                 'boot/which',

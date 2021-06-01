@@ -15,9 +15,9 @@ def package(mix):
             ],
             'depends': libs + [
                 'tool/compress/gzip',
-                'dev/lang/clang',
                 'tool/gnu/findutils',
-                'boot/stdenv',
+                'boot/make',
+                'stdenv/mini',
             ],
         },
         'runtime': {

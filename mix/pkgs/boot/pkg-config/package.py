@@ -9,7 +9,9 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/make',
                 'boot/iconv',
+                'boot/diffutils',
                 'boot/findutils',
                 'boot/bin/stdenv',
             ],

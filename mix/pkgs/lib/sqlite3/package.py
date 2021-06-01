@@ -10,6 +10,7 @@ def package(mix):
             ],
             'depends': [
                 'lib/readline',
+                'dev/build/make',
                 'stdenv',
             ],
         },

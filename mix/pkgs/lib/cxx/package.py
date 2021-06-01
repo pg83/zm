@@ -11,8 +11,9 @@ def package(mix):
                 },
             ],
             'depends': [
-                'stdenv',
+                'boot/ninja',
                 'boot/cmake',
+                'stdenv',
             ],
         },
     }

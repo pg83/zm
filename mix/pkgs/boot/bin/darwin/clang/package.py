@@ -11,4 +11,9 @@ def package(mix):
                 },
             ],
         },
+        'runtime': {
+            'depends': [
+                'env/system',
+            ],
+        },
     }

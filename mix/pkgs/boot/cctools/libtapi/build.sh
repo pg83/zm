@@ -5,8 +5,6 @@ $unzip $src/664* && cd apple*
     cat CMakeLists.txt | sed -e 's/SHARED/STATIC/' > tmp && mv tmp CMakeLists.txt
 )
 
-mkdir build && cd build
-
 dash=$(which dash)
 
 ln -s $dash sh
@@ -25,6 +23,8 @@ ln -s gcc clang && ln -s g++ clang++ && chmod +x gcc g++
 
 export PATH="$(pwd):$PATH"
 
+mkdir build && cd build
+
 cmake ../src/llvm \
       -DCMAKE_CXX_FLAGS="-I$(pwd)/../src/llvm/projects/clang/include -I$(pwd)/projects/clang/include" \
       -DLLVM_INCLUDE_TESTS=OFF \
@@ -33,28 +33,20 @@ cmake ../src/llvm \
       -DTAPI_REPOSITORY_STRING=1100.0.11 \
       -DTAPI_FULL_VERSION=11.0.0
 
-(
-    cd projects/libtapi/tools/tapi
-    make -j $make_thrs install
-)
-
-(
-    cd projects/libtapi/tools/libtapi
-    make -j $make_thrs install
-)
-
-(
-    cd projects/libtapi/include
-    make -j $make_thrs install
-)
+for p in projects/libtapi/tools/tapi projects/libtapi/tools/libtapi projects/libtapi/include; do
+    (
+        cd $p
+        make -j $make_thrs install
+    )
+done
 
 (
     cp lib/*.a $out/lib/
 )
 
-export LDFLAGS1=`(cd $out/lib && echo lib*.a) | sort | tr ' ' '\n' | sed -e 's/lib/-l/' | sed -e 's/\.a//' | tr '\n' ' '`
+libtool -static -o libtapi.a $out/lib/*.a && rm $out/lib/*.a && mv libtapi.a $out/lib/
 
 cat << EOF > $out/env
-export LDFLAGS="-L$out/lib $LDFLAGS1 \$LDFLAGS"
+export LDFLAGS="-L$out/lib -ltapi \$LDFLAGS"
 export CPPFLAGS="-I$out/include \$CPPFLAGS"
 EOF

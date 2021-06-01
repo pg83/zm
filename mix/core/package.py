@@ -48,7 +48,7 @@ set -x
 (rm -rf "$out" || true) && mkdir -p "$out"
 (rm -rf "$tmp" || true) && mkdir -p "$tmp"
 
-cd "$tmp"
+cd "$tmp" && echo > tmpenv
 
 echo "$PATH" | tr ':' '\n' | tac | while read p; do
     env=$(realpath -m "$p/../env")

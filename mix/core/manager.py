@@ -24,6 +24,8 @@ class Manager:
         return self._w
 
     def load_package(self, name):
+        print(name)
+
         while True:
             try:
                 return self._c[name]

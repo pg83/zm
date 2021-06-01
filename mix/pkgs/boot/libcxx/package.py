@@ -12,9 +12,9 @@ def package(mix):
                     'md5': '588d440bfa1420c696b900d5d9c012ae',
                 },
             ],
-            'depends': [
+            'depends': deps + [
                 'boot/bin/stdenv',
-            ] + deps,
+            ],
         },
         'runtime': {
             'depends': deps,
