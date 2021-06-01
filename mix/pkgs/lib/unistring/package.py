@@ -13,6 +13,7 @@ def package(mix):
                 },
             ],
             'depends': libs + [
+                'boot/make',
                 'stdenv/mini',
             ],
         },

@@ -7,9 +7,11 @@ def package(mix):
             'fetch': [
                 {
                     'url': 'https://ftp.gnu.org/gnu/m4/m4-1.4.18.tar.xz',
+                    'md5': '730bb15d96fffe47e148d1e09235af82',
                 },
                 {
                     'url': url,
+                    'md5': '319c143996239e23d2fe3e7968a7620d',
                 },
             ],
             'depends': [

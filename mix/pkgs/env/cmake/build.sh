@@ -5,6 +5,7 @@ build_cmake_prepare() {
     (rm -rf build || true) && mkdir build && cd build
 
     cmake                                                                   \
+        $CMFLAGS                                                            \
         -Wno-dev                                                            \
         -DCMAKE_INSTALL_PREFIX="$out"                                       \
         -DCMAKE_EXE_LINKER_FLAGS="$LDFLAGS $LIBS"                           \

@@ -14,7 +14,9 @@ perl ./Configure \
      no-engine \
      --prefix=$out \
      --openssldir=$out \
-     -w -std=c99 -D_GNU_SOURCE=1 $CFLAGS $LDFLAGS $LIBS
+     -w -std=c99 \
+     -D_GNU_SOURCE=1 \
+     $CFLAGS $LDFLAGS $LIBS
 
 make -j $make_thrs
 make install
@@ -26,4 +28,5 @@ export OPENSSL_LIBS="-L$out/lib -lssl -lcrypto"
 export CPPFLAGS="\$OPENSSL_INCLUDES \$CPPFLAGS"
 export LDFLAGS="\$OPENSSL_LIBS \$LDFLAGS"
 export PKG_CONFIG_PATH="$out/lib/pkgconfig:\$PKG_CONFIG_PATH"
+export CMFLAGS="-DOPENSSL_ROOT_DIR=$out -DOPENSSL_INCLUDE_DIR=$out/include \$CMFLAGS"
 EOF

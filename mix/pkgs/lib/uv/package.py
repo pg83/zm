@@ -5,6 +5,7 @@ def package(mix):
             'fetch': [
                 {
                     'url': 'https://dist.libuv.org/dist/v1.41.0/libuv-v1.41.0.tar.gz',
+                    'md5': 'd990b0770dd2b15f7a8399580d55d32c',
                 },
             ],
             'depends': [

@@ -10,6 +10,7 @@ def package(mix):
             ],
             'depends': [
                 'lib/iconv',
+                'boot/make',
                 'stdenv/mini',
             ],
         },

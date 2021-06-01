@@ -7,7 +7,7 @@ def package(mix):
             'fetch': [
                 {
                     'url': url,
-                    'md5': '',
+                    'md5': 'a0128d661cfe7cc8c121e73519c54fbf',
                 },
             ],
             'depends': [

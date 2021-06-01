@@ -1,6 +1,16 @@
 $untar $src/pcre* && cd pcre*
 
-dash ./configure $COFLAGS --prefix=$out --disable-shared --enable-static --enable-pcre2grep-libz --enable-pcre2grep-libbz2 --enable-newline-is-anycrlf --enable-utf8 --enable-jit --enable-c++
+dash ./configure $COFLAGS \
+     --prefix=$out \
+     --disable-shared \
+     --enable-static \
+     --enable-pcre2grep-libz \
+     --enable-pcre2grep-libbz2 \
+     --enable-newline-is-anycrlf \
+     --enable-utf8 \
+     --enable-jit \
+     --enable-c++
+
 make -j $make_thrs
 make install
 
