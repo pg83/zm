@@ -3,6 +3,8 @@ $untar $src/openssl* && cd openssl*
 export CC=gcc
 export RANLIB=ranlib
 
+#     -D_GNU_SOURCE=1 \
+
 perl ./Configure \
      darwin64-x86_64-cc \
      no-asm \
@@ -15,7 +17,6 @@ perl ./Configure \
      --prefix=$out \
      --openssldir=$out \
      -w -std=c99 \
-     -D_GNU_SOURCE=1 \
      $CFLAGS $LDFLAGS $LIBS
 
 make -j $make_thrs
