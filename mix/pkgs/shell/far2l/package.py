@@ -4,8 +4,8 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://github.com/elfmz/far2l/archive/refs/tags/v2021-04-26_alpha.tar.gz',
-                    'md5': '508477c54a5fb7e2cde798c65d45fca8',
+                    'url': 'https://github.com/pg83/far2l/archive/0ff21b859c9a3ffeb1b9fd541dd03f9b398b0b3a.zip',
+                    'md5': 'fbb070521047b8589615b490686b6f8c',
                 },
             ],
             'depends': [
