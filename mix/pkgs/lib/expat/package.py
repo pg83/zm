@@ -10,7 +10,7 @@ def package(mix):
             ],
             'depends': [
                 'dev/build/make',
-                'stdenv',
+                'stdenv/tiny',
             ],
         },
     }

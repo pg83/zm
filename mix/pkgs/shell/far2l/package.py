@@ -10,11 +10,12 @@ def package(mix):
             ],
             'depends': [
                 'lib/ssh',
-                'lib/pcre2',
+                'lib/pcre',
                 'lib/spdlog',
                 'lib/archive',
                 'lib/xerces-c',
                 'lib/uchardet',
+                'tool/gnu/patch',
                 'dev/build/ninja',
                 'dev/build/pkg-config',
                 'dev/build/cmake',

@@ -6,8 +6,6 @@ import core.manager as cm
 
 
 def execute_cmd(c):
-    print(c)
-
     if 'func' in c:
         return c['func']()
 

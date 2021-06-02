@@ -2,6 +2,7 @@ def package(mix):
     libs = [
         'lib/z',
         'lib/idn2',
+        'lib/zstd',
         'lib/nghttp2',
         'lib/openssl',
     ]

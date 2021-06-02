@@ -43,7 +43,6 @@ def struct_hash(d):
 
 BUILD_SH_SCRIPT = '''
 set -e
-set -x
 
 (rm -rf "$out" || true) && mkdir -p "$out"
 (rm -rf "$tmp" || true) && mkdir -p "$tmp"
@@ -58,9 +57,13 @@ echo "$PATH" | tr ':' '\n' | tac | while read p; do
     fi
 done
 
-. "$tmp/tmpenv" && rm "$tmp/tmpenv" && env
+. "$tmp/tmpenv" && rm "$tmp/tmpenv"
+
+set -x
 
 {build_script}
+
+set +x
 
 rm -rf $out/lib/*.so* || true
 rm -rf $out/lib/*.la* || true

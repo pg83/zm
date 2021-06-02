@@ -1,7 +1,5 @@
 $untar $src/cmake* && cd cmake*
 
-export CPPFLAGS="-w $CPPFLAGS"
-
 build_cmake_ninja \
     -Dfortran=OFF \
     -DBUILD_TESTING=OFF \

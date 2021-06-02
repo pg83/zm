@@ -1,8 +1,12 @@
 build_cmake_prepare() {
+    export CPPFLAGS="-Wno-unused-command-line-argument $CPPFLAGS"
     export CXXFLAGS="-O2 $CPPFLAGS $CXXFLAGS"
     export CFLAGS="-O2 $CPPFLAGS $CFLAGS"
 
     (rm -rf build || true) && mkdir build && cd build
+
+    echo '' > ps && chmod +x ps
+    export PATH="$(pwd):$PATH"
 
     cmake                                                                   \
         $CMFLAGS                                                            \

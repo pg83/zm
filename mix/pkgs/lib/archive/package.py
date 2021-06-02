@@ -2,9 +2,12 @@ def package(mix):
     libs = [
         'lib/z',
         'lib/xz',
+        'lib/lz4',
         'lib/intl',
+        'lib/zstd',
         'lib/bzip2',
         'lib/iconv',
+        'lib/expat',
     ]
 
     return {

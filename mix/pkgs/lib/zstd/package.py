@@ -4,16 +4,13 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/gnu/grep/grep-3.6.tar.xz',
-                    'md5': 'f47fe27049510b2249dba7f862ac1b51',
+                    'url': 'https://github.com/facebook/zstd/releases/download/v1.5.0/zstd-1.5.0.tar.gz',
+                    'md5': 'a6eb7fb1f2c21fa80030a47993853e92',
                 },
             ],
             'depends': [
-                'lib/intl',
-                'lib/iconv',
-                'lib/sigsegv',
                 'dev/build/make',
-                'stdenv/mini',
+                'stdenv/tiny',
             ],
         },
     }

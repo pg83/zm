@@ -1,6 +1,6 @@
 $untar $src/llvm* && cd llvm*
 
-export CPPFLAGS="-w -DNDEBUG -U__SSE2__ -I$out/include/c++/v1 $CPPFLAGS"
+export CPPFLAGS="-DNDEBUG -U__SSE2__ -I$out/include/c++/v1 $CPPFLAGS"
 ln -s $(which dash) sh
 export PATH="$(pwd):$PATH"
 
