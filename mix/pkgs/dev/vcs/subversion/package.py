@@ -12,6 +12,8 @@ def package(mix):
                 'lib/z',
                 'lib/lz4',
                 'lib/apr',
+                'lib/intl',
+                'lib/serf',
                 'lib/expat',
                 'lib/sqlite3',
                 'lib/apr-util',
