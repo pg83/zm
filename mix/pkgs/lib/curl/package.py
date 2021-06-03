@@ -3,6 +3,7 @@ def package(mix):
         'lib/z',
         'lib/idn2',
         'lib/zstd',
+        'lib/brotli',
         'lib/nghttp2',
         'lib/openssl',
     ]

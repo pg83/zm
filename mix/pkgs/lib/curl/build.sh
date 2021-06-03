@@ -1,5 +1,6 @@
 $untar $src/curl* && cd curl*
 
+
 export LIBS=$(echo "$LDFLAGS" | tr ' ' '\n' | grep '^-l' | tr '\n' ' ')
 
 dash ./configure $COFLAGS --prefix=$out --enable-static --disable-shared

@@ -9,7 +9,6 @@ dash ./configure $COFLAGS \
      --prefix=$out \
      --with-readline=gnu \
      --without-png \
-     --without-pcre \
      --without-onig
 
 make AR_CR="$AR_CR" CFLAGS="$CFLAGS" install-static

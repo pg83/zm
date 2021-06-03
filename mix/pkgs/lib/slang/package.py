@@ -1,6 +1,7 @@
 def package(mix):
     libs = [
         'lib/z',
+        'lib/pcre',
         'lib/iconv',
         'lib/readline',
     ]
@@ -10,8 +11,8 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://storage.yandexcloud.net/mix-cache/slang-pre2.3.3-56.tar.gz',
-                    'md5': 'e60945d04da8c71a4a888d6c4a8c3fc8',
+                    'url': 'https://storage.yandexcloud.net/mix-cache/slang-2.3.2.tar.bz2',
+                    'md5': 'c2d5a7aa0246627da490be4e399c87cb',
                 },
             ],
             'depends': libs + [

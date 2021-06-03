@@ -14,7 +14,7 @@ make install
 cat << EOF > $out/env
 export LIBFFI_CFLAGS="-I$out/include"
 export LIBFFI_LIBS="-L$out/lib -lffi"
-export CFLAGS="\$LIBFFI_CFLAGS \$CFLAGS"
+export CPPFLAGS="\$LIBFFI_CFLAGS \$CPPFLAGS"
 export LDFLAGS="\$LIBFFI_LIBS \$LDFLAGS"
 export COFLAGS="--with-system-ffi=$out \$COFLAGS"
 export PKG_CONFIG_PATH="$out/lib/pkgconfig:\$PKG_CONFIG_PATH"

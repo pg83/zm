@@ -4,18 +4,16 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://ftp.midnight-commander.org/mc-4.8.26.tar.xz',
-                    'md5': '3c1f77b71dba1f4eeeedc4276627fed7',
+                    'url': 'https://ftp.gnu.org/gnu/emacs/emacs-27.2.tar.xz',
+                    'md5': '4c3d9ff35b2ab2fe518dc7eb3951e128',
                 },
             ],
             'depends': [
-                'lib/intl',
-                'lib/glib',
-                'lib/pcre',
-                'lib/iconv',
-                'lib/slang',
+                'lib/z',
+                'lib/ncurses',
                 'dev/build/make',
                 'dev/build/pkg-config',
+                'tool/compress/tar',
                 'stdenv',
             ],
         },

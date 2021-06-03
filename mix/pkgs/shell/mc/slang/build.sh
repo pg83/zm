@@ -1,9 +1,20 @@
 $untar $src/mc* && cd mc*
 
-export LDFLAGS="$LDFLAGS $LIBS"
+cat << EOF > gcc
+#!$(which dash)
+$(which gcc) -w $CPPFLAGS $CFLAGS \$@
+EOF
 
-dash ./configure $COFLAGS --prefix=$out --disable-shared --enable-static --with-screen=slang
+chmod +x gcc
+
+export PATH="$(pwd):$PATH"
+
+dash ./configure $COFLAGS \
+     --prefix=$out \
+     --disable-shared \
+     --enable-static \
+     --with-screen=slang \
+     --with-search-engine=pcre
 
 make -j $make_thrs
-echo 'all install:' > doc/hlp/Makefile
 make install
