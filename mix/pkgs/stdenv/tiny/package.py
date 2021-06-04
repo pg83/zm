@@ -2,15 +2,15 @@ def package(mix):
     return {
         'runtime': {
             'depends': [
-                'tool/gnu/sed',
                 'tool/gnu/file',
-                'tool/gnu/gawk',
-                'tool/gnu/grep',
-                'tool/gnu/patch',
                 'tool/gnu/which',
                 'tool/gnu/coreutils',
                 'tool/gnu/findutils',
-                'tool/gnu/diffutils',
+                'tool/text/gnu/sed',
+                'tool/text/gnu/gawk',
+                'tool/text/gnu/grep',
+                'tool/text/gnu/patch',
+                'tool/text/gnu/diffutils',
                 'shell/dash/minimal',
                 'stdenv/comp',
                 'env/bootstrap',

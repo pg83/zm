@@ -1,6 +1,6 @@
 $untar $src/libiconv* && cd libiconv*
 
-dash ./configure --prefix=$out --enable-static --disable-shared
+dash ./configure $COFLAGS --prefix=$out --enable-static --disable-shared
 make -j $make_thrs
 make install
 

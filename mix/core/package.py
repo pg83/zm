@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import base64
 import jinja2
 import hashlib
 import multiprocessing
@@ -119,6 +120,9 @@ class Package:
         self._m = mngr
         self._d = exec_mod(self.files.package_py['data'], self)
         self._u = struct_hash([self._d, list(self.iter_env())])
+
+    def base64(self, data):
+        return base64.b64encode(data.encode('utf-8')).decode('utf-8')
 
     @property
     def manager(self):

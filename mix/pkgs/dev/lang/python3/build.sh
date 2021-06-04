@@ -1,7 +1,7 @@
 $untar $src/Python* && cd Python*
 
-cat << EOF > fix.py
-{{mix.files.fix_py.data}}
+base64 -d << EOF > fix.py
+{{mix.base64(mix.files.fix_py.data)}}
 EOF
 
 export MACOSX_DEPLOYMENT_TARGET=11.0

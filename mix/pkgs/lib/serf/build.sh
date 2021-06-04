@@ -4,7 +4,14 @@ patch -p1 << EOF
 {{mix.files.p00_patch.data}}
 EOF
 
-scons PREFIX=$out CFLAGS="$CPPFLAGS $CFLAGS" LINKFLAGS="$LDFLAGS $LIBS" OPENSSL="$lib_openssl" ZLIB="$lib_z" APR="$lib_apr" APU="$lib_apr_util"
+scons PREFIX=$out \
+      CFLAGS="$CPPFLAGS $CFLAGS" \
+      LINKFLAGS="$LDFLAGS $LIBS" \
+      OPENSSL="$lib_openssl" \
+      ZLIB="$lib_z" \
+      APR="$lib_apr" \
+      APU="$lib_apr_util"
+
 scons install
 
 cat << EOF > $out/env

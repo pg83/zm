@@ -4,15 +4,14 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/gnu/diffutils/diffutils-3.7.tar.xz',
-                    'md5': '4824adc0e95dbbf11dfbdfaad6a1e461',
+                    'url': 'https://invisible-mirror.net/archives/mawk/mawk-1.3.4-20200120.tgz',
+                    'md5': 'd48752f402d7371d9eb5f68de3da05d4',
                 },
             ],
             'depends': [
-                'lib/intl',
-                'lib/iconv',
+                'lib/readline',
                 'dev/build/make',
-                'stdenv/mini',
+                'stdenv',
             ],
         },
     }

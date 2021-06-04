@@ -17,7 +17,7 @@ def package(mix):
             ],
             'depends': deps + [
                 'dev/build/scons',
-                'tool/gnu/patch',
+                'tool/text/gnu/patch',
                 'stdenv',
             ],
         },

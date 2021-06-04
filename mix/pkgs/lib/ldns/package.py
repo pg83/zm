@@ -1,7 +1,6 @@
 def package(mix):
-    libs = [
-        'lib/ncurses',
-        'lib/termcap',
+    deps = [
+        'lib/openssl',
     ]
 
     return {
@@ -9,16 +8,16 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'http://thrysoee.dk/editline/libedit-20210522-3.1.tar.gz',
-                    'md5': '6ad9e9208daf031adf1ebc64441769e0',
+                    'url': 'https://nlnetlabs.nl/downloads/ldns/ldns-1.7.1.tar.gz',
+                    'md5': '166262a46995d9972aba417fd091acd5',
                 },
             ],
-            'depends': libs + [
+            'depends': deps + [
                 'dev/build/make',
                 'stdenv',
             ],
         },
         'runtime': {
-            'depends': libs,
+            'depends': deps,
         },
     }

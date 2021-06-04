@@ -16,7 +16,7 @@ def package(mix):
             ],
             'depends': [
                 'dev/build/make',
-                'tool/gnu/patch',
+                'tool/text/gnu/patch',
                 'stdenv/tiny',
             ],
         },
