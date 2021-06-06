@@ -6,25 +6,22 @@ import time
 import enum
 import atexit
 import cProfile
+import contextlib
 
 from collections import deque
 from dataclasses import dataclass
 
 
-def reset():
-    os.system('reset')
+def esc(d):
+    return chr(27) + d
 
 
-def esc(*args):
-    return '\033[' + ';'.join(str(x) for x in args)
+def csi(*args):
+    return esc('[' + ';'.join(str(x) for x in args))
 
 
 def move(x, y):
-    return esc(y + 1, x + 1) + 'H'
-
-
-def hide_cursor():
-    return esc('?25l')
+    return csi(y + 1, x + 1) + 'H'
 
 
 class Channel:
@@ -32,8 +29,14 @@ class Channel:
         self.b = deque()
         self.i = io.FileIO(0, 'r')
         self.o = io.FileIO(1, 'w')
+        self.init()
 
+    def init(self):
         tty.setraw(self.i)
+        self.send(csi('?25l'))
+
+    def fini(self):
+        os.system('reset')
 
     def send(self, cmd):
         self.o.write(cmd.encode('ascii'))
@@ -73,7 +76,7 @@ class Channel:
         return ''.join(chr(x) for x in self.read_seq(ord(ch)))
 
     def dims(self):
-        self.send(move(10000, 10000) + esc('6n'))
+        self.send(move(10000, 10000) + csi('6n'))
 
         y, x = self.resp('R').split(';')
 
@@ -135,15 +138,30 @@ class InputStream:
 
     def __init__(self, ch):
         self.ch = ch
+        self.cb = None
+
+    def set_cb(self, cb):
+        self.cb = cb
+
+    def read(self):
+        res = self.ch.next()
+
+        if self.cb:
+            self.cb(res)
+
+        return res
 
     def next(self):
-        key = self.ch.next()
+        key = self.read()
 
         if key == 27:
             return self.scan_escape()
 
         if key == 3:
-            return 'ctrlc'
+            return 'break'
+
+        if key == 127:
+            return 'bs'
 
         return chr(key)
 
@@ -151,7 +169,7 @@ class InputStream:
         p = ''
 
         while True:
-            p += chr(self.ch.next())
+            p += chr(self.read())
 
             if p in self.TRIE:
                 v = self.TRIE[p]
@@ -171,10 +189,10 @@ class Color24:
     b: int
 
     def bg(self):
-        return esc(48, 2, self.r, self.g, self.b) + 'm'
+        return csi(48, 2, self.r, self.g, self.b) + 'm'
 
     def fg(self):
-        return esc(38, 2, self.r, self.g, self.b) + 'm'
+        return csi(38, 2, self.r, self.g, self.b) + 'm'
 
 
 @dataclass
@@ -182,24 +200,24 @@ class Color8:
     n: int
 
     def bg(self):
-        return esc(48, 5, self.n) + 'm'
+        return csi(48, 5, self.n) + 'm'
 
     def fg(self):
-        return esc(38, 5, self.n) + 'm'
+        return csi(38, 5, self.n) + 'm'
 
 
 def bg4(n):
     if n < 8:
-        return esc(40 + n) + 'm'
+        return csi(40 + n) + 'm'
 
-    return esc(92 + n) + 'm'
+    return csi(92 + n) + 'm'
 
 
 def fg4(n):
     if n < 8:
-        return esc(30 + n) + 'm'
+        return csi(30 + n) + 'm'
 
-    return esc(82 + n) + 'm'
+    return csi(82 + n) + 'm'
 
 
 TBL4 = [(bg4(x), fg4(x)) for x in range(0, 16)]
@@ -257,7 +275,6 @@ class Display:
 
         self.dx = dx
         self.dy = dy
-        self.ch.send(hide_cursor())
         self.d = ['' for i in range(dx * dy)]
 
     def flip(self, pixels):
@@ -266,11 +283,9 @@ class Display:
 
         for x, y, n in pixels:
             if x >= 0 and x < self.dx and y >= 0 and y < self.dy:
-                byp[x + y * self.dx] = (x, y, n)
+                byp[x + y * self.dx] = (x, y, n.fmt())
 
-        for p, (x, y, n) in byp.items():
-            f = n.fmt()
-
+        for p, (x, y, f) in byp.items():
             if f != self.d[p]:
                 self.d[p] = f
 
@@ -311,6 +326,8 @@ class Handle:
         self.x = x
         self.y = y
 
+        return self
+
 
 class Composer:
     def __init__(self, ch):
@@ -331,7 +348,7 @@ class Composer:
         while True:
             c = self.i.next()
 
-            if c in ('ctrlc', 3, chr(3)):
+            if c in ('break', 3, chr(3)):
                 raise KeyboardInterrupt()
 
             self.s[self.o[-1]].dispatch(c)
@@ -343,36 +360,53 @@ class Composer:
             self.d.flip(pixels())
 
 
-class SimpleInput:
-    def __init__(self, w):
-        self.w = w
-        self.t = ''
-
-    def dispatch(self, ev):
-        self.t += ev
-
-    def pixels(self):
-        x = 0
-        y = 0
-
-        for i in range(0, len(self.t)):
-            yield x, y, Point(self.t[i], black(), white())
-
-            x += 1
-
-            if x >= self.w:
-                x = 0
-                y += 1
-
-
 class Editor:
     def __init__(self, d):
         self.l = d.split('\n')
+        self.x = 0
+        self.y = 0
 
-    def render(self):
-        for y, l in enumerate(self.l):
-            for x, c in enumerate(l):
-                yield x, y, c
+    def render(self, x1, y1, x2, y2):
+        for y in range(y1, min(y2, len(self.l))):
+            l = self.l[y]
+
+            for x in range(x1, min(x2, len(l))):
+                yield x, y, l[x]
+
+    def dispatch(self, ev, h):
+        if len(ev) == 1:
+            self.handle_char(ev)
+        else:
+            self.handle_event(ev, h)
+
+    def handle_event(self, ev, h):
+        if ev == 'left':
+            self.x -= 1
+        elif ev == 'right':
+            self.x += 1
+        elif ev == 'up':
+            self.y -= 1
+        elif ev == 'down':
+            self.y += 1
+        elif ev == 'pageup':
+            self.y -= h
+        elif ev == 'pagedown':
+            self.y += h
+
+        if self.y >= len(self.l):
+            self.y = len(self.l) - 1
+
+        if self.y < 0:
+            self.y = 0
+
+        if self.x > len(self.l[self.y]):
+            self.x = len(self.l[self.y])
+
+        if self.x < 0:
+            self.x = 0
+
+    def handle_char(self, ch):
+        pass
 
 
 class EditorWidget:
@@ -384,9 +418,6 @@ class EditorWidget:
         self.w = w
         self.h = h
 
-        self.cx = 0
-        self.cy = 0
-
     def pixels(self):
         bx = self.x
         by = self.y
@@ -397,11 +428,18 @@ class EditorWidget:
         bc = black()
         wc = white()
 
-        for x, y, c in self.e.render():
-            if x >= bx and x < ex and y >= by and y < ey:
-                yield x - bx, y - by, Point(c, bc, wc)
+        for x, y, c in self.e.render(bx, by, ex, ey):
+            yield x - bx, y - by, Point(c, bc, wc)
 
         yield self.cx, self.cy, Point(' ', wc, wc)
+
+    @property
+    def cx(self):
+        return self.e.x - self.x
+
+    @property
+    def cy(self):
+        return self.e.y - self.y
 
     @property
     def hw(self):
@@ -412,61 +450,66 @@ class EditorWidget:
         return self.h // 2
 
     def dispatch(self, ev):
-        if ev == 'left':
-            self.cx -= 1
-        elif ev == 'right':
-            self.cx += 1
-        elif ev == 'up':
-            self.cy -= 1
-        elif ev == 'down':
-            self.cy += 1
-        elif ev == 'pageup':
-            self.y -= self.h
-        elif ev == 'pagedown':
-            self.y += self.h
+        self.e.dispatch(ev, self.h)
 
-        if self.cx < 0:
-            self.cx += self.hw
+        while self.cx < 0:
             self.x -= self.hw
 
-        if self.x < 0:
-            self.x = 0
-            self.cx = 0
-
-        if self.cy < 0:
-            self.cy += self.hh
+        while self.cy < 0:
             self.y -= self.hh
 
-        if self.y < 0:
-            self.y = 0
-            self.cy = 0
-
-        if self.cx >= self.w:
-            self.cx -= self.hw
+        while self.cx >= self.w:
             self.x += self.hw
 
-        if self.cy >= self.h:
-            self.cy -= self.hh
+        while self.cy >= self.h:
             self.y += self.hh
 
 
+class MessageBar:
+    def __init__(self, w):
+        self.w = w
+        self.t = ''
+
+    def append(self, t):
+        self.t += ', ' + str(t)
+
+        if len(self.t) > self.w:
+            self.t = self.t[-self.w:]
+
+    def pixels(self):
+        b = black()
+        w = white()
+
+        for x, ch in enumerate(self.t):
+            yield x, 0, Point(ch, b, w)
+
+    def dispatch(self, ev):
+        pass
+
+
+@contextlib.contextmanager
+def channel():
+    ch = Channel()
+
+    try:
+        yield ch
+    finally:
+        ch.fini()
+
+
 def main():
-    c = Composer(Channel())
+    with channel() as ch:
+        c = Composer(ch)
 
-    c.add_widget(Panel(c.d.dx, c.d.dy, black()))
-    c.add_widget(EditorWidget(c.d.dx, c.d.dy, open(sys.argv[1]).read()))
+        c.add_widget(Panel(c.d.dx, c.d.dy, black()))
+        c.i.set_cb(c.add_widget(MessageBar(c.d.dx)).move(0, c.d.dy - 1).w.append)
+        c.add_widget(EditorWidget(c.d.dx, c.d.dy - 1, open(sys.argv[1]).read()))
 
-    c.loop()
+        c.loop()
 
 
 try:
-    def run():
-        try:
-            main()
-        finally:
-            reset()
-
-    run()
-    #cProfile.run('run()')
+    main()
+    #cProfile.run('main()')
 except KeyboardInterrupt:
     pass
