@@ -10,7 +10,6 @@ def package(mix):
             ],
             'depends': [
                 'dev/build/cmake',
-                'dev/build/ninja',
                 'dev/build/pkg-config',
                 'stdenv',
             ],

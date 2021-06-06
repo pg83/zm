@@ -15,7 +15,6 @@ def package(mix):
                 },
             ],
             'depends': deps + [
-                'dev/build/ninja',
                 'dev/build/cmake',
                 'stdenv',
             ],

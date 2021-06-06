@@ -15,7 +15,6 @@ def package(mix):
                 'lib/archive',
                 'lib/xerces-c',
                 'lib/uchardet',
-                'dev/build/ninja',
                 'dev/build/pkg-config',
                 'dev/build/cmake',
                 'dev/lang/m4',

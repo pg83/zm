@@ -25,6 +25,7 @@ def package(mix):
         },
         'runtime': {
             'depends': [
+                'dev/build/ninja',
                 'env/cmake',
             ],
         },

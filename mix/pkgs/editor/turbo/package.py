@@ -14,7 +14,6 @@ def package(mix):
                 'lib/tvision',
                 'lib/clipboard',
                 'dev/build/cmake',
-                'dev/build/ninja',
                 'stdenv',
             ],
         },

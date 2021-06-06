@@ -10,7 +10,6 @@ def package(mix):
             ],
             'depends': [
                 'lib/cxx',
-                'dev/build/ninja',
                 'dev/build/cmake',
                 'stdenv',
             ],
