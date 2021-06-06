@@ -4,12 +4,18 @@ import sys
 import tty
 import time
 import enum
+import queue
 import atexit
 import cProfile
+import threading
+import functools
 import contextlib
 
 from collections import deque
 from dataclasses import dataclass
+
+import pygments.lexers as pl
+import pygments.styles as ps
 
 
 def esc(d):
@@ -17,7 +23,13 @@ def esc(d):
 
 
 def csi(*args):
-    return esc('[' + ';'.join(str(x) for x in args))
+    res = '[' + str(args[0])
+
+    for a in args[1:]:
+        res += ';'
+        res += str(a)
+
+    return esc(res)
 
 
 def move(x, y):
@@ -39,7 +51,7 @@ class Channel:
         os.system('reset')
 
     def send(self, cmd):
-        self.o.write(cmd.encode('ascii'))
+        self.o.write(cmd.encode('utf-8'))
 
     def recv(self):
         return ord(self.i.read(1))
@@ -102,6 +114,10 @@ KMAP = [
     ('OQ', 'f2'),
     ('OR', 'f3'),
     ('OS', 'f4'),
+    ('[P', 'f1'),
+    ('[Q', 'f2'),
+    ('[R', 'f3'),
+    ('[S', 'f4'),
     ('[15~', 'f5'),
     ('[17~', 'f6'),
     ('[18~', 'f7'),
@@ -138,21 +154,9 @@ class InputStream:
 
     def __init__(self, ch):
         self.ch = ch
-        self.cb = None
-
-    def set_cb(self, cb):
-        self.cb = cb
-
-    def read(self):
-        res = self.ch.next()
-
-        if self.cb:
-            self.cb(res)
-
-        return res
 
     def next(self):
-        key = self.read()
+        key = self.ch.next()
 
         if key == 27:
             return self.scan_escape()
@@ -163,13 +167,19 @@ class InputStream:
         if key == 127:
             return 'bs'
 
+        if key == 10:
+            return 'lf'
+
+        if key == 13:
+            return 'cr'
+
         return chr(key)
 
     def scan_escape(self):
         p = ''
 
         while True:
-            p += chr(self.read())
+            p += chr(self.ch.next())
 
             if p in self.TRIE:
                 v = self.TRIE[p]
@@ -267,6 +277,41 @@ class Point:
         return self
 
 
+class Async:
+    def __init__(self):
+        self.q = queue.SimpleQueue()
+
+        threading.Thread(target=self.deq, daemon=True).start()
+
+    def deq(self):
+        while True:
+            self.q.get()()
+
+    def schedule(self, f):
+        self.q.put(f)
+
+
+def singleton(func):
+    @functools.wraps(func)
+    def wrapper():
+        while True:
+            try:
+                return func.__result__
+            except AttributeError:
+                func.__result__ = func()
+
+    return wrapper
+
+
+@singleton
+def asyncmngr():
+    return Async()
+
+
+def schedule(f):
+    asyncmngr().schedule(f)
+
+
 class Display:
     def __init__(self, ch):
         self.ch = ch
@@ -285,21 +330,21 @@ class Display:
             if x >= 0 and x < self.dx and y >= 0 and y < self.dy:
                 byp[x + y * self.dx] = (x, y, n.fmt())
 
-        for p, (x, y, f) in byp.items():
+        for p, (x, y, f) in sorted(byp.items(), key=lambda x: x[0]):
             if f != self.d[p]:
                 self.d[p] = f
 
                 d += move(x, y)
                 d += f
 
-        self.ch.send(d)
+        schedule(lambda: self.ch.send(d))
 
 
 class Panel:
-    def __init__(self, dx, dy, c):
+    def __init__(self, dx, dy, px):
         self.dx = dx
         self.dy = dy
-        self.px = Point(' ', c, c)
+        self.px = px
 
     def pixels(self):
         for y in range(0, self.dy):
@@ -331,8 +376,8 @@ class Handle:
 
 class Composer:
     def __init__(self, ch):
-        self.i = InputStream(ch)
         self.d = Display(ch)
+        self.i = InputStream(ch)
         self.o = []
         self.s = dict()
 
@@ -348,7 +393,7 @@ class Composer:
         while True:
             c = self.i.next()
 
-            if c in ('break', 3, chr(3)):
+            if c == 'break':
                 raise KeyboardInterrupt()
 
             self.s[self.o[-1]].dispatch(c)
@@ -360,18 +405,55 @@ class Composer:
             self.d.flip(pixels())
 
 
+def parse_color(s):
+    if c := s.get('color'):
+        return Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16))
+
+    return white()
+
+
+class HighLight:
+    def __init__(self):
+        self.lex = pl.get_lexer_by_name('python')
+        self.stl = ps.get_style_by_name('material')
+        self.lns = {}
+
+    def style_line_impl(self, l):
+        for typ, text in self.lex.get_tokens(l):
+            s = parse_color(self.stl.style_for_token(typ))
+
+            for ch in text:
+                if ch == '\n':
+                    pass
+                else:
+                    yield ch, s
+
+    def style_line(self, l):
+        while True:
+            try:
+                return self.lns[l]
+            except KeyError:
+                self.lns[l] = list(self.style_line_impl(l))
+
+                assert len(l) == len(self.lns[l])
+
+
 class Editor:
     def __init__(self, d):
+        self.h = HighLight()
         self.l = d.split('\n')
         self.x = 0
         self.y = 0
 
     def render(self, x1, y1, x2, y2):
         for y in range(y1, min(y2, len(self.l))):
-            l = self.l[y]
+            l = self.h.style_line(self.l[y])
 
             for x in range(x1, min(x2, len(l))):
-                yield x, y, l[x]
+                c, col = l[x]
+
+                if c != ' ':
+                    yield x, y, c, col
 
     def dispatch(self, ev, h):
         if len(ev) == 1:
@@ -379,19 +461,77 @@ class Editor:
         else:
             self.handle_event(ev, h)
 
+    def getch(self):
+        try:
+            return self.l[self.y][self.x]
+        except IndexError:
+            return ''
+
+    def skip_ws_right(self):
+        while self.getch() == ' ':
+            self.x += 1
+
+    def skip_ws_left(self):
+        while self.getch() == ' ':
+            self.x -= 1
+
+    def key_home(self):
+        self.x = 0
+
+    def key_end(self):
+        self.x = len(self.l[self.y])
+
+    def key_left(self):
+        if self.x == 0:
+            if self.y == 0:
+                pass
+            else:
+                self.key_up()
+                self.key_end()
+        else:
+            self.x -= 1
+            self.skip_ws_left()
+
+    def key_right(self):
+        if self.getch() == ' ':
+            self.skip_ws_right()
+        else:
+            self.x += 1
+
+    def key_up(self):
+        self.y -= 1
+
+    def key_down(self):
+        self.y += 1
+
+    def key_bs(self):
+        self.key_left()
+        self.key_del()
+
+    def key_del(self):
+        self.l[self.y] = self.l[self.y][:self.x] + self.l[self.y][self.x + 1:]
+
     def handle_event(self, ev, h):
         if ev == 'left':
-            self.x -= 1
+            self.key_left()
         elif ev == 'right':
-            self.x += 1
+            self.key_right()
         elif ev == 'up':
-            self.y -= 1
+            self.key_up()
         elif ev == 'down':
-            self.y += 1
+            self.key_down()
         elif ev == 'pageup':
             self.y -= h
         elif ev == 'pagedown':
             self.y += h
+        elif ev == 'home':
+            self.key_home()
+        elif ev == 'end':
+            self.key_end()
+        elif ev == 'bs':
+            self.key_bs()
+        elif ev == 'del':
+            self.key_del()
 
         if self.y >= len(self.l):
             self.y = len(self.l) - 1
@@ -406,7 +546,8 @@ class Editor:
             self.x = 0
 
     def handle_char(self, ch):
-        pass
+        self.l[self.y] = self.l[self.y][:self.x] + ch + self.l[self.y][self.x:]
+        self.x += 1
 
 
 class EditorWidget:
@@ -428,8 +569,8 @@ class EditorWidget:
         bc = black()
         wc = white()
 
-        for x, y, c in self.e.render(bx, by, ex, ey):
-            yield x - bx, y - by, Point(c, bc, wc)
+        for x, y, c, col in self.e.render(bx, by, ex, ey):
+            yield x - bx, y - by, Point(c, bc, col)
 
         yield self.cx, self.cy, Point(' ', wc, wc)
 
@@ -465,26 +606,31 @@ class EditorWidget:
             self.y += self.hh
 
 
-class MessageBar:
-    def __init__(self, w):
+class Rect:
+    def __init__(self, w, h):
         self.w = w
-        self.t = ''
+        self.h = h
 
-    def append(self, t):
-        self.t += ', ' + str(t)
+    def chars(self):
+        yield 0, 0, 0x2553
+        yield self.w - 1, 0, 0x2556
+        yield self.w - 1, self.h - 1, 0x255C
+        yield 0, self.h - 1, 0x2559
 
-        if len(self.t) > self.w:
-            self.t = self.t[-self.w:]
+        for x in range(1, self.w - 1):
+            yield x, 0, 0x2500
+            yield x, self.h - 1, 0x2500
+
+        for y in range(1, self.h - 1):
+            yield 0, y, 0x2551
+            yield self.w - 1, y, 0x2551
 
     def pixels(self):
         b = black()
         w = white()
 
-        for x, ch in enumerate(self.t):
-            yield x, 0, Point(ch, b, w)
-
-    def dispatch(self, ev):
-        pass
+        for x, y, c in self.chars():
+            yield x, y, Point(chr(c), b, w)
 
 
 @contextlib.contextmanager
@@ -501,9 +647,9 @@ def main():
     with channel() as ch:
         c = Composer(ch)
 
-        c.add_widget(Panel(c.d.dx, c.d.dy, black()))
-        c.i.set_cb(c.add_widget(MessageBar(c.d.dx)).move(0, c.d.dy - 1).w.append)
-        c.add_widget(EditorWidget(c.d.dx, c.d.dy - 1, open(sys.argv[1]).read()))
+        c.add_widget(Panel(c.d.dx - 2, c.d.dy - 2, Point(' ', black(), black()))).move(1, 1)
+        c.add_widget(Rect(c.d.dx, c.d.dy))
+        c.add_widget(EditorWidget(c.d.dx - 2, c.d.dy - 2, open(sys.argv[1]).read())).move(1, 1)
 
         c.loop()
 
