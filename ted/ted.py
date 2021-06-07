@@ -6,6 +6,7 @@ import time
 import enum
 import queue
 import atexit
+import signal
 import cProfile
 import threading
 import functools
@@ -36,25 +37,52 @@ def move(x, y):
     return csi(y + 1, x + 1) + 'H'
 
 
+def retval(v):
+    def func():
+        return v
+
+    return func
+
+
+class SigWinch(Exception):
+    pass
+
+
 class Channel:
     def __init__(self):
         self.b = deque()
         self.i = io.FileIO(0, 'r')
         self.o = io.FileIO(1, 'w')
-        self.init()
-
-    def init(self):
+        self.q = queue.SimpleQueue()
         tty.setraw(self.i)
         self.send(csi('?25l'))
+        threading.Thread(target=self.runq, daemon=True).start()
+        signal.signal(signal.SIGWINCH, self.sigwinch)
 
     def fini(self):
         os.system('reset')
 
+    def sigwinch(self, *args):
+        def err():
+            raise SigWinch()
+
+        self.q.put(err)
+
+    def runq(self):
+        try:
+            while True:
+                self.q.put(retval(ord(self.i.read(1))))
+        except Exception as e:
+            def err():
+                raise e
+
+            self.q.put(err)
+
     def send(self, cmd):
-        self.o.write(cmd.encode('utf-8'))
+        self.o.write(cmd.encode())
 
     def recv(self):
-        return ord(self.i.read(1))
+        return self.q.get()()
 
     def next(self):
         try:
@@ -129,7 +157,7 @@ KMAP = [
 ]
 
 
-def scan_table():
+def make_scan_table():
     res = {}
 
     def substr(k):
@@ -150,7 +178,14 @@ def scan_table():
 
 
 class InputStream:
-    TRIE = scan_table()
+    TRIE = make_scan_table()
+
+    ASCII = {
+        3: 'break',
+        127: 'bs',
+        10: 'lf',
+        13: 'cr',
+    }
 
     def __init__(self, ch):
         self.ch = ch
@@ -158,22 +193,30 @@ class InputStream:
     def next(self):
         key = self.ch.next()
 
-        if key == 27:
-            return self.scan_escape()
+        if key < 128:
+            if key == 27:
+                return self.scan_escape()
 
-        if key == 3:
-            return 'break'
+            if val := self.ASCII.get(key):
+                return val
 
-        if key == 127:
-            return 'bs'
+            if key >= 32:
+                return chr(key)
 
-        if key == 10:
-            return 'lf'
+            raise Exception('bad key ' + str(key))
 
-        if key == 13:
-            return 'cr'
+        return self.scan_utf8(key)
 
-        return chr(key)
+    def scan_utf8(self, key):
+        runes = [key]
+
+        for i in range(0, 4):
+            runes.append(self.ch.next())
+
+            try:
+                return bytes(runes).decode()
+            except UnicodeError:
+                pass
 
     def scan_escape(self):
         p = ''
@@ -391,18 +434,18 @@ class Composer:
 
     def loop(self):
         while True:
+            def pixels():
+                for o in self.o:
+                    yield from self.s[o].pixels()
+
+            self.d.flip(pixels())
+
             c = self.i.next()
 
             if c == 'break':
                 raise KeyboardInterrupt()
 
             self.s[self.o[-1]].dispatch(c)
-
-            def pixels():
-                for o in self.o:
-                    yield from self.s[o].pixels()
-
-            self.d.flip(pixels())
 
 
 def parse_color(s):
@@ -413,8 +456,8 @@ def parse_color(s):
 
 
 class HighLight:
-    def __init__(self):
-        self.lex = pl.get_lexer_by_name('python')
+    def __init__(self, p, d):
+        self.lex = pl.guess_lexer_for_filename(os.path.basename(p), d)
         self.stl = ps.get_style_by_name('material')
         self.lns = {}
 
@@ -429,6 +472,9 @@ class HighLight:
                     yield ch, s
 
     def style_line(self, l):
+        if len(self.lns) > 10000:
+            self.lns.clear()
+
         while True:
             try:
                 return self.lns[l]
@@ -439,15 +485,19 @@ class HighLight:
 
 
 class Editor:
-    def __init__(self, d):
-        self.h = HighLight()
+    def __init__(self, p):
+        d = open(p).read()
+
+        self.h = HighLight(p, d)
         self.l = d.split('\n')
         self.x = 0
         self.y = 0
 
     def render(self, x1, y1, x2, y2):
-        for y in range(y1, min(y2, len(self.l))):
-            l = self.h.style_line(self.l[y])
+        sl = self.l
+
+        for y in range(y1, min(y2, len(sl))):
+            l = self.h.style_line(sl[y])
 
             for x in range(x1, min(x2, len(l))):
                 c, col = l[x]
@@ -472,8 +522,11 @@ class Editor:
             self.x += 1
 
     def skip_ws_left(self):
-        while self.getch() == ' ':
-            self.x -= 1
+        if self.getch() == ' ':
+            while self.getch() == ' ':
+                self.x -= 1
+
+            self.x += 1
 
     def key_home(self):
         self.x = 0
@@ -533,6 +586,9 @@ class Editor:
         elif ev == 'del':
             self.key_del()
 
+        self.cur_just()
+
+    def cur_just(self):
         if self.y >= len(self.l):
             self.y = len(self.l) - 1
 
@@ -551,9 +607,8 @@ class Editor:
 
 
 class EditorWidget:
-    def __init__(self, w, h, d):
-        self.e = Editor(d)
-
+    def __init__(self, w, h, e):
+        self.e = e
         self.x = 0
         self.y = 0
         self.w = w
@@ -644,14 +699,20 @@ def channel():
 
 
 def main():
+    ed = Editor(sys.argv[1])
+
     with channel() as ch:
-        c = Composer(ch)
+        while True:
+            c = Composer(ch)
 
-        c.add_widget(Panel(c.d.dx - 2, c.d.dy - 2, Point(' ', black(), black()))).move(1, 1)
-        c.add_widget(Rect(c.d.dx, c.d.dy))
-        c.add_widget(EditorWidget(c.d.dx - 2, c.d.dy - 2, open(sys.argv[1]).read())).move(1, 1)
+            c.add_widget(Panel(c.d.dx - 2, c.d.dy - 2, Point(' ', black(), black()))).move(1, 1)
+            c.add_widget(Rect(c.d.dx, c.d.dy))
+            c.add_widget(EditorWidget(c.d.dx - 2, c.d.dy - 2, ed)).move(1, 1)
 
-        c.loop()
+            try:
+                return c.loop()
+            except SigWinch:
+                pass
 
 
 try:
