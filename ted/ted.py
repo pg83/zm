@@ -652,7 +652,7 @@ class EditorWidget:
         for x, y, c, col in self.e.render(bx, by, ex, ey):
             yield x - bx, y - by, Attrs(c=c, f=col)
 
-        yield self.cx, self.cy, Attrs(c=' ', b=white(), f=white())
+        yield self.cx, self.cy, Attrs(b=white(), f=white())
 
     @property
     def cx(self):
