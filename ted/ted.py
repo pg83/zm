@@ -12,7 +12,7 @@ import threading
 import functools
 import contextlib
 
-from collections import deque, defaultdict
+from collections import deque, defaultdict, namedtuple
 from dataclasses import dataclass
 
 import pygments.lexers as pl
@@ -251,12 +251,7 @@ class InputStream:
                 raise Exception('unknown escape sequence ' + p)
 
 
-@dataclass
-class Color24:
-    r: int
-    g: int
-    b: int
-
+class Color24(namedtuple('Color24Base', ['r', 'g', 'b'])):
     def bg(self):
         return csi(48, 2, self.r, self.g, self.b) + 'm'
 
@@ -264,10 +259,7 @@ class Color24:
         return csi(38, 2, self.r, self.g, self.b) + 'm'
 
 
-@dataclass
-class Color8:
-    n: int
-
+class Color8(namedtuple('Color8Base', ['n'])):
     def bg(self):
         return csi(48, 5, self.n) + 'm'
 
@@ -292,10 +284,7 @@ def fg4(n):
 TBL4 = [(bg4(x), fg4(x)) for x in range(0, 16)]
 
 
-@dataclass
-class Color4:
-    n: int
-
+class Color4(namedtuple('Color4Base', ['n'])):
     def bg(self):
         return TBL4[self.n][0]
 
@@ -504,6 +493,9 @@ class TextArray:
         self.d = d
 
     def at(self, pos):
+        if pos < 0:
+            raise IndexError()
+
         return self.d[pos]
 
     def delete(self, pos):
@@ -571,10 +563,7 @@ class Editor:
             self.handle_event(ev, h)
 
     def getch(self):
-        try:
-            return self.t.at(self.c)
-        except IndexError:
-            return ''
+        return self.t.at(self.c)
 
     def key_pagedown(self, h):
         for i in range(0, h):
@@ -585,52 +574,55 @@ class Editor:
             self.key_up()
 
     def key_cr(self):
-        self.handle_char('\n')
+        self.key_lf()
 
     def key_lf(self):
         self.handle_char('\n')
 
+    def set_pos(self, c):
+        self.t.at(c)
+        self.c = c
+
     def key_home(self):
-        self.c -= 1
+        self.one_left()
 
-        while self.getch() not in ('', '\n'):
-            self.c -= 1
+        try:
+            while self.getch() != '\n':
+                self.one_left()
 
-        self.c += 1
+            self.one_right()
+        except IndexError:
+            pass
 
     def key_end(self):
-        while self.getch() not in ('', '\n'):
+        while self.getch() != '\n':
             self.one_right()
 
     def key_left(self):
-        self.c -= 1
+        self.one_left()
 
         if self.getch() == ' ':
             while self.getch() == ' ':
-                self.c -= 1
+                self.one_left()
 
-            self.c += 1
-
-        if self.c < 0:
-            self.c = 0
+            self.one_right()
 
     def one_right(self):
-        self.c += 1
+        self.set_pos(self.c + 1)
 
     def one_left(self):
-        if self.c > 0:
-            self.c -= 1
+        self.set_pos(self.c - 1)
 
     def key_right(self):
         if self.getch() == ' ':
             while self.getch() == ' ':
-                self.c += 1
+                self.one_right()
         else:
             self.one_right()
 
     def skip_at_max(self, cnt):
         for i in range(0, cnt):
-            if self.getch() in ('', '\n'):
+            if self.getch() == '\n':
                 break
 
             self.one_right()
@@ -666,13 +658,16 @@ class Editor:
         func = getattr(self, 'key_' + ev.replace('-', '_'), unknown)
 
         try:
-            func()
-        except TypeError:
-            func(h)
+            try:
+                func()
+            except TypeError:
+                func(h)
+        except IndexError:
+            BUS.pub('message', 'index error')
 
     def handle_char(self, ch):
         self.t.insert(self.c, ch)
-        self.c += 1
+        self.one_right()
 
 
 class EditorWidget:
