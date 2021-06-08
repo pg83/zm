@@ -12,11 +12,26 @@ import threading
 import functools
 import contextlib
 
-from collections import deque
+from collections import deque, defaultdict
 from dataclasses import dataclass
 
 import pygments.lexers as pl
 import pygments.styles as ps
+
+
+class PubSub:
+    def __init__(self):
+        self.s = defaultdict(list)
+
+    def sub(self, t, f):
+        self.s[t].append(f)
+
+    def pub(self, t, m):
+        for f in self.s.get(t, []):
+            f(m)
+
+
+BUS = PubSub()
 
 
 def esc(d):
@@ -157,7 +172,7 @@ KMAP = [
 ]
 
 
-def make_scan_table():
+def make_scan_trie():
     res = {}
 
     def substr(k):
@@ -178,7 +193,7 @@ def make_scan_table():
 
 
 class InputStream:
-    TRIE = make_scan_table()
+    TRIE = make_scan_trie()
 
     ASCII = {
         3: 'break',
@@ -224,12 +239,8 @@ class InputStream:
         while True:
             p += chr(self.ch.next())
 
-            if p in self.TRIE:
-                v = self.TRIE[p]
-
-                if v == 'int':
-                    pass
-                else:
+            if v := self.TRIE.get(p):
+                if v != 'int':
                     return v
             else:
                 raise Exception('unknown escape sequence ' + p)
@@ -295,11 +306,11 @@ def white():
     return Color4(15)
 
 
-@dataclass
-class Point:
-    c: str
-    b: object
-    f: object
+class Attrs:
+    def __init__(self, c=None, b=None, f=None):
+        self.c = c
+        self.b = b
+        self.f = f
 
     def fmt(self):
         return self.b.bg() + self.f.fg() + self.c
@@ -309,15 +320,19 @@ class Point:
 
         return self
 
-    def set_fg(self, c):
-        self.f = c
+    def set_fg(self, f):
+        self.f = f
 
         return self
 
-    def set_bg(self, c):
-        self.b = c
+    def set_bg(self, b):
+        self.b = b
 
         return self
+
+
+def combine_attrs(a1, a2):
+    return Attrs(c=a2.c or a1.c, b=a2.b or a1.b, f=a2.f or a1.f)
 
 
 class Async:
@@ -363,19 +378,29 @@ class Display:
 
         self.dx = dx
         self.dy = dy
-        self.d = ['' for i in range(dx * dy)]
+        self.dd = {}
 
     def flip(self, pixels):
         d = ''
+        dd = self.dd
         byp = {}
+        dx = self.dx
+        dy = self.dy
 
         for x, y, n in pixels:
-            if x >= 0 and x < self.dx and y >= 0 and y < self.dy:
-                byp[x + y * self.dx] = (x, y, n.fmt())
+            if x >= 0 and x < dx and y >= 0 and y < dy:
+                p = x + y * dx
 
-        for p, (x, y, f) in sorted(byp.items(), key=lambda x: x[0]):
-            if f != self.d[p]:
-                self.d[p] = f
+                if pp := byp.get(p):
+                    byp[p] = (x, y, combine_attrs(pp[2], n))
+                else:
+                    byp[p] = (x, y, n)
+
+        for p, (x, y, n) in sorted(byp.items(), key=lambda x: x[0]):
+            f = n.fmt()
+
+            if f != dd.get(p):
+                dd[p] = f
 
                 d += move(x, y)
                 d += f
@@ -546,7 +571,12 @@ class Editor:
             self.skip_ws_left()
 
     def key_right(self):
-        if self.getch() == ' ':
+        ch = self.getch()
+
+        if ch == '':
+            self.key_down()
+            self.key_home()
+        elif ch == ' ':
             self.skip_ws_right()
         else:
             self.x += 1
@@ -562,7 +592,9 @@ class Editor:
         self.key_del()
 
     def key_del(self):
-        self.l[self.y] = self.l[self.y][:self.x] + self.l[self.y][self.x + 1:]
+        l = self.l[self.y]
+
+        self.l[self.y] = l[:self.x] + l[self.x + 1:]
 
     def handle_event(self, ev, h):
         if ev == 'left':
@@ -589,20 +621,15 @@ class Editor:
         self.cur_just()
 
     def cur_just(self):
-        if self.y >= len(self.l):
-            self.y = len(self.l) - 1
-
-        if self.y < 0:
-            self.y = 0
-
-        if self.x > len(self.l[self.y]):
-            self.x = len(self.l[self.y])
-
-        if self.x < 0:
-            self.x = 0
+        self.y = min(self.y, len(self.l) - 1)
+        self.y = max(self.y, 0)
+        self.x = min(self.x, len(self.l[self.y]))
+        self.x = max(self.x, 0)
 
     def handle_char(self, ch):
-        self.l[self.y] = self.l[self.y][:self.x] + ch + self.l[self.y][self.x:]
+        l = self.l[self.y]
+
+        self.l[self.y] = l[:self.x] + ch + l[self.x:]
         self.x += 1
 
 
@@ -613,6 +640,7 @@ class EditorWidget:
         self.y = 0
         self.w = w
         self.h = h
+        self.adjust()
 
     def pixels(self):
         bx = self.x
@@ -621,13 +649,10 @@ class EditorWidget:
         ex = bx + self.w
         ey = by + self.h
 
-        bc = black()
-        wc = white()
-
         for x, y, c, col in self.e.render(bx, by, ex, ey):
-            yield x - bx, y - by, Point(c, bc, col)
+            yield x - bx, y - by, Attrs(c=c, f=col)
 
-        yield self.cx, self.cy, Point(' ', wc, wc)
+        yield self.cx, self.cy, Attrs(c=' ', b=white(), f=white())
 
     @property
     def cx(self):
@@ -647,7 +672,9 @@ class EditorWidget:
 
     def dispatch(self, ev):
         self.e.dispatch(ev, self.h)
+        self.adjust()
 
+    def adjust(self):
         while self.cx < 0:
             self.x -= self.hw
 
@@ -681,11 +708,8 @@ class Rect:
             yield self.w - 1, y, 0x2551
 
     def pixels(self):
-        b = black()
-        w = white()
-
         for x, y, c in self.chars():
-            yield x, y, Point(chr(c), b, w)
+            yield x, y, Attrs(c=chr(c))
 
 
 @contextlib.contextmanager
@@ -705,7 +729,7 @@ def main():
         while True:
             c = Composer(ch)
 
-            c.add_widget(Panel(c.d.dx - 2, c.d.dy - 2, Point(' ', black(), black()))).move(1, 1)
+            c.add_widget(Panel(c.d.dx, c.d.dy, Attrs(c=' ', b=black(), f=white())))
             c.add_widget(Rect(c.d.dx, c.d.dy))
             c.add_widget(EditorWidget(c.d.dx - 2, c.d.dy - 2, ed)).move(1, 1)
 
