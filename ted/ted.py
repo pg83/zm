@@ -192,15 +192,20 @@ def make_scan_trie():
     return res
 
 
+def make_ctrl_tables():
+    return [(n + 1, 'ctrl-' + chr(ch)) for n, ch in enumerate(range(ord('a'), ord('z')))]
+
+
 class InputStream:
     TRIE = make_scan_trie()
 
-    ASCII = {
-        3: 'break',
-        127: 'bs',
-        10: 'lf',
-        13: 'cr',
-    }
+    ASCII = dict(make_ctrl_tables() + [
+        (0, 'ctrl-@'),
+        (9, 'tab'),
+        (10, 'lf'),
+        (13, 'cr'),
+        (127, 'bs'),
+    ])
 
     def __init__(self, ch):
         self.ch = ch
@@ -306,29 +311,14 @@ def white():
     return Color4(15)
 
 
+@dataclass
 class Attrs:
-    def __init__(self, c=None, b=None, f=None):
-        self.c = c
-        self.b = b
-        self.f = f
+    c: str = None
+    b: object = None
+    f: object = None
 
     def fmt(self):
         return self.b.bg() + self.f.fg() + self.c
-
-    def set_char(self, c):
-        self.c = c
-
-        return self
-
-    def set_fg(self, f):
-        self.f = f
-
-        return self
-
-    def set_bg(self, b):
-        self.b = b
-
-        return self
 
 
 def combine_attrs(a1, a2):
@@ -383,7 +373,7 @@ class Display:
     def flip(self, pixels):
         d = ''
         dd = self.dd
-        byp = {}
+        bp = {}
         dx = self.dx
         dy = self.dy
 
@@ -391,12 +381,12 @@ class Display:
             if x >= 0 and x < dx and y >= 0 and y < dy:
                 p = x + y * dx
 
-                if pp := byp.get(p):
-                    byp[p] = (x, y, combine_attrs(pp[2], n))
+                if pp := bp.get(p):
+                    bp[p] = (x, y, combine_attrs(pp[2], n))
                 else:
-                    byp[p] = (x, y, n)
+                    bp[p] = (x, y, n)
 
-        for p, (x, y, n) in sorted(byp.items(), key=lambda x: x[0]):
+        for p, (x, y, n) in sorted(bp.items(), key=lambda x: x[0]):
             f = n.fmt()
 
             if f != dd.get(p):
@@ -467,7 +457,7 @@ class Composer:
 
             c = self.i.next()
 
-            if c == 'break':
+            if c == 'ctrl-c':
                 raise KeyboardInterrupt()
 
             self.s[self.o[-1]].dispatch(c)
@@ -509,17 +499,61 @@ class HighLight:
                 assert len(l) == len(self.lns[l])
 
 
+class TextArray:
+    def __init__(self, d):
+        self.d = d
+
+    def at(self, pos):
+        return self.d[pos]
+
+    def delete(self, pos):
+        self.d = self.d[:pos] + self.d[pos + 1:]
+
+    def insert(self, pos, c):
+        self.d = self.d[:pos] + c + self.d[pos:]
+
+    def x(self, pos):
+        return self.xy(pos)[0]
+
+    def y(self, pos):
+        return self.xy(pos)[1]
+
+    def xy(self, pos):
+        x = 0
+        y = 0
+
+        for c in self.d[:pos]:
+            if c == '\n':
+                x = 0
+                y += 1
+            else:
+                x += 1
+
+        return x, y
+
+    def lines(self):
+        return self.d.split('\n')
+
+
 class Editor:
     def __init__(self, p):
-        d = open(p).read()
+        with open(p) as f:
+            d = f.read()
 
-        self.h = HighLight(p, d)
-        self.l = d.split('\n')
-        self.x = 0
-        self.y = 0
+        self.h = HighLight(p, d[:10000])
+        self.t = TextArray(d)
+        self.c = 0
+
+    @property
+    def x(self):
+        return self.t.x(self.c)
+
+    @property
+    def y(self):
+        return self.t.y(self.c)
 
     def render(self, x1, y1, x2, y2):
-        sl = self.l
+        sl = self.t.lines()
 
         for y in range(y1, min(y2, len(sl))):
             l = self.h.style_line(sl[y])
@@ -538,99 +572,107 @@ class Editor:
 
     def getch(self):
         try:
-            return self.l[self.y][self.x]
+            return self.t.at(self.c)
         except IndexError:
             return ''
 
-    def skip_ws_right(self):
-        while self.getch() == ' ':
-            self.x += 1
+    def key_pagedown(self, h):
+        for i in range(0, h):
+            self.key_down()
 
-    def skip_ws_left(self):
-        if self.getch() == ' ':
-            while self.getch() == ' ':
-                self.x -= 1
+    def key_pageup(self, h):
+        for i in range(0, h):
+            self.key_up()
 
-            self.x += 1
+    def key_cr(self):
+        self.handle_char('\n')
+
+    def key_lf(self):
+        self.handle_char('\n')
 
     def key_home(self):
-        self.x = 0
+        self.c -= 1
+
+        while self.getch() not in ('', '\n'):
+            self.c -= 1
+
+        self.c += 1
 
     def key_end(self):
-        self.x = len(self.l[self.y])
+        while self.getch() not in ('', '\n'):
+            self.one_right()
 
     def key_left(self):
-        if self.x == 0:
-            if self.y == 0:
-                pass
-            else:
-                self.key_up()
-                self.key_end()
-        else:
-            self.x -= 1
-            self.skip_ws_left()
+        self.c -= 1
+
+        if self.getch() == ' ':
+            while self.getch() == ' ':
+                self.c -= 1
+
+            self.c += 1
+
+        if self.c < 0:
+            self.c = 0
+
+    def one_right(self):
+        self.c += 1
+
+    def one_left(self):
+        if self.c > 0:
+            self.c -= 1
 
     def key_right(self):
-        ch = self.getch()
-
-        if ch == '':
-            self.key_down()
-            self.key_home()
-        elif ch == ' ':
-            self.skip_ws_right()
+        if self.getch() == ' ':
+            while self.getch() == ' ':
+                self.c += 1
         else:
-            self.x += 1
+            self.one_right()
+
+    def skip_at_max(self, cnt):
+        for i in range(0, cnt):
+            if self.getch() in ('', '\n'):
+                break
+
+            self.one_right()
 
     def key_up(self):
-        self.y -= 1
+        x = self.x
+
+        self.key_home()
+        self.one_left()
+        self.key_home()
+        self.skip_at_max(x)
 
     def key_down(self):
-        self.y += 1
+        x = self.x
+
+        self.key_end()
+        self.one_right()
+        self.skip_at_max(x)
 
     def key_bs(self):
-        self.key_left()
-        self.key_del()
+        self.one_left()
+        self.key_delete()
 
-    def key_del(self):
-        l = self.l[self.y]
-
-        self.l[self.y] = l[:self.x] + l[self.x + 1:]
+    def key_delete(self):
+        self.t.delete(self.c)
 
     def handle_event(self, ev, h):
-        if ev == 'left':
-            self.key_left()
-        elif ev == 'right':
-            self.key_right()
-        elif ev == 'up':
-            self.key_up()
-        elif ev == 'down':
-            self.key_down()
-        elif ev == 'pageup':
-            self.y -= h
-        elif ev == 'pagedown':
-            self.y += h
-        elif ev == 'home':
-            self.key_home()
-        elif ev == 'end':
-            self.key_end()
-        elif ev == 'bs':
-            self.key_bs()
-        elif ev == 'del':
-            self.key_del()
+        BUS.pub('message', ev)
 
-        self.cur_just()
+        def unknown():
+            BUS.pub('message', 'unknown: ' + ev)
 
-    def cur_just(self):
-        self.y = min(self.y, len(self.l) - 1)
-        self.y = max(self.y, 0)
-        self.x = min(self.x, len(self.l[self.y]))
-        self.x = max(self.x, 0)
+        func = getattr(self, 'key_' + ev.replace('-', '_'), unknown)
+
+        try:
+            func()
+        except TypeError:
+            func(h)
 
     def handle_char(self, ch):
-        l = self.l[self.y]
-
-        self.l[self.y] = l[:self.x] + ch + l[self.x:]
-        self.x += 1
+        self.t.insert(self.c, ch)
+        self.c += 1
 
 
 class EditorWidget:
@@ -652,7 +694,7 @@ class EditorWidget:
         for x, y, c, col in self.e.render(bx, by, ex, ey):
             yield x - bx, y - by, Attrs(c=c, f=col)
 
-        yield self.cx, self.cy, Attrs(b=white(), f=white())
+        yield self.cx, self.cy, Attrs(b=white())
 
     @property
     def cx(self):
@@ -662,30 +704,22 @@ class EditorWidget:
     def cy(self):
         return self.e.y - self.y
 
-    @property
-    def hw(self):
-        return self.w // 2
-
-    @property
-    def hh(self):
-        return self.h // 2
-
     def dispatch(self, ev):
         self.e.dispatch(ev, self.h)
         self.adjust()
 
     def adjust(self):
         while self.cx < 0:
-            self.x -= self.hw
+            self.x -= self.w // 2
 
         while self.cy < 0:
-            self.y -= self.hh
+            self.y -= self.h // 2
 
         while self.cx >= self.w:
-            self.x += self.hw
+            self.x += self.w // 2
 
         while self.cy >= self.h:
-            self.y += self.hh
+            self.y += self.h // 2
 
 
 class Rect:
@@ -722,6 +756,15 @@ def channel():
         ch.fini()
 
 
+class Label:
+    def __init__(self):
+        self.t = ''
+
+    def pixels(self):
+        for x, c in enumerate(self.t):
+            yield x, 0, Attrs(c=c)
+
+
 def main():
     ed = Editor(sys.argv[1])
 
@@ -729,9 +772,20 @@ def main():
         while True:
             c = Composer(ch)
 
-            c.add_widget(Panel(c.d.dx, c.d.dy, Attrs(c=' ', b=black(), f=white())))
-            c.add_widget(Rect(c.d.dx, c.d.dy))
-            c.add_widget(EditorWidget(c.d.dx - 2, c.d.dy - 2, ed)).move(1, 1)
+            w = c.d.dx
+            h = c.d.dy
+
+            c.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
+            c.add_widget(Rect(w, h))
+
+            l = c.add_widget(Label()).move(1, 0).w
+
+            def on_message(m):
+                l.t = m
+
+            BUS.sub('message', on_message)
+
+            c.add_widget(EditorWidget(w - 2, h - 2, ed)).move(1, 1)
 
             try:
                 return c.loop()
