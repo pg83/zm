@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import io
 import os
 import sys
@@ -12,16 +14,23 @@ import threading
 import functools
 import contextlib
 
-from collections import deque, defaultdict, namedtuple
-from dataclasses import dataclass
+from collections import deque, defaultdict
 
+import pygments.util as pu
 import pygments.lexers as pl
 import pygments.styles as ps
 
 
+if 'graal' in os.path.basename(sys.executable):
+    CHRT = dict((x, chr(x)) for x in range(0, 10000))
+
+    def chr(c):
+        return CHRT[c]
+
+
 class PubSub:
     def __init__(self):
-        self.s = defaultdict(list)
+        self.clear()
 
     def sub(self, t, f):
         self.s[t].append(f)
@@ -29,6 +38,9 @@ class PubSub:
     def pub(self, t, m):
         for f in self.s.get(t, []):
             f(m)
+
+    def clear(self):
+        self.s = defaultdict(list)
 
 
 BUS = PubSub()
@@ -69,13 +81,16 @@ class Channel:
         self.i = io.FileIO(0, 'r')
         self.o = io.FileIO(1, 'w')
         self.q = queue.SimpleQueue()
-        tty.setraw(self.i)
+
+        #tty.setraw(self.i)
+        os.system('stty raw')
         self.send(csi('?25l'))
         threading.Thread(target=self.runq, daemon=True).start()
         signal.signal(signal.SIGWINCH, self.sigwinch)
 
     def fini(self):
-        os.system('reset')
+        os.system('tput reset')
+        os.system('stty -raw')
 
     def sigwinch(self, *args):
         def err():
@@ -193,14 +208,14 @@ def make_scan_trie():
 
 
 def make_ctrl_tables():
-    return [(n + 1, 'ctrl-' + chr(ch)) for n, ch in enumerate(range(ord('a'), ord('z')))]
+    return [(n + 1, f'ctrl-{chr(ch)}') for n, ch in enumerate(range(ord('a'), ord('z')))]
 
 
 class InputStream:
     TRIE = make_scan_trie()
 
     ASCII = dict(make_ctrl_tables() + [
-        (0, 'ctrl-@'),
+        (0, 'ctrl-space'),
         (9, 'tab'),
         (10, 'lf'),
         (13, 'cr'),
@@ -217,13 +232,15 @@ class InputStream:
             if key == 27:
                 return self.scan_escape()
 
-            if val := self.ASCII.get(key):
+            val = self.ASCII.get(key)
+
+            if val:
                 return val
 
             if key >= 32:
                 return chr(key)
 
-            raise Exception('bad key ' + str(key))
+            raise Exception(f'bad key {key}')
 
         return self.scan_utf8(key)
 
@@ -244,22 +261,34 @@ class InputStream:
         while True:
             p += chr(self.ch.next())
 
-            if v := self.TRIE.get(p):
+            v = self.TRIE.get(p)
+
+            if v:
                 if v != 'int':
                     return v
             else:
-                raise Exception('unknown escape sequence ' + p)
+                raise Exception(f'unknown escape sequence {p}')
 
 
-class Color24(namedtuple('Color24Base', ['r', 'g', 'b'])):
+class Color24:
+    __slots__ = 't'
+
+    def __init__(self, r, g, b):
+        self.t = (r, g, b)
+
     def bg(self):
-        return csi(48, 2, self.r, self.g, self.b) + 'm'
+        return csi(48, 2, *self.t) + 'm'
 
     def fg(self):
-        return csi(38, 2, self.r, self.g, self.b) + 'm'
+        return csi(38, 2, *self.t) + 'm'
 
 
-class Color8(namedtuple('Color8Base', ['n'])):
+class Color8:
+    __slots__ = 'n'
+
+    def __init__(self, n):
+        self.n = n
+
     def bg(self):
         return csi(48, 5, self.n) + 'm'
 
@@ -284,7 +313,12 @@ def fg4(n):
 TBL4 = [(bg4(x), fg4(x)) for x in range(0, 16)]
 
 
-class Color4(namedtuple('Color4Base', ['n'])):
+class Color4:
+    __slots__ = 'n'
+
+    def __init__(self, n):
+        self.n = n
+
     def bg(self):
         return TBL4[self.n][0]
 
@@ -300,27 +334,32 @@ def white():
     return Color4(15)
 
 
-@dataclass
 class Attrs:
-    c: str = None
-    b: object = None
-    f: object = None
+    __slots__ = 't'
+
+    def __init__(self, c=None, b=None, f=None):
+        self.t = (c, b, f)
 
     def fmt(self):
-        return self.b.bg() + self.f.fg() + self.c
+        c, b, f = self.t
+
+        return b.bg() + f.fg() + c
 
 
 def combine_attrs(a1, a2):
-    return Attrs(c=a2.c or a1.c, b=a2.b or a1.b, f=a2.f or a1.f)
+    c1, b1, f1 = a1.t
+    c2, b2, f2 = a2.t
+
+    return Attrs(c=c2 or c1, b=b2 or b1, f=f2 or f1)
 
 
 class Async:
     def __init__(self):
         self.q = queue.SimpleQueue()
 
-        threading.Thread(target=self.deq, daemon=True).start()
+        threading.Thread(target=self.runq, daemon=True).start()
 
-    def deq(self):
+    def runq(self):
         while True:
             self.q.get()()
 
@@ -360,7 +399,7 @@ class Display:
         self.dd = {}
 
     def flip(self, pixels):
-        d = ''
+        ds = ''
         dd = self.dd
         bp = {}
         dx = self.dx
@@ -368,23 +407,25 @@ class Display:
 
         for x, y, n in pixels:
             if x >= 0 and x < dx and y >= 0 and y < dy:
-                p = x + y * dx
+                k = (y, x)
 
-                if pp := bp.get(p):
-                    bp[p] = (x, y, combine_attrs(pp[2], n))
+                v = bp.get(k)
+
+                if v:
+                    bp[k] = combine_attrs(v, n)
                 else:
-                    bp[p] = (x, y, n)
+                    bp[k] = n
 
-        for p, (x, y, n) in sorted(bp.items(), key=lambda x: x[0]):
-            f = n.fmt()
+        for k in sorted(bp.keys()):
+            f = bp[k].fmt()
 
-            if f != dd.get(p):
-                dd[p] = f
+            if f != dd.get(k):
+                dd[k] = f
 
-                d += move(x, y)
-                d += f
+                ds += move(k[1], k[0])
+                ds += f
 
-        schedule(lambda: self.ch.send(d))
+        schedule(lambda: self.ch.send(ds))
 
 
 class Panel:
@@ -404,8 +445,8 @@ class Panel:
 
 class Handle:
     def __init__(self, w):
-        self.move(0, 0)
         self.w = w
+        self.move(0, 0)
 
     def pixels(self):
         for x, y, c in self.w.pixels():
@@ -453,15 +494,24 @@ class Composer:
 
 
 def parse_color(s):
-    if c := s.get('color'):
+    c = s.get('color')
+
+    if c:
         return Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16))
 
     return white()
 
 
+def guess_lexer(p, d):
+    try:
+        return pl.guess_lexer_for_filename(p, d)
+    except pu.ClassNotFound:
+        return pl.guess_lexer(d)
+
+
 class HighLight:
     def __init__(self, p, d):
-        self.lex = pl.guess_lexer_for_filename(os.path.basename(p), d)
+        self.lex = guess_lexer(p, d[:10000])
         self.stl = ps.get_style_by_name('material')
         self.lns = {}
 
@@ -483,9 +533,12 @@ class HighLight:
             try:
                 return self.lns[l]
             except KeyError:
-                self.lns[l] = list(self.style_line_impl(l))
+                r = list(self.style_line_impl(l))
 
-                assert len(l) == len(self.lns[l])
+                if len(l) != len(r):
+                    r = [(x, white()) for x in l]
+
+                self.lns[l] = r
 
 
 class TextArray:
@@ -504,24 +557,8 @@ class TextArray:
     def insert(self, pos, c):
         self.d = self.d[:pos] + c + self.d[pos:]
 
-    def x(self, pos):
-        return self.xy(pos)[0]
-
     def y(self, pos):
-        return self.xy(pos)[1]
-
-    def xy(self, pos):
-        x = 0
-        y = 0
-
-        for c in self.d[:pos]:
-            if c == '\n':
-                x = 0
-                y += 1
-            else:
-                x += 1
-
-        return x, y
+        return self.d[:pos].count('\n')
 
     def lines(self):
         return self.d.split('\n')
@@ -532,13 +569,21 @@ class Editor:
         with open(p) as f:
             d = f.read()
 
-        self.h = HighLight(p, d[:10000])
+        self.h = HighLight(p, d)
         self.t = TextArray(d)
         self.c = 0
 
     @property
     def x(self):
-        return self.t.x(self.c)
+        n = 0
+
+        for c in self.iter_chars_before(self.c):
+            if c == '\n':
+                break
+
+            n += 1
+
+        return n
 
     @property
     def y(self):
@@ -556,14 +601,79 @@ class Editor:
                 if c != ' ':
                     yield x, y, c, col
 
+    def iter_chars_before(self, p):
+        while p > 0:
+            p -= 1
+
+            yield self.t.at(p)
+
+    def iter_lines_before(self, p):
+        s = ''
+
+        for ch in self.iter_chars_before(p):
+            if ch == '\n':
+                yield s
+
+                s = ''
+            else:
+                s = ch + s
+
+        if s:
+            yield s
+
+    def get_line_before_cursor(self, p):
+        for i in self.iter_lines_before(p):
+            if i:
+                return i
+
+        return ''
+
+    def indent(self, l):
+        s = ''
+
+        for c in l:
+            if c == ' ':
+                s += c
+            else:
+                break
+
+        if l and l[-1] in (':', '{', '['):
+            s += '    '
+
+        return s
+
+    def cur_indent(self):
+        return self.indent(self.get_line_before_cursor(self.c))
+
+    def run_indent(self):
+        indent = self.cur_indent()
+
+        BUS.pub('message', f'indent: {indent}')
+
+        for ch in indent:
+            self.handle_char(ch)
+
+    def getch(self):
+        return self.t.at(self.c)
+
+    def space(self):
+        return self.getch() == ' '
+
+    def set_pos(self, c):
+        self.t.at(c)
+        self.c = c
+
+    def one_right(self):
+        self.set_pos(self.c + 1)
+
+    def one_left(self):
+        self.set_pos(self.c - 1)
+
     def dispatch(self, ev, h):
         if len(ev) == 1:
             self.handle_char(ev)
         else:
             self.handle_event(ev, h)
-
-    def getch(self):
-        return self.t.at(self.c)
 
     def key_pagedown(self, h):
         for i in range(0, h):
@@ -578,10 +688,7 @@ class Editor:
 
     def key_lf(self):
         self.handle_char('\n')
-
-    def set_pos(self, c):
-        self.t.at(c)
-        self.c = c
+        self.run_indent()
 
     def key_home(self):
         self.one_left()
@@ -601,21 +708,15 @@ class Editor:
     def key_left(self):
         self.one_left()
 
-        if self.getch() == ' ':
-            while self.getch() == ' ':
+        if self.space():
+            while self.space():
                 self.one_left()
 
             self.one_right()
 
-    def one_right(self):
-        self.set_pos(self.c + 1)
-
-    def one_left(self):
-        self.set_pos(self.c - 1)
-
     def key_right(self):
-        if self.getch() == ' ':
-            while self.getch() == ' ':
+        if self.space():
+            while self.space():
                 self.one_right()
         else:
             self.one_right()
@@ -644,7 +745,15 @@ class Editor:
 
     def key_bs(self):
         self.one_left()
-        self.key_delete()
+
+        if self.space():
+            while self.space():
+                self.key_delete()
+                self.one_left()
+
+            self.one_right()
+        else:
+            self.key_delete()
 
     def key_delete(self):
         self.t.delete(self.c)
@@ -653,7 +762,7 @@ class Editor:
         BUS.pub('message', ev)
 
         def unknown():
-            BUS.pub('message', 'unknown: ' + ev)
+            BUS.pub('message', f'do not know to do: {ev}')
 
         func = getattr(self, 'key_' + ev.replace('-', '_'), unknown)
 
@@ -689,7 +798,7 @@ class EditorWidget:
         for x, y, c, col in self.e.render(bx, by, ex, ey):
             yield x - bx, y - by, Attrs(c=c, f=col)
 
-        yield self.cx, self.cy, Attrs(b=white())
+        yield self.cx, self.cy, Attrs(f=black(), b=white())
 
     @property
     def cx(self):
@@ -765,6 +874,8 @@ def main():
 
     with channel() as ch:
         while True:
+            BUS.clear()
+
             c = Composer(ch)
 
             w = c.d.dx
@@ -773,13 +884,14 @@ def main():
             c.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
             c.add_widget(Rect(w, h))
 
-            l = c.add_widget(Label()).move(1, 0).w
+            l = Label()
 
             def on_message(m):
                 l.t = m
 
             BUS.sub('message', on_message)
 
+            c.add_widget(l).move(1, 0)
             c.add_widget(EditorWidget(w - 2, h - 2, ed)).move(1, 1)
 
             try:
