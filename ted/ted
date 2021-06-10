@@ -10,6 +10,8 @@ import queue
 import atexit
 import signal
 import cProfile
+import fractions
+import itertools
 import threading
 import functools
 import contextlib
@@ -44,6 +46,18 @@ class PubSub:
 
 
 BUS = PubSub()
+
+
+def sub(t, f):
+    BUS.sub(t, f)
+
+
+def pub(t, m):
+    BUS.pub(t, m)
+
+
+def message(m):
+    pub('message', m)
 
 
 def esc(d):
@@ -81,6 +95,7 @@ class Channel:
         self.i = io.FileIO(0, 'r')
         self.o = io.FileIO(1, 'w')
         self.q = queue.SimpleQueue()
+        self.l = threading.Lock()
 
         #tty.setraw(self.i)
         os.system('stty raw')
@@ -94,6 +109,9 @@ class Channel:
 
     def sigwinch(self, *args):
         def err():
+            if self.l.locked():
+                return self.q.get()()
+
             raise SigWinch()
 
         self.q.put(err)
@@ -101,7 +119,7 @@ class Channel:
     def runq(self):
         try:
             while True:
-                self.q.put(retval(ord(self.i.read(1))))
+                self.q.put(retval(self.i.read(1)))
         except Exception as e:
             def err():
                 raise e
@@ -112,7 +130,7 @@ class Channel:
         self.o.write(cmd.encode())
 
     def recv(self):
-        return self.q.get()()
+        return ord(self.q.get()())
 
     def next(self):
         try:
@@ -146,11 +164,30 @@ class Channel:
         return ''.join(chr(x) for x in self.read_seq(ord(ch)))
 
     def dims(self):
-        self.send(move(10000, 10000) + csi('6n'))
+        with self.l:
+            return self.dims_nointr()
 
-        y, x = self.resp('R').split(';')
+    def dims_nointr(self):
+        n = 16
 
-        return int(x), int(y)
+        while True:
+            x, y = self.try_dims(n)
+
+            if x < n and y < n:
+                return x, y
+
+            n *= 2
+
+    def try_dims(self, n):
+        while True:
+            self.send(move(n, n) + csi('6n'))
+
+            y, x = self.resp('R').split(';')
+
+            try:
+                return int(x), int(y)
+            except ValueError:
+                pass
 
 
 KMAP = [
@@ -184,6 +221,7 @@ KMAP = [
     ('[21~', 'f10'),
     ('[23~', 'f11'),
     ('[24~', 'f12'),
+    ('[33~', 'f19'),
 ]
 
 
@@ -214,13 +252,15 @@ def make_ctrl_tables():
 class InputStream:
     TRIE = make_scan_trie()
 
-    ASCII = dict(make_ctrl_tables() + [
-        (0, 'ctrl-space'),
-        (9, 'tab'),
-        (10, 'lf'),
-        (13, 'cr'),
-        (127, 'bs'),
-    ])
+    ASCII = dict(
+        make_ctrl_tables() + [
+            (0, 'ctrl-space'),
+            (9, 'tab'),
+            (10, 'lf'),
+            (13, 'cr'),
+            (127, 'bs'),
+        ]
+    )
 
     def __init__(self, ch):
         self.ch = ch
@@ -283,6 +323,17 @@ class Color24:
         return csi(38, 2, *self.t) + 'm'
 
 
+def bg8(n):
+    return csi(48, 5, n) + 'm'
+
+
+def fg8(n):
+    return csi(38, 5, n) + 'm'
+
+
+TBL8 = [(bg8(n), fg8(n)) for n in range(0, 256)]
+
+
 class Color8:
     __slots__ = 'n'
 
@@ -290,10 +341,10 @@ class Color8:
         self.n = n
 
     def bg(self):
-        return csi(48, 5, self.n) + 'm'
+        return TBL8[self.n][0]
 
     def fg(self):
-        return csi(38, 5, self.n) + 'm'
+        return TBL8[self.n][1]
 
 
 def bg4(n):
@@ -332,6 +383,10 @@ def black():
 
 def white():
     return Color4(15)
+
+
+def gray(n):
+    return Color8(232 + n)
 
 
 class Attrs:
@@ -408,7 +463,6 @@ class Display:
         for x, y, n in pixels:
             if x >= 0 and x < dx and y >= 0 and y < dy:
                 k = (y, x)
-
                 v = bp.get(k)
 
                 if v:
@@ -544,6 +598,10 @@ class HighLight:
 class TextArray:
     def __init__(self, d):
         self.d = d
+        self.split()
+
+    def split(self):
+        self.l = self.d.split('\n')
 
     def at(self, pos):
         if pos < 0:
@@ -553,15 +611,58 @@ class TextArray:
 
     def delete(self, pos):
         self.d = self.d[:pos] + self.d[pos + 1:]
+        self.split()
 
     def insert(self, pos, c):
         self.d = self.d[:pos] + c + self.d[pos:]
+        self.split()
 
     def y(self, pos):
         return self.d[:pos].count('\n')
 
-    def lines(self):
-        return self.d.split('\n')
+    def lines(self, fr, to):
+        try:
+            for i in range(fr, to):
+                yield i, self.l[i]
+        except IndexError:
+            pass
+
+
+class TextCache:
+    def __init__(self, t):
+        self.t = t
+        self.clear()
+
+    def clear(self):
+        self.c = {}
+
+    def at(self, pos):
+        return self.t.at(pos)
+
+    def insert(self, pos, ch):
+        self.clear()
+        self.t.insert(pos, ch)
+
+    def delete(self, pos):
+        self.clear()
+        self.t.delete(pos)
+
+    def y(self, pos):
+        cp = pos - pos % 256
+
+        if cp not in self.c:
+            self.c[cp] = self.t.y(cp)
+
+        res = self.c[cp]
+
+        for c in range(cp, pos):
+            if self.at(c) == '\n':
+                res += 1
+
+        return res
+
+    def lines(self, fr, to):
+        return self.t.lines(fr, to)
 
 
 class Editor:
@@ -570,7 +671,7 @@ class Editor:
             d = f.read()
 
         self.h = HighLight(p, d)
-        self.t = TextArray(d)
+        self.t = TextCache(TextArray(d))
         self.c = 0
 
     @property
@@ -590,10 +691,8 @@ class Editor:
         return self.t.y(self.c)
 
     def render(self, x1, y1, x2, y2):
-        sl = self.t.lines()
-
-        for y in range(y1, min(y2, len(sl))):
-            l = self.h.style_line(sl[y])
+        for y, s in self.t.lines(y1, y2):
+            l = self.h.style_line(s)
 
             for x in range(x1, min(x2, len(l))):
                 c, col = l[x]
@@ -621,14 +720,14 @@ class Editor:
         if s:
             yield s
 
-    def get_line_before_cursor(self, p):
-        for i in self.iter_lines_before(p):
-            if i:
+    def get_indent_base_line(self, p):
+        for i in itertools.islice(self.iter_lines_before(p), 1, None):
+            if i.strip():
                 return i
 
         return ''
 
-    def indent(self, l):
+    def calc_indent_for(self, l):
         s = ''
 
         for c in l:
@@ -637,21 +736,28 @@ class Editor:
             else:
                 break
 
-        if l and l[-1] in (':', '{', '['):
+        if l and l[-1] in (':', '{', '[', '('):
             s += '    '
+        elif l.strip().split(' ')[0] in ('return', 'break', 'continue', 'raise', 'throw', 'pass'):
+            s = s[4:]
 
         return s
 
-    def cur_indent(self):
-        return self.indent(self.get_line_before_cursor(self.c))
+    def calc_indent(self):
+        return self.calc_indent_for(self.get_indent_base_line(self.c))
 
-    def run_indent(self):
-        indent = self.cur_indent()
+    def ins_indent(self):
+        indent = self.calc_indent()
 
-        BUS.pub('message', f'indent: {indent}')
+        message(f'indent: {indent}')
 
         for ch in indent:
             self.handle_char(ch)
+
+    def run_indent(self):
+        self.key_home()
+        self.del_space()
+        self.ins_indent()
 
     def getch(self):
         return self.t.at(self.c)
@@ -669,11 +775,18 @@ class Editor:
     def one_left(self):
         self.set_pos(self.c - 1)
 
+    def del_space(self):
+        while self.space():
+            self.key_delete()
+
     def dispatch(self, ev, h):
         if len(ev) == 1:
             self.handle_char(ev)
         else:
             self.handle_event(ev, h)
+
+    def key_tab(self):
+        self.run_indent()
 
     def key_pagedown(self, h):
         for i in range(0, h):
@@ -691,9 +804,9 @@ class Editor:
         self.run_indent()
 
     def key_home(self):
-        self.one_left()
-
         try:
+            self.one_left()
+
             while self.getch() != '\n':
                 self.one_left()
 
@@ -759,10 +872,10 @@ class Editor:
         self.t.delete(self.c)
 
     def handle_event(self, ev, h):
-        BUS.pub('message', ev)
+        message(ev)
 
         def unknown():
-            BUS.pub('message', f'do not know to do: {ev}')
+            message(f'do not know to do: {ev}')
 
         func = getattr(self, 'key_' + ev.replace('-', '_'), unknown)
 
@@ -772,7 +885,7 @@ class Editor:
             except TypeError:
                 func(h)
         except IndexError:
-            BUS.pub('message', 'index error')
+            message('index error')
 
     def handle_char(self, ch):
         self.t.insert(self.c, ch)
@@ -782,48 +895,65 @@ class Editor:
 class EditorWidget:
     def __init__(self, w, h, e):
         self.e = e
-        self.x = 0
-        self.y = 0
+        self.x = fractions.Fraction(0)
+        self.y = fractions.Fraction(0)
         self.w = w
         self.h = h
         self.adjust()
 
     def pixels(self):
-        bx = self.x
-        by = self.y
+        bx = int(self.x)
+        by = int(self.y)
 
-        ex = bx + self.w
-        ey = by + self.h
-
-        for x, y, c, col in self.e.render(bx, by, ex, ey):
+        for x, y, c, col in self.e.render(bx, by, bx + self.w, by + self.h):
             yield x - bx, y - by, Attrs(c=c, f=col)
 
         yield self.cx, self.cy, Attrs(f=black(), b=white())
 
     @property
     def cx(self):
-        return self.e.x - self.x
+        return self.e.x - int(self.x)
 
     @property
     def cy(self):
-        return self.e.y - self.y
+        return self.e.y - int(self.y)
+
+    def set_width(self, w):
+        self.w = w
+        self.adjust()
 
     def dispatch(self, ev):
         self.e.dispatch(ev, self.h)
         self.adjust()
 
     def adjust(self):
+        oy = self.y
+
+        hw = fractions.Fraction(self.w, 2)
+        hh = fractions.Fraction(self.h, 2)
+
         while self.cx < 0:
-            self.x -= self.w // 2
+            self.x -= hw
 
         while self.cy < 0:
-            self.y -= self.h // 2
+            self.y -= hh
 
         while self.cx >= self.w:
-            self.x += self.w // 2
+            self.x += hw
 
         while self.cy >= self.h:
-            self.y += self.h // 2
+            self.y += hh
+
+        if oy != self.y:
+            self.pub_lineno()
+
+        pub('cursor', {
+            'x': self.cx,
+            'y': self.cy,
+        })
+
+    def pub_lineno(self):
+        pub('lineno', int(self.y))
 
 
 class Rect:
@@ -869,35 +999,107 @@ class Label:
             yield x, 0, Attrs(c=c)
 
 
+class VLine:
+    def __init__(self, h):
+        self.h = h
+
+    def pixels(self):
+        yield 0, 0, Attrs(c=chr(0x252C))
+        yield 0, self.h - 1, Attrs(c=chr(0x2534))
+
+        a = Attrs(c=chr(0x2502))
+
+        for y in range(1, self.h - 1):
+            yield 0, y, a
+
+    def dispatch(self, ev):
+        pass
+
+
+class LineNo:
+    def __init__(self, s, c):
+        self.s = s
+        self.c = c
+        self.y = 0
+
+    def set_cursor(self, c):
+        self.y = c['y']
+
+    def width(self):
+        return len(str(self.s + self.c))
+
+    def pixels(self):
+        for x, y, c in self.chars():
+            yield x, y, Attrs(c=c, f=gray(4))
+
+        for x in range(0, self.width()):
+            yield x, self.y, Attrs(b=gray(6), f=black())
+
+    def chars(self):
+        w = self.width()
+
+        for y, s in enumerate(range(self.s, self.s + self.c)):
+            l = str(s)
+            dx = w - len(l)
+
+            for x, c in enumerate(l):
+                yield dx + x, y, c
+
+
 def main():
     ed = Editor(sys.argv[1])
 
     with channel() as ch:
         while True:
-            BUS.clear()
-
-            c = Composer(ch)
-
-            w = c.d.dx
-            h = c.d.dy
-
-            c.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
-            c.add_widget(Rect(w, h))
-
-            l = Label()
-
-            def on_message(m):
-                l.t = m
-
-            BUS.sub('message', on_message)
-
-            c.add_widget(l).move(1, 0)
-            c.add_widget(EditorWidget(w - 2, h - 2, ed)).move(1, 1)
-
             try:
-                return c.loop()
+                return one_step(ed, ch)
             except SigWinch:
                 pass
+
+
+def one_step(ed, ch):
+    BUS.clear()
+
+    c = Composer(ch)
+
+    w = c.d.dx
+    h = c.d.dy
+
+    c.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
+    c.add_widget(Rect(w, h))
+
+    ln_w = LineNo(0, h - 2)
+    vl_w = VLine(h)
+    lb_w = Label()
+    ew_w = EditorWidget(w, h - 2, ed)
+
+    ln_h = c.add_widget(ln_w)
+    vl_h = c.add_widget(vl_w)
+    lb_h = c.add_widget(lb_w)
+    ew_h = c.add_widget(ew_w)
+
+    def on_lineno(ln):
+        ln_w.s = ln
+
+        ln_h.move(1, 1)
+        vl_h.move(ln_h.x + ln_w.width(), 0)
+        lb_h.move(1, 0)
+        ew_h.move(vl_h.x + 1, 1)
+        ew_w.set_width(w - 2 - vl_h.x)
+
+    def on_message(m):
+        lb_w.t = m
+
+    def on_cursor(c):
+        ln_w.set_cursor(c)
+
+    sub('message', on_message)
+    sub('lineno', on_lineno)
+    sub('cursor', on_cursor)
+
+    ew_w.pub_lineno()
+
+    c.loop()
 
 
 try:
