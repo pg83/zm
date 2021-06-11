@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import re
 import io
 import os
 import sys
@@ -19,6 +20,7 @@ import contextlib
 from collections import deque, defaultdict
 
 import pygments.util as pu
+import pygments.token as pt
 import pygments.lexers as pl
 import pygments.styles as ps
 
@@ -362,6 +364,20 @@ class Color4:
         return TBL4[self.n][1]
 
 
+class PrepColor:
+    __slots__ = ('b', 'f')
+
+    def __init__(self, c):
+        self.b = c.bg()
+        self.f = c.fg()
+
+    def bg(self):
+        return self.b
+
+    def fg(self):
+        return self.f
+
+
 def black():
     return Color4(0)
 
@@ -487,9 +503,6 @@ class Panel:
             for x in range(0, self.w):
                 yield x, y, self.p
 
-    def dispatch(self, ev):
-        pass
-
 
 class Handle:
     def __init__(self, w):
@@ -506,8 +519,6 @@ class Handle:
     def move(self, x, y):
         self.x = x
         self.y = y
-
-        return self
 
 
 class Stack:
@@ -547,11 +558,9 @@ class EventLoop:
             w.dispatch(ev)
 
 
-def parse_color(s):
-    c = s.get('color')
-
+def parse_color(c):
     if c:
-        return Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16))
+        return PrepColor(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
 
     return white()
 
@@ -568,10 +577,40 @@ class HighLight:
         self.lex = guess_lexer(p, d[:10000])
         self.stl = ps.get_style_by_name('material')
         self.lns = {}
+        self.col = {}
+
+    def parse_color(self, c):
+        while True:
+            try:
+                return self.col[c]
+            except KeyError:
+                self.col[c] = parse_color(c)
+
+    def style(self, typ):
+        return self.parse_color(self.stl.style_for_token(typ).get('color', ''))
 
     def style_line_impl(self, l):
+        cc = self.style(pt.Name.Class)
+        cf = self.style(pt.Name.Function)
+
+        extra = {}
+
+        for m in re.finditer('(\w+)\(', l):
+            ch = m[1][0]
+            co = cf if ch.islower() else cc
+
+            for p in range(m.start(1), m.end(1)):
+                extra[p] = co
+
+        for n, (ch, s) in enumerate(self.iter_pygments(l)):
+            if n in extra:
+                yield ch, extra[n]
+            else:
+                yield ch, s
+
+    def iter_pygments(self, l):
         for typ, text in self.lex.get_tokens(l):
-            s = parse_color(self.stl.style_for_token(typ))
+            s = self.style(typ)
 
             for ch in text:
                 if ch == '\n':
@@ -677,7 +716,15 @@ class TextCache:
         return self.t.result()
 
 
+def gen_brackets():
+    for p in ('()', '[]', '{}'):
+        yield p[0], (p[1],  1)
+        yield p[1], (p[0], -1)
+
+
 class Editor:
+    BRKT = dict(gen_brackets())
+
     def __init__(self, p, b):
         with open(p) as f:
             d = f.read()
@@ -688,17 +735,20 @@ class Editor:
         self.b = b
 
     def save(self, p):
-        with open(p, 'w') as f:
+        t = p + '.tmp'
+
+        with open(t, 'w') as f:
             f.write(self.t.result())
+
+        os.rename(t, p)
 
     def complete_ratio(self):
         return fractions.Fraction(self.c + 1, self.t.length() + 1)
 
-    @property
-    def x(self):
+    def x_for(self, c):
         n = 0
 
-        for c in self.iter_chars_before(self.c):
+        for c in self.iter_chars_before(c):
             if c == '\n':
                 break
 
@@ -706,9 +756,45 @@ class Editor:
 
         return n
 
+    def y_for(self, c):
+        return self.t.y(c)
+
+    @property
+    def x(self):
+        return self.x_for(self.c)
+
     @property
     def y(self):
-        return self.t.y(self.c)
+        return self.y_for(self.c)
+
+    def iter_chars_fwd(self, p):
+        while True:
+            yield p, self.t.at(p)
+
+            p += 1
+
+    def iter_chars_bck(self, p):
+        while True:
+            yield p, self.t.at(p)
+
+            p -= 1
+
+    def find_bracket_match(self, cur):
+        o = self.t.at(cur)
+
+        if o in self.BRKT:
+            c, ov = self.BRKT[o]
+            tbl = {o: ov, c: -ov}
+            cnt = 0
+
+            for p, c in (self.iter_chars_fwd if ov > 0 else self.iter_chars_bck)(cur):
+                if c in tbl:
+                    cnt += tbl[c]
+
+                if cnt == 0:
+                    return p
+
+        return None
 
     def render(self, x1, y1, x2, y2):
         for y, s in self.t.lines(y1, y2):
@@ -718,13 +804,21 @@ class Editor:
                 c, col = l[x]
 
                 if c != ' ':
-                    yield x, y, c, col
+                    yield x, y, Attrs(c=c, f=col)
+        try:
+            bm = self.find_bracket_match(self.c)
+        except IndexError:
+            bm = None
+
+        if bm is not None:
+            yield self.x_for(bm), self.y_for(bm), Attrs(f=black(), b=Color4(12))
 
     def iter_chars_before(self, p):
-        while p > 0:
-            p -= 1
-
-            yield self.t.at(p)
+        try:
+            for p, c in self.iter_chars_bck(p - 1):
+                yield c
+        except IndexError:
+            pass
 
     def iter_lines_before(self, p):
         s = ''
@@ -912,7 +1006,7 @@ class Editor:
         self.one_right()
 
 
-class EditorWidget:
+class ViewPort:
     def __init__(self, w, h, e):
         self.e = e
         self.x = fractions.Fraction(0)
@@ -925,8 +1019,8 @@ class EditorWidget:
         bx = int(self.x)
         by = int(self.y)
 
-        for x, y, c, col in self.e.render(bx, by, bx + self.w, by + self.h):
-            yield x - bx, y - by, Attrs(c=c, f=col)
+        for x, y, a in self.e.render(bx, by, bx + self.w, by + self.h):
+            yield x - bx, y - by, a
 
         yield self.cx, self.cy, Attrs(f=black(), b=white())
 
@@ -1032,30 +1126,28 @@ class VLine:
         for y in range(1, self.h - 1):
             yield 0, y, a
 
-    def dispatch(self, ev):
-        pass
-
 
 class LineNo:
-    def __init__(self, s, c):
+    def __init__(self, s, h):
         self.s = s
-        self.c = c
+        self.h = h
 
-    @property
-    def h(self):
-        return self.c
+    def set_lineno(self, s):
+        self.s = s
 
     def width(self):
-        return len(str(self.s + self.c))
+        return len(str(self.s + self.h))
 
     def pixels(self):
+        f = gray(8)
+
         for x, y, c in self.chars():
-            yield x, y, Attrs(c=c, f=gray(8))
+            yield x, y, Attrs(c=c, f=f)
 
     def chars(self):
         w = self.width()
 
-        for y, s in enumerate(range(self.s, self.s + self.c)):
+        for y, s in enumerate(range(self.s, self.s + self.h)):
             l = str(s)
             dx = w - len(l)
 
@@ -1063,9 +1155,7 @@ class LineNo:
                 yield dx + x, y, c
 
 
-def editor_widget(ed, w, h):
-    bus = ed.b
-
+def editor_widget(ed, bus, w, h):
     st_w = Stack()
 
     st_w.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
@@ -1076,7 +1166,7 @@ def editor_widget(ed, w, h):
     lb_w = Label()
     cp_w = Panel(w - 2, 1, Attrs(b=gray(4)))
     pp_w = Panel(1, 1, Attrs(b=gray(16)))
-    ew_w = EditorWidget(w, h - 2, ed)
+    ew_w = ViewPort(w, h - 2, ed)
 
     ln_h = st_w.add_widget(ln_w)
     vl_h = st_w.add_widget(vl_w)
@@ -1086,8 +1176,7 @@ def editor_widget(ed, w, h):
     ew_h = st_w.add_widget(ew_w)
 
     def on_lineno(ln):
-        ln_w.s = ln
-
+        ln_w.set_lineno(ln)
         ln_h.move(1, 1)
         vl_h.move(ln_h.x + ln_w.width(), 0)
         lb_h.move(1, 0)
@@ -1120,7 +1209,7 @@ def main():
                 try:
                     ev = EventLoop(ch)
 
-                    return ev.loop(editor_widget(ed, ev.d.dx, ev.d.dy))
+                    return ev.loop(editor_widget(ed, ed.b, ev.d.dx, ev.d.dy))
                 except SigWinch:
                     pass
 
@@ -1132,7 +1221,9 @@ def main():
 
 
 try:
-    main()
-    #cProfile.run('main()')
+    if os.environ.get('PROFILE', ''):
+        cProfile.run('main()')
+    else:
+        main()
 except KeyboardInterrupt:
     pass
