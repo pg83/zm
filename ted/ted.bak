@@ -32,7 +32,7 @@ if 'graal' in os.path.basename(sys.executable):
 
 class PubSub:
     def __init__(self):
-        self.clear()
+        self.s = defaultdict(list)
 
     def sub(self, t, f):
         self.s[t].append(f)
@@ -41,23 +41,8 @@ class PubSub:
         for f in self.s.get(t, []):
             f(m)
 
-    def clear(self):
-        self.s = defaultdict(list)
-
-
-BUS = PubSub()
-
-
-def sub(t, f):
-    BUS.sub(t, f)
-
-
-def pub(t, m):
-    BUS.pub(t, m)
-
-
-def message(m):
-    pub('message', m)
+    def msg(self, m):
+        self.pub('message', m)
 
 
 def esc(d):
@@ -462,21 +447,30 @@ class Display:
 
         for x, y, n in pixels:
             if x >= 0 and x < dx and y >= 0 and y < dy:
-                k = (y, x)
+                k = x + y * 10000
                 v = bp.get(k)
 
                 if v:
-                    bp[k] = combine_attrs(v, n)
+                    bp[k] = (x, y, combine_attrs(v[2], n))
                 else:
-                    bp[k] = n
+                    bp[k] = (x, y, n)
+
+        p = None
 
         for k in sorted(bp.keys()):
-            f = bp[k].fmt()
+            x, y, n = bp[k]
+
+            f = n.fmt()
 
             if f != dd.get(k):
                 dd[k] = f
 
-                ds += move(k[1], k[0])
+                if k - 1 == p:
+                    pass
+                else:
+                    ds += move(x, y)
+
+                p = k
                 ds += f
 
         schedule(lambda: self.ch.send(ds))
@@ -516,35 +510,41 @@ class Handle:
         return self
 
 
-class Composer:
-    def __init__(self, ch):
-        self.d = Display(ch)
-        self.i = InputStream(ch)
+class Stack:
+    def __init__(self):
         self.o = []
-        self.s = dict()
 
     def add_widget(self, w):
         h = Handle(w)
 
-        self.s[id(h)] = h
-        self.o.append(id(h))
+        self.o.append(h)
 
         return h
 
-    def loop(self):
+    def pixels(self):
+        for o in self.o:
+            yield from o.pixels()
+
+    def dispatch(self, ev):
+        if self.o:
+            self.o[-1].dispatch(ev)
+
+
+class EventLoop:
+    def __init__(self, ch):
+        self.d = Display(ch)
+        self.i = InputStream(ch)
+
+    def loop(self, w):
         while True:
-            def pixels():
-                for o in self.o:
-                    yield from self.s[o].pixels()
+            self.d.flip(w.pixels())
 
-            self.d.flip(pixels())
+            ev = self.i.next()
 
-            c = self.i.next()
-
-            if c == 'ctrl-c':
+            if ev == 'ctrl-c':
                 raise KeyboardInterrupt()
 
-            self.s[self.o[-1]].dispatch(c)
+            w.dispatch(ev)
 
 
 def parse_color(s):
@@ -678,13 +678,14 @@ class TextCache:
 
 
 class Editor:
-    def __init__(self, p):
+    def __init__(self, p, b):
         with open(p) as f:
             d = f.read()
 
         self.h = HighLight(p, d)
         self.t = TextCache(TextArray(d))
         self.c = 0
+        self.b = b
 
     def save(self, p):
         with open(p, 'w') as f:
@@ -768,7 +769,7 @@ class Editor:
     def ins_indent(self):
         indent = self.calc_indent()
 
-        message(f'indent: {indent}')
+        self.b.msg(f'indent: {indent}')
 
         for ch in indent:
             self.handle_char(ch)
@@ -891,10 +892,10 @@ class Editor:
         self.t.delete(self.c)
 
     def handle_event(self, ev, h):
-        message(ev)
+        self.b.msg(ev)
 
         def unknown():
-            message(f'do not know to do: {ev}')
+            self.b.msg(f'do not know to do: {ev}')
 
         func = getattr(self, 'key_' + ev.replace('-', '_'), unknown)
 
@@ -904,7 +905,7 @@ class Editor:
             except TypeError:
                 func(h)
         except IndexError:
-            message('index error')
+            self.b.msg('index error')
 
     def handle_char(self, ch):
         self.t.insert(self.c, ch)
@@ -966,13 +967,13 @@ class EditorWidget:
         if oy != self.y:
             self.pub_lineno()
 
-        pub('cursor', {
+        self.e.b.pub('cursor', {
             'x': self.cx,
             'y': self.cy,
         })
 
     def pub_lineno(self):
-        pub('lineno', int(self.y))
+        self.e.b.pub('lineno', int(self.y))
 
 
 class Rect:
@@ -1062,33 +1063,13 @@ class LineNo:
                 yield dx + x, y, c
 
 
-def main():
-    fn = sys.argv[1]
-    ed = Editor(fn)
+def editor_widget(ed, w, h):
+    bus = ed.b
 
-    try:
-        with channel() as ch:
-            while True:
-                try:
-                    return one_step(ed, ch)
-                except SigWinch:
-                    pass
-    except:
-        ed.save(fn + '.bak')
+    st_w = Stack()
 
-        raise
-
-
-def one_step(ed, ch):
-    BUS.clear()
-
-    c = Composer(ch)
-
-    w = c.d.dx
-    h = c.d.dy
-
-    c.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
-    c.add_widget(Rect(w, h))
+    st_w.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
+    st_w.add_widget(Rect(w, h))
 
     ln_w = LineNo(0, h - 2)
     vl_w = VLine(h)
@@ -1097,12 +1078,12 @@ def one_step(ed, ch):
     pp_w = Panel(1, 1, Attrs(b=gray(16)))
     ew_w = EditorWidget(w, h - 2, ed)
 
-    ln_h = c.add_widget(ln_w)
-    vl_h = c.add_widget(vl_w)
-    lb_h = c.add_widget(lb_w)
-    cp_h = c.add_widget(cp_w)
-    pp_h = c.add_widget(pp_w)
-    ew_h = c.add_widget(ew_w)
+    ln_h = st_w.add_widget(ln_w)
+    vl_h = st_w.add_widget(vl_w)
+    lb_h = st_w.add_widget(lb_w)
+    cp_h = st_w.add_widget(cp_w)
+    pp_h = st_w.add_widget(pp_w)
+    ew_h = st_w.add_widget(ew_w)
 
     def on_lineno(ln):
         ln_w.s = ln
@@ -1120,13 +1101,34 @@ def one_step(ed, ch):
         pp_h.move(vl_h.x, int(ln_h.y + ln_w.h * ed.complete_ratio()))
         cp_h.move(1, ew_h.y + c['y'])
 
-    sub('message', on_message)
-    sub('lineno', on_lineno)
-    sub('cursor', on_cursor)
+    bus.sub('message', on_message)
+    bus.sub('lineno', on_lineno)
+    bus.sub('cursor', on_cursor)
 
     ew_w.pub_lineno()
 
-    c.loop()
+    return st_w
+
+
+def main():
+    fn = sys.argv[1]
+    ed = Editor(fn, PubSub())
+
+    try:
+        with channel() as ch:
+            while True:
+                try:
+                    ev = EventLoop(ch)
+
+                    return ev.loop(editor_widget(ed, ev.d.dx, ev.d.dy))
+                except SigWinch:
+                    pass
+
+                ed.b = PubSub()
+    except:
+        ed.save(fn + '.bak')
+
+        raise
 
 
 try:
