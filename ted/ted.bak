@@ -241,10 +241,11 @@ class InputStream:
 
     ASCII = dict(
         make_ctrl_tables() + [
-            (0, 'ctrl-space'),
-            (9, 'tab'),
-            (10, 'lf'),
-            (13, 'cr'),
+            (0,   'ctrl-space'),
+            (8,   'bs'),
+            (9,   'tab'),
+            (10,  'lf'),
+            (13,  'cr'),
             (127, 'bs'),
         ]
     )
@@ -573,6 +574,8 @@ def guess_lexer(p, d):
 
 
 class HighLight:
+    CALL = re.compile('(\w+)\(')
+
     def __init__(self, p, d):
         self.lex = guess_lexer(p, d[:10000])
         self.stl = ps.get_style_by_name('material')
@@ -595,9 +598,14 @@ class HighLight:
 
         extra = {}
 
-        for m in re.finditer('(\w+)\(', l):
-            ch = m[1][0]
-            co = cf if ch.islower() else cc
+        for m in re.finditer(self.CALL, l):
+            if m[1][0].islower():
+                if m[1] in ('dict', 'list', 'tuple', 'deque'):
+                    co = cc
+                else:
+                    co = cf
+            else:
+                co = cc
 
             for p in range(m.start(1), m.end(1)):
                 extra[p] = co
@@ -1155,6 +1163,17 @@ class LineNo:
                 yield dx + x, y, c
 
 
+class HGrad:
+    def __init__(self, w):
+        self.w = w
+
+    def pixels(self):
+        for i in range(0, self.w):
+            n = 50 - (i * 50) // self.w
+
+            yield i, 0, Attrs(b=Color24(n, n, n))
+
+
 def editor_widget(ed, bus, w, h):
     st_w = Stack()
 
@@ -1164,37 +1183,38 @@ def editor_widget(ed, bus, w, h):
     ln_w = LineNo(0, h - 2)
     vl_w = VLine(h)
     lb_w = Label()
-    cp_w = Panel(w - 2, 1, Attrs(b=gray(4)))
+    #cp_w = Panel(w - 2, 1, Attrs(b=gray(4)))
+    cp_w = HGrad(w - 2)
     pp_w = Panel(1, 1, Attrs(b=gray(16)))
-    ew_w = ViewPort(w, h - 2, ed)
+    vp_w = ViewPort(w, h - 2, ed)
 
     ln_h = st_w.add_widget(ln_w)
     vl_h = st_w.add_widget(vl_w)
     lb_h = st_w.add_widget(lb_w)
     cp_h = st_w.add_widget(cp_w)
     pp_h = st_w.add_widget(pp_w)
-    ew_h = st_w.add_widget(ew_w)
+    vp_h = st_w.add_widget(vp_w)
 
     def on_lineno(ln):
         ln_w.set_lineno(ln)
         ln_h.move(1, 1)
         vl_h.move(ln_h.x + ln_w.width(), 0)
         lb_h.move(1, 0)
-        ew_h.move(vl_h.x + 1, 1)
-        ew_w.set_width(w - 2 - vl_h.x)
+        vp_h.move(vl_h.x + 1, 1)
+        vp_w.set_width(w - 2 - vl_h.x)
 
     def on_message(m):
         lb_w.t = m
 
     def on_cursor(c):
         pp_h.move(vl_h.x, int(ln_h.y + ln_w.h * ed.complete_ratio()))
-        cp_h.move(1, ew_h.y + c['y'])
+        cp_h.move(1, vp_h.y + c['y'])
 
     bus.sub('message', on_message)
     bus.sub('lineno', on_lineno)
     bus.sub('cursor', on_cursor)
 
-    ew_w.pub_lineno()
+    vp_w.pub_lineno()
 
     return st_w
 
