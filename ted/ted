@@ -574,7 +574,17 @@ def guess_lexer(p, d):
 
 
 class HighLight:
-    CALL = re.compile('(\w+)\(')
+    CALL = re.compile('([a-zA-Z0-9]\w*)\(')
+
+    DFLT = {
+        'dict',
+        'list',
+        'tuple',
+        'deque',
+        'int',
+        'str',
+        'defaultdict',
+    }
 
     def __init__(self, p, d):
         self.lex = guess_lexer(p, d[:10000])
@@ -600,7 +610,7 @@ class HighLight:
 
         for m in re.finditer(self.CALL, l):
             if m[1][0].islower():
-                if m[1] in ('dict', 'list', 'tuple', 'deque'):
+                if m[1] in self.DFLT:
                     co = cc
                 else:
                     co = cf
@@ -813,6 +823,7 @@ class Editor:
 
                 if c != ' ':
                     yield x, y, Attrs(c=c, f=col)
+
         try:
             bm = self.find_bracket_match(self.c)
         except IndexError:
@@ -1169,7 +1180,7 @@ class HGrad:
 
     def pixels(self):
         for i in range(0, self.w):
-            n = 50 - (i * 50) // self.w
+            n = 32 - (i * 32) // self.w
 
             yield i, 0, Attrs(b=Color24(n, n, n))
 
