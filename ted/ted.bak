@@ -39,9 +39,9 @@ class PubSub:
     def sub(self, t, f):
         self.s[t].append(f)
 
-    def pub(self, t, m):
+    def pub(self, t, *args, **kwargs):
         for f in self.s.get(t, []):
-            f(m)
+            f(*args, **kwargs)
 
     def msg(self, m):
         self.pub('message', m)
@@ -526,12 +526,15 @@ class Stack:
     def __init__(self):
         self.o = []
 
-    def add_widget(self, w):
+    def push(self, w):
         h = Handle(w)
 
         self.o.append(h)
 
         return h
+
+    def pop(self):
+        return self.o.pop()
 
     def pixels(self):
         for o in self.o:
@@ -603,10 +606,14 @@ class HighLight:
         return self.parse_color(self.stl.style_for_token(typ).get('color', ''))
 
     def style_line_impl(self, l):
+        extra = dict(self.iter_calls(l))
+
+        for n, (ch, s) in enumerate(self.iter_pygments(l)):
+            yield ch, extra.get(n, s)
+
+    def iter_calls(self, l):
         cc = self.style(pt.Name.Class)
         cf = self.style(pt.Name.Function)
-
-        extra = {}
 
         for m in re.finditer(self.CALL, l):
             if m[1][0].islower():
@@ -618,13 +625,7 @@ class HighLight:
                 co = cc
 
             for p in range(m.start(1), m.end(1)):
-                extra[p] = co
-
-        for n, (ch, s) in enumerate(self.iter_pygments(l)):
-            if n in extra:
-                yield ch, extra[n]
-            else:
-                yield ch, s
+                yield p, co
 
     def iter_pygments(self, l):
         for typ, text in self.lex.get_tokens(l):
@@ -663,6 +664,9 @@ class TextArray:
     def at(self, pos):
         if pos < 0:
             raise IndexError()
+
+        if pos == len(self.d):
+            return None
 
         return self.d[pos]
 
@@ -1004,6 +1008,9 @@ class Editor:
     def key_delete(self):
         self.t.delete(self.c)
 
+    def key_ctrl_s(self):
+        self.b.pub('show_search_dialog')
+
     def handle_event(self, ev, h):
         self.b.msg(ev)
 
@@ -1185,26 +1192,124 @@ class HGrad:
             yield i, 0, Attrs(b=Color24(n, n, n))
 
 
+class TextInput:
+    def __init__(self, w):
+        self.w = w
+        self.x = 0
+        self.c = 0
+        self.t = ''
+
+    def on_text_change(self):
+        pass
+
+    def on_complete(self):
+        pass
+
+    @property
+    def cx(self):
+        return self.c - self.x
+
+    def render(self):
+        for x, c in enumerate(self.t):
+            yield x, Attrs(c=c)
+
+        yield self.c, Attrs(f=black(), b=white())
+
+    def pixels(self):
+        x1 = self.x
+        x2 = x1 + self.w
+
+        for x, a in self.render():
+            if x >= x1 and x < x2:
+                yield x - x1, 0, a
+
+    def dispatch(self, ev):
+        try:
+            if len(ev) == 1:
+                self.dispatch_chr(ev)
+                self.key_right()
+            else:
+                self.dispatch_ev(ev)
+        except IndexError:
+            pass
+
+        self.adjust_cursor()
+
+    def dispatch_chr(self, ch):
+        self.t = self.t[:self.c] + ch + self.t[self.c:]
+        self.on_text_change()
+
+    def at(self, p):
+        if p < 0:
+            raise IndexError()
+
+        if p == len(self.t):
+            return None
+
+        return self.t[p]
+
+    def set_pos(self, p):
+        self.at(p)
+        self.c = p
+
+    def key_bs(self):
+        self.key_left()
+        self.key_delete()
+
+    def key_delete(self):
+        self.t = self.t[:self.c] + self.t[self.c + 1:]
+        self.on_text_change()
+
+    def key_left(self):
+        self.set_pos(self.c - 1)
+
+    def key_right(self):
+        self.set_pos(self.c + 1)
+
+    def dispatch_ev(self, ev):
+        getattr(self, 'key_' + ev.replace('-', '_'), self.on_complete)()
+
+    def adjust_cursor(self):
+        hw = self.w // 2
+
+        while self.cx < 0:
+            self.x -= hw
+
+        while self.cx >= self.w:
+            self.x += hw
+
+
 def editor_widget(ed, bus, w, h):
     st_w = Stack()
 
-    st_w.add_widget(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
-    st_w.add_widget(Rect(w, h))
+    st_w.push(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
+    st_w.push(Rect(w, h))
 
     ln_w = LineNo(0, h - 2)
     vl_w = VLine(h)
     lb_w = Label()
-    #cp_w = Panel(w - 2, 1, Attrs(b=gray(4)))
     cp_w = HGrad(w - 2)
     pp_w = Panel(1, 1, Attrs(b=gray(16)))
     vp_w = ViewPort(w, h - 2, ed)
 
-    ln_h = st_w.add_widget(ln_w)
-    vl_h = st_w.add_widget(vl_w)
-    lb_h = st_w.add_widget(lb_w)
-    cp_h = st_w.add_widget(cp_w)
-    pp_h = st_w.add_widget(pp_w)
-    vp_h = st_w.add_widget(vp_w)
+    class SearchInput(TextInput):
+        def on_text_change(self):
+            bus.pub('search', self.t)
+
+        def on_complete(self):
+            bus.pub('popw')
+
+    ti_w = SearchInput(w - 2)
+
+    ln_h = st_w.push(ln_w)
+    vl_h = st_w.push(vl_w)
+    lb_h = st_w.push(lb_w)
+    cp_h = st_w.push(cp_w)
+    pp_h = st_w.push(pp_w)
+    vp_h = st_w.push(vp_w)
+
+    def on_popw():
+        st_w.pop()
 
     def on_lineno(ln):
         ln_w.set_lineno(ln)
@@ -1218,12 +1323,18 @@ def editor_widget(ed, bus, w, h):
         lb_w.t = m
 
     def on_cursor(c):
-        pp_h.move(vl_h.x, int(ln_h.y + ln_w.h * ed.complete_ratio()))
+        pp_h.move(vl_h.x, int(ln_h.y + (ln_w.h - 1) * ed.complete_ratio()))
         cp_h.move(1, vp_h.y + c['y'])
 
-    bus.sub('message', on_message)
-    bus.sub('lineno', on_lineno)
-    bus.sub('cursor', on_cursor)
+    def on_show_search_dialog():
+        st_w.push(ti_w).move(1, h - 1)
+
+    def on_search(t):
+        bus.msg(f'search for: {t}')
+
+    for k in list(locals()):
+        if k.startswith('on_'):
+            bus.sub(k[3:], locals()[k])
 
     vp_w.pub_lineno()
 
