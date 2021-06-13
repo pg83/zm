@@ -5,10 +5,8 @@ import io
 import os
 import sys
 import tty
-import time
-import enum
+import json
 import queue
-import atexit
 import signal
 import cProfile
 import fractions
@@ -365,7 +363,7 @@ class Color4:
         return TBL4[self.n][1]
 
 
-class PrepColor:
+class PreparedColor:
     __slots__ = ('b', 'f')
 
     def __init__(self, c):
@@ -377,6 +375,18 @@ class PrepColor:
 
     def fg(self):
         return self.f
+
+
+def prepare(c):
+    return PreparedColor(c)
+
+
+class DefaultColor:
+    def fg(self):
+        return csi(39) + 'm'
+
+    def bg(self):
+        return csi(49) + 'm'
 
 
 def black():
@@ -402,12 +412,20 @@ class Attrs:
 
         return b.bg() + f.fg() + c
 
+    def combine(self, prev):
+        c1, b1, f1 = prev.t
+        c2, b2, f2 = self.t
 
-def combine_attrs(a1, a2):
-    c1, b1, f1 = a1.t
-    c2, b2, f2 = a2.t
+        return Attrs(c=c2 or c1, b=b2 or b1, f=f2 or f1)
 
-    return Attrs(c=c2 or c1, b=b2 or b1, f=f2 or f1)
+
+class ReverseAttrs:
+    __slots__ = ()
+
+    def combine(self, prev):
+        c, b, f = prev.t
+
+        return Attrs(c=c, b=f, f=b)
 
 
 class Async:
@@ -468,7 +486,7 @@ class Display:
                 v = bp.get(k)
 
                 if v:
-                    bp[k] = (x, y, combine_attrs(v[2], n))
+                    bp[k] = (x, y, n.combine(v[2]))
                 else:
                     bp[k] = (x, y, n)
 
@@ -499,7 +517,7 @@ class Panel:
         self.h = h
         self.p = p
 
-    def pixels(self):
+    def pixels(self, attrs):
         for y in range(0, self.h):
             for x in range(0, self.w):
                 yield x, y, self.p
@@ -510,8 +528,8 @@ class Handle:
         self.w = w
         self.move(0, 0)
 
-    def pixels(self):
-        for x, y, c in self.w.pixels():
+    def pixels(self, attrs):
+        for x, y, c in self.w.pixels(attrs):
             yield x + self.x, y + self.y, c
 
     def dispatch(self, ev):
@@ -536,13 +554,26 @@ class Stack:
     def pop(self):
         return self.o.pop()
 
-    def pixels(self):
-        for o in self.o:
-            yield from o.pixels()
+    def pixels(self, attrs):
+        for n, o in enumerate(self.o):
+            a = json.loads(json.dumps(attrs))
+
+            if n == (len(self.o) - 1):
+                a['focus'] = attrs['focus']
+            else:
+                a['focus'] = False
+
+            yield from o.pixels(a)
 
     def dispatch(self, ev):
         if self.o:
             self.o[-1].dispatch(ev)
+
+
+class Combine(Stack):
+    def pixels(self, attrs):
+        for o in self.o:
+            yield from o.pixels(attrs)
 
 
 class EventLoop:
@@ -552,7 +583,7 @@ class EventLoop:
 
     def loop(self, w):
         while True:
-            self.d.flip(w.pixels())
+            self.d.flip(w.pixels({'focus': True}))
 
             ev = self.i.next()
 
@@ -564,7 +595,7 @@ class EventLoop:
 
 def parse_color(c):
     if c:
-        return PrepColor(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
+        return prepare(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
 
     return white()
 
@@ -694,6 +725,9 @@ class TextArray:
     def result(self):
         return ('\n'.join(x.rstrip() for x in self.l)).strip() + '\n'
 
+    def search(self, t, fr):
+        return self.d.find(t, fr)
+
 
 class TextCache:
     def __init__(self, t):
@@ -737,6 +771,9 @@ class TextCache:
     def result(self):
         return self.t.result()
 
+    def search(self, t, fr):
+        return self.t.search(t, fr)
+
 
 def gen_brackets():
     for p in ('()', '[]', '{}'):
@@ -755,6 +792,12 @@ class Editor:
         self.t = TextCache(TextArray(d))
         self.c = 0
         self.b = b
+
+    def search(self, t):
+        p = self.t.search(t, self.c)
+
+        if p >= 0:
+            self.set_pos(p)
 
     def save(self, p):
         t = p + '.tmp'
@@ -1041,14 +1084,15 @@ class ViewPort:
         self.h = h
         self.adjust()
 
-    def pixels(self):
+    def pixels(self, attrs):
         bx = int(self.x)
         by = int(self.y)
 
         for x, y, a in self.e.render(bx, by, bx + self.w, by + self.h):
             yield x - bx, y - by, a
 
-        yield self.cx, self.cy, Attrs(f=black(), b=white())
+        if attrs.get('focus'):
+            yield self.cx, self.cy, ReverseAttrs()
 
     @property
     def cx(self):
@@ -1057,6 +1101,10 @@ class ViewPort:
     @property
     def cy(self):
         return self.e.y - int(self.y)
+
+    def search(self, t):
+        self.e.search(t)
+        self.adjust()
 
     def set_width(self, w):
         self.w = w
@@ -1101,22 +1149,32 @@ class Rect:
         self.w = w
         self.h = h
 
-    def chars(self):
-        yield 0, 0, 0x2553
-        yield self.w - 1, 0, 0x2556
-        yield self.w - 1, self.h - 1, 0x255C
-        yield 0, self.h - 1, 0x2559
+    def chars(self, focus, **kwargs):
+        if focus:
+            yield 0, 0, 0x2553
+            yield self.w - 1, 0, 0x2556
+            yield self.w - 1, self.h - 1, 0x255C
+            yield 0, self.h - 1, 0x2559
+
+            for y in range(1, self.h - 1):
+                yield 0, y, 0x2551
+                yield self.w - 1, y, 0x2551
+        else:
+            yield 0, 0, 0x250C
+            yield self.w - 1, 0, 0x2510
+            yield self.w - 1, self.h - 1, 0x2518
+            yield 0, self.h - 1, 0x2514
+
+            for y in range(1, self.h - 1):
+                yield 0, y, 0x2502
+                yield self.w - 1, y, 0x2502
 
         for x in range(1, self.w - 1):
             yield x, 0, 0x2500
             yield x, self.h - 1, 0x2500
 
-        for y in range(1, self.h - 1):
-            yield 0, y, 0x2551
-            yield self.w - 1, y, 0x2551
-
-    def pixels(self):
-        for x, y, c in self.chars():
+    def pixels(self, attrs):
+        for x, y, c in self.chars(**attrs):
             yield x, y, Attrs(c=chr(c))
 
 
@@ -1134,7 +1192,7 @@ class Label:
     def __init__(self):
         self.t = ''
 
-    def pixels(self):
+    def pixels(self, attrs):
         for x, c in enumerate(self.t):
             yield x, 0, Attrs(c=c)
 
@@ -1143,7 +1201,7 @@ class VLine:
     def __init__(self, h):
         self.h = h
 
-    def pixels(self):
+    def pixels(self, attrs):
         yield 0, 0, Attrs(c=chr(0x252C))
         yield 0, self.h - 1, Attrs(c=chr(0x2534))
 
@@ -1164,7 +1222,7 @@ class LineNo:
     def width(self):
         return len(str(self.s + self.h))
 
-    def pixels(self):
+    def pixels(self, attrs):
         f = gray(8)
 
         for x, y, c in self.chars():
@@ -1185,7 +1243,7 @@ class HGrad:
     def __init__(self, w):
         self.w = w
 
-    def pixels(self):
+    def pixels(self, attrs):
         for i in range(0, self.w):
             n = 32 - (i * 32) // self.w
 
@@ -1195,6 +1253,9 @@ class HGrad:
 class TextInput:
     def __init__(self, w):
         self.w = w
+        self.reset()
+
+    def reset(self):
         self.x = 0
         self.c = 0
         self.t = ''
@@ -1215,7 +1276,7 @@ class TextInput:
 
         yield self.c, Attrs(f=black(), b=white())
 
-    def pixels(self):
+    def pixels(self, attrs):
         x1 = self.x
         x2 = x1 + self.w
 
@@ -1280,16 +1341,18 @@ class TextInput:
 
 
 def editor_widget(ed, bus, w, h):
-    st_w = Stack()
+    mw_w = Stack()
 
-    st_w.push(Panel(w, h, Attrs(c=' ', b=black(), f=white())))
+    st_w = mw_w.push(Combine()).w
+
+    st_w.push(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
     st_w.push(Rect(w, h))
 
     ln_w = LineNo(0, h - 2)
     vl_w = VLine(h)
     lb_w = Label()
     cp_w = HGrad(w - 2)
-    pp_w = Panel(1, 1, Attrs(b=gray(16)))
+    pp_w = Panel(1, 1, Attrs(b=gray(14)))
     vp_w = ViewPort(w, h - 2, ed)
 
     class SearchInput(TextInput):
@@ -1297,6 +1360,7 @@ def editor_widget(ed, bus, w, h):
             bus.pub('search', self.t)
 
         def on_complete(self):
+            self.reset()
             bus.pub('popw')
 
     ti_w = SearchInput(w - 2)
@@ -1309,7 +1373,7 @@ def editor_widget(ed, bus, w, h):
     vp_h = st_w.push(vp_w)
 
     def on_popw():
-        st_w.pop()
+        mw_w.pop()
 
     def on_lineno(ln):
         ln_w.set_lineno(ln)
@@ -1327,10 +1391,11 @@ def editor_widget(ed, bus, w, h):
         cp_h.move(1, vp_h.y + c['y'])
 
     def on_show_search_dialog():
-        st_w.push(ti_w).move(1, h - 1)
+        mw_w.push(ti_w).move(1, h - 1)
 
     def on_search(t):
         bus.msg(f'search for: {t}')
+        vp_w.search(t)
 
     for k in list(locals()):
         if k.startswith('on_'):
@@ -1338,7 +1403,7 @@ def editor_widget(ed, bus, w, h):
 
     vp_w.pub_lineno()
 
-    return st_w
+    return mw_w
 
 
 def main():
