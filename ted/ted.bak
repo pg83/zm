@@ -5,7 +5,6 @@ import io
 import os
 import sys
 import tty
-import json
 import queue
 import signal
 import cProfile
@@ -317,7 +316,8 @@ def fg8(n):
     return csi(38, 5, n) + 'm'
 
 
-TBL8 = [(bg8(n), fg8(n)) for n in range(0, 256)]
+TBL8BG = [bg8(n) for n in range(0, 256)]
+TBL8FG = [fg8(n) for n in range(0, 256)]
 
 
 class Color8:
@@ -327,10 +327,10 @@ class Color8:
         self.n = n
 
     def bg(self):
-        return TBL8[self.n][0]
+        return TBL8BG[self.n]
 
     def fg(self):
-        return TBL8[self.n][1]
+        return TBL8FG[self.n]
 
 
 def bg4(n):
@@ -347,7 +347,8 @@ def fg4(n):
     return csi(82 + n) + 'm'
 
 
-TBL4 = [(bg4(x), fg4(x)) for x in range(0, 16)]
+TBL4BG = [bg4(x) for x in range(0, 16)]
+TBL4FG = [fg4(x) for x in range(0, 16)]
 
 
 class Color4:
@@ -357,10 +358,10 @@ class Color4:
         self.n = n
 
     def bg(self):
-        return TBL4[self.n][0]
+        return TBL4BG[self.n]
 
     def fg(self):
-        return TBL4[self.n][1]
+        return TBL4FG[self.n]
 
 
 class PreparedColor:
@@ -397,8 +398,15 @@ def white():
     return Color4(15)
 
 
-def gray(n):
+def gray8(n):
     return Color8(232 + n)
+
+
+TBLGR24 = [prepare(Color24(i, i, i)) for i in range(0, 256)]
+
+
+def gray24(n):
+    return TBLGR24[n]
 
 
 class Attrs:
@@ -556,7 +564,7 @@ class Stack:
 
     def pixels(self, attrs):
         for n, o in enumerate(self.o):
-            a = json.loads(json.dumps(attrs))
+            a = attrs.copy()
 
             if n == (len(self.o) - 1):
                 a['focus'] = attrs['focus']
@@ -566,8 +574,7 @@ class Stack:
             yield from o.pixels(a)
 
     def dispatch(self, ev):
-        if self.o:
-            self.o[-1].dispatch(ev)
+        self.o[-1].dispatch(ev)
 
 
 class Combine(Stack):
@@ -582,8 +589,10 @@ class EventLoop:
         self.i = InputStream(ch)
 
     def loop(self, w):
+        attrs = {'focus': True}
+
         while True:
-            self.d.flip(w.pixels({'focus': True}))
+            self.d.flip(w.pixels(attrs))
 
             ev = self.i.next()
 
@@ -634,7 +643,10 @@ class HighLight:
                 self.col[c] = parse_color(c)
 
     def style(self, typ):
-        return self.parse_color(self.stl.style_for_token(typ).get('color', ''))
+        try:
+            return self.parse_color(self.stl.style_for_token(typ).get('color', ''))
+        except KeyError:
+            return white()
 
     def style_line_impl(self, l):
         extra = dict(self.iter_calls(l))
@@ -781,6 +793,29 @@ def gen_brackets():
         yield p[1], (p[0], -1)
 
 
+class SearchContext:
+    def __init__(self, e):
+        self.e = e
+
+    def search_from(self, t, c):
+        p = self.e.t.search(t, c)
+
+        if p >= 0:
+            self.e.set_mark(p, p + len(t))
+            self.e.set_pos(p)
+            self.e.b.pub('cursor', p)
+
+        return p
+
+    def search(self, t):
+        self.search_from(t, self.e.c)
+
+    def search_next(self, t):
+        if self.search_from(t, self.e.c + 1) < 0:
+            self.e.b.msg(f'search wrap: {t}')
+            self.search_from(t, 0)
+
+
 class Editor:
     BRKT = dict(gen_brackets())
 
@@ -793,11 +828,17 @@ class Editor:
         self.c = 0
         self.b = b
 
-    def search(self, t):
-        p = self.t.search(t, self.c)
+        self.unmark()
 
-        if p >= 0:
-            self.set_pos(p)
+    def unmark(self):
+        self.set_mark(0, 0)
+
+    def set_mark(self, b, e):
+        self.mb = b
+        self.me = e
+
+    def search_context(self):
+        return SearchContext(self)
 
     def save(self, p):
         t = p + '.tmp'
@@ -823,6 +864,24 @@ class Editor:
 
     def y_for(self, c):
         return self.t.y(c)
+
+    def iter_xypc(self, fr, to):
+        if fr == to:
+            return
+
+        x = self.x_for(fr)
+        y = self.y_for(to)
+
+        for p in range(fr, to):
+            c = self.t.at(p)
+
+            yield x, y, p, c
+
+            if c == '\n':
+                x = 0
+                y += 1
+            else:
+                x += 1
 
     @property
     def x(self):
@@ -853,8 +912,7 @@ class Editor:
             cnt = 0
 
             for p, c in (self.iter_chars_fwd if ov > 0 else self.iter_chars_bck)(cur):
-                if c in tbl:
-                    cnt += tbl[c]
+                cnt += tbl.get(c, 0)
 
                 if cnt == 0:
                     return p
@@ -870,6 +928,9 @@ class Editor:
 
                 if c != ' ':
                     yield x, y, Attrs(c=c, f=col)
+
+        for x, y, p, c in self.iter_xypc(self.mb, self.me):
+            yield x, y, Attrs(c=c, b=white())
 
         try:
             bm = self.find_bracket_match(self.c)
@@ -1049,10 +1110,11 @@ class Editor:
             self.key_delete()
 
     def key_delete(self):
+        self.unmark()
         self.t.delete(self.c)
 
     def key_ctrl_s(self):
-        self.b.pub('show_search_dialog')
+        self.b.pub('show-search-dialog')
 
     def handle_event(self, ev, h):
         self.b.msg(ev)
@@ -1071,6 +1133,7 @@ class Editor:
             self.b.msg('index error')
 
     def handle_char(self, ch):
+        self.unmark()
         self.t.insert(self.c, ch)
         self.one_right()
 
@@ -1091,7 +1154,7 @@ class ViewPort:
         for x, y, a in self.e.render(bx, by, bx + self.w, by + self.h):
             yield x - bx, y - by, a
 
-        if attrs.get('focus'):
+        if attrs['focus']:
             yield self.cx, self.cy, ReverseAttrs()
 
     @property
@@ -1102,13 +1165,10 @@ class ViewPort:
     def cy(self):
         return self.e.y - int(self.y)
 
-    def search(self, t):
-        self.e.search(t)
-        self.adjust()
-
     def set_width(self, w):
-        self.w = w
-        self.adjust()
+        if self.w != w:
+            self.w = w
+            self.adjust()
 
     def dispatch(self, ev):
         self.e.dispatch(ev, self.h)
@@ -1135,7 +1195,7 @@ class ViewPort:
         if oy != self.y:
             self.pub_lineno()
 
-        self.e.b.pub('cursor', {
+        self.e.b.pub('xy', {
             'x': self.cx,
             'y': self.cy,
         })
@@ -1145,29 +1205,24 @@ class ViewPort:
 
 
 class Rect:
+    F = [0x2553, 0x2556, 0x255C, 0x2559, 0x2551]
+    U = [0x250C, 0x2510, 0x2518, 0x2514, 0x2502]
+
     def __init__(self, w, h):
         self.w = w
         self.h = h
 
     def chars(self, focus, **kwargs):
-        if focus:
-            yield 0, 0, 0x2553
-            yield self.w - 1, 0, 0x2556
-            yield self.w - 1, self.h - 1, 0x255C
-            yield 0, self.h - 1, 0x2559
+        t = self.F if focus else self.U
 
-            for y in range(1, self.h - 1):
-                yield 0, y, 0x2551
-                yield self.w - 1, y, 0x2551
-        else:
-            yield 0, 0, 0x250C
-            yield self.w - 1, 0, 0x2510
-            yield self.w - 1, self.h - 1, 0x2518
-            yield 0, self.h - 1, 0x2514
+        yield 0, 0, t[0]
+        yield self.w - 1, 0, t[1]
+        yield self.w - 1, self.h - 1, t[2]
+        yield 0, self.h - 1, t[3]
 
-            for y in range(1, self.h - 1):
-                yield 0, y, 0x2502
-                yield self.w - 1, y, 0x2502
+        for y in range(1, self.h - 1):
+            yield 0, y, t[4]
+            yield self.w - 1, y, t[4]
 
         for x in range(1, self.w - 1):
             yield x, 0, 0x2500
@@ -1223,7 +1278,7 @@ class LineNo:
         return len(str(self.s + self.h))
 
     def pixels(self, attrs):
-        f = gray(8)
+        f = gray8(8)
 
         for x, y, c in self.chars():
             yield x, y, Attrs(c=c, f=f)
@@ -1245,9 +1300,7 @@ class HGrad:
 
     def pixels(self, attrs):
         for i in range(0, self.w):
-            n = 32 - (i * 32) // self.w
-
-            yield i, 0, Attrs(b=Color24(n, n, n))
+            yield i, 0, Attrs(b=gray24(32 - (i * 32) // self.w))
 
 
 class TextInput:
@@ -1294,7 +1347,7 @@ class TextInput:
         except IndexError:
             pass
 
-        self.adjust_cursor()
+        self.adjust()
 
     def dispatch_chr(self, ch):
         self.t = self.t[:self.c] + ch + self.t[self.c:]
@@ -1330,7 +1383,7 @@ class TextInput:
     def dispatch_ev(self, ev):
         getattr(self, 'key_' + ev.replace('-', '_'), self.on_complete)()
 
-    def adjust_cursor(self):
+    def adjust(self):
         hw = self.w // 2
 
         while self.cx < 0:
@@ -1352,15 +1405,17 @@ def editor_widget(ed, bus, w, h):
     vl_w = VLine(h)
     lb_w = Label()
     cp_w = HGrad(w - 2)
-    pp_w = Panel(1, 1, Attrs(b=gray(14)))
+    pp_w = Panel(1, 1, Attrs(b=gray8(14)))
     vp_w = ViewPort(w, h - 2, ed)
 
     class SearchInput(TextInput):
         def on_text_change(self):
             bus.pub('search', self.t)
 
+        def key_ctrl_s(self):
+            bus.pub('search-next', self.t)
+
         def on_complete(self):
-            self.reset()
             bus.pub('popw')
 
     ti_w = SearchInput(w - 2)
@@ -1387,19 +1442,27 @@ def editor_widget(ed, bus, w, h):
         lb_w.t = m
 
     def on_cursor(c):
+        vp_w.adjust()
+
+    def on_xy(c):
         pp_h.move(vl_h.x, int(ln_h.y + (ln_w.h - 1) * ed.complete_ratio()))
         cp_h.move(1, vp_h.y + c['y'])
 
     def on_show_search_dialog():
+        ti_w.reset()
         mw_w.push(ti_w).move(1, h - 1)
 
     def on_search(t):
         bus.msg(f'search for: {t}')
-        vp_w.search(t)
+        ed.search_context().search(t)
+
+    def on_search_next(t):
+        bus.msg(f'search next: {t}')
+        ed.search_context().search_next(t)
 
     for k in list(locals()):
         if k.startswith('on_'):
-            bus.sub(k[3:], locals()[k])
+            bus.sub(k[3:].replace('_', '-'), locals()[k])
 
     vp_w.pub_lineno()
 
