@@ -1076,7 +1076,7 @@ class Editor:
         self.set_mark(self.mb, self.c)
 
     def key_ctrl_x_c(self):
-        raise KeyboardInterrupt()
+        self.b.pub('show-save-dialog')
 
     def key_ctrl_x_ctrl_c(self):
         self.key_ctrl_x_c()
@@ -1542,12 +1542,17 @@ def editor_widget(ed, bus, w, h):
         def __init__(self):
             YesNo.__init__(self, 'save file, y/n?')
 
-        def on_yes(self):
-            bus.pub('save')
+        def on_complete(self):
             bus.pub('popw')
 
+            raise KeyboardInterrupt()
+
+        def on_yes(self):
+            bus.pub('save')
+            self.on_complete()
+
         def on_no(self):
-            bus.pub('popw')
+            self.on_complete()
 
     sd_w = SaveDialog()
 

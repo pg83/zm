@@ -1076,7 +1076,7 @@ class Editor:
         self.set_mark(self.mb, self.c)
 
     def key_ctrl_x_c(self):
-        raise KeyboardInterrupt()
+        self.b.pub('show-save-dialog')
 
     def key_ctrl_x_ctrl_c(self):
         self.key_ctrl_x_c()
@@ -1348,8 +1348,8 @@ def channel():
 
 
 class Label:
-    def __init__(self):
-        self.t = ''
+    def __init__(self, t=''):
+        self.t = t
 
     def pixels(self, attrs):
         for x, c in enumerate(self.t):
@@ -1497,6 +1497,20 @@ class TextInput:
             self.x += hw
 
 
+class YesNo(Label):
+    def on_yes(self):
+        pass
+
+    def on_no(self):
+        pass
+
+    def dispatch(self, ev):
+         if ev == 'y':
+             self.on_yes()
+         else:
+             self.on_no()
+
+
 def editor_widget(ed, bus, w, h):
     mw_w = Stack()
 
@@ -1523,6 +1537,24 @@ def editor_widget(ed, bus, w, h):
             bus.pub('popw')
 
     ti_w = SearchInput(w - 2)
+
+    class SaveDialog(YesNo):
+        def __init__(self):
+            YesNo.__init__(self, 'save file, y/n?')
+
+        def on_complete(self):
+            bus.pub('popw')
+
+            raise KeyboardInterrupt()
+
+        def on_yes(self):
+            bus.pub('save')
+            self.on_complete()
+
+        def on_no(self):
+            self.on_complete()
+
+    sd_w = SaveDialog()
 
     ln_h = st_w.push(ln_w)
     vl_h = st_w.push(vl_w)
@@ -1564,6 +1596,9 @@ def editor_widget(ed, bus, w, h):
         bus.msg(f'search next: {t}')
         ed.search_context().search_next(t)
 
+    def on_show_save_dialog():
+        mw_w.push(sd_w).move(1, h - 1)
+
     for k in list(locals()):
         if k.startswith('on_'):
             bus.sub(k[3:].replace('_', '-'), locals()[k])
@@ -1580,6 +1615,8 @@ def main():
     try:
         with channel() as ch:
             while True:
+                ed.b.sub('save', lambda: ed.save(fn))
+
                 try:
                     ev = EventLoop(ch)
 
