@@ -7,6 +7,7 @@ import sys
 import tty
 import queue
 import signal
+import hashlib
 import cProfile
 import fractions
 import itertools
@@ -27,6 +28,10 @@ if 'graal' in os.path.basename(sys.executable):
 
     def chr(c):
         return CHRT[c]
+
+
+def str_hash(s):
+    return hashlib.md5(s.encode()).hexdigest()
 
 
 class PubSub:
@@ -840,6 +845,7 @@ class Editor:
         with open(p) as f:
             d = f.read()
 
+        self.md5 = str_hash(d)
         self.s = EmacsSequencer()
         self.h = HighLight(p, d)
         self.t = TextCache(TextArray(d))
@@ -973,7 +979,7 @@ class Editor:
                     yield x, y, Attrs(c=c, f=col)
 
         for x, y, p, c in self.iter_xypc(*self.get_mark()):
-            yield x, y, Attrs(c=c, b=gray8(12))
+            yield x, y, Attrs(c=c, b=gray8(8))
 
         bm = self.bracket_match()
 
@@ -1076,6 +1082,9 @@ class Editor:
         self.set_mark(self.mb, self.c)
 
     def key_ctrl_x_c(self):
+        if str_hash(self.t.result()) == self.md5:
+            raise KeyboardInterrupt()
+
         self.b.pub('show-save-dialog')
 
     def key_ctrl_x_ctrl_c(self):
