@@ -206,7 +206,7 @@ KMAP = [
     ('[23~', 'f11'),
     ('[24~', 'f12'),
     ('[33~', 'f19'),
-]
+] + [(chr(x), f'alt-{chr(x)}') for x in range(ord('a'), ord('z'))]
 
 
 def make_scan_trie():
@@ -229,15 +229,11 @@ def make_scan_trie():
     return res
 
 
-def make_ctrl_tables():
-    return [(n + 1, f'ctrl-{chr(ch)}') for n, ch in enumerate(range(ord('a'), ord('z')))]
-
-
 class InputStream:
     TRIE = make_scan_trie()
 
     ASCII = dict(
-        make_ctrl_tables() + [
+        [(n + 1, f'ctrl-{chr(ch)}') for n, ch in enumerate(range(ord('a'), ord('z')))] + [
             (0,   'ctrl-space'),
             (8,   'bs'),
             (9,   'tab'),
@@ -246,6 +242,13 @@ class InputStream:
             (127, 'bs'),
         ]
     )
+
+    BROKEN_UNICODE = dict((bytes(k).decode(), v) for k, v in (
+        ((226, 136, 145), 'alt-w'),
+        ((197, 147),      'alt-q'),
+        ((194, 174),      'alt-r'),
+        ((226, 137, 136), 'alt-x'),
+    ))
 
     def __init__(self, ch):
         self.ch = ch
@@ -267,7 +270,9 @@ class InputStream:
 
             raise Exception(f'bad key {key}')
 
-        return self.scan_utf8(key)
+        res = self.scan_utf8(key)
+
+        return self.BROKEN_UNICODE.get(res, res)
 
     def scan_utf8(self, key):
         runes = [key]
@@ -593,13 +598,7 @@ class EventLoop:
 
         while True:
             self.d.flip(w.pixels(attrs))
-
-            ev = self.i.next()
-
-            if ev == 'ctrl-c':
-                raise KeyboardInterrupt()
-
-            w.dispatch(ev)
+            w.dispatch(self.i.next())
 
 
 def parse_color(c):
@@ -713,8 +712,8 @@ class TextArray:
 
         return self.d[pos]
 
-    def delete(self, pos):
-        self.d = self.d[:pos] + self.d[pos + 1:]
+    def delete(self, fr, to):
+        self.d = self.d[:fr] + self.d[to:]
         self.split()
 
     def insert(self, pos, c):
@@ -756,9 +755,9 @@ class TextCache:
         self.clear()
         self.t.insert(pos, ch)
 
-    def delete(self, pos):
+    def delete(self, fr, to):
         self.clear()
-        self.t.delete(pos)
+        self.t.delete(fr, to)
 
     def y(self, pos):
         cp = pos - pos % 256
@@ -816,6 +815,24 @@ class SearchContext:
             self.search_from(t, 0)
 
 
+class EmacsSequencer:
+    def __init__(self):
+        self.state = ''
+
+    def dispatch(self, ev):
+        if ev == 'ctrl-x':
+            self.state = ev
+        else:
+            prev = self.state
+
+            self.state = ''
+
+            if prev:
+                return prev + '-' + ev
+
+            return ev
+
+
 class Editor:
     BRKT = dict(gen_brackets())
 
@@ -823,19 +840,41 @@ class Editor:
         with open(p) as f:
             d = f.read()
 
+        self.s = EmacsSequencer()
         self.h = HighLight(p, d)
         self.t = TextCache(TextArray(d))
         self.c = 0
         self.b = b
-
         self.unmark()
+        self.copy_to_buffer('')
+
+    def get_unmark(self):
+        try:
+            return self.get_mark()
+        finally:
+            self.unmark()
 
     def unmark(self):
-        self.set_mark(0, 0)
+        self.set_mark(None, None)
 
     def set_mark(self, b, e):
         self.mb = b
         self.me = e
+
+    def get_mark(self):
+        b = self.mb
+        e = self.me
+
+        if b is None:
+            b = self.c
+
+        if e is None:
+            e = self.c
+
+        if e < b:
+            return e, b + 1
+
+        return b, e
 
     def search_context(self):
         return SearchContext(self)
@@ -870,17 +909,17 @@ class Editor:
             return
 
         x = self.x_for(fr)
-        y = self.y_for(to)
+        y = self.y_for(fr)
 
         for p in range(fr, to):
             c = self.t.at(p)
-
-            yield x, y, p, c
 
             if c == '\n':
                 x = 0
                 y += 1
             else:
+                yield x, y, p, c
+
                 x += 1
 
     @property
@@ -917,7 +956,11 @@ class Editor:
                 if cnt == 0:
                     return p
 
-        return None
+    def bracket_match(self):
+        try:
+            return self.find_bracket_match(self.c)
+        except IndexError:
+            pass
 
     def render(self, x1, y1, x2, y2):
         for y, s in self.t.lines(y1, y2):
@@ -929,13 +972,10 @@ class Editor:
                 if c != ' ':
                     yield x, y, Attrs(c=c, f=col)
 
-        for x, y, p, c in self.iter_xypc(self.mb, self.me):
-            yield x, y, Attrs(c=c, b=white())
+        for x, y, p, c in self.iter_xypc(*self.get_mark()):
+            yield x, y, Attrs(c=c, b=gray8(12))
 
-        try:
-            bm = self.find_bracket_match(self.c)
-        except IndexError:
-            bm = None
+        bm = self.bracket_match()
 
         if bm is not None:
             yield self.x_for(bm), self.y_for(bm), Attrs(f=black(), b=Color4(12))
@@ -1021,10 +1061,73 @@ class Editor:
             self.key_delete()
 
     def dispatch(self, ev, h):
-        if len(ev) == 1:
-            self.handle_char(ev)
-        else:
-            self.handle_event(ev, h)
+        seq = self.s.dispatch(ev)
+
+        if seq:
+            if len(seq) == 1:
+                self.handle_char(seq)
+            else:
+                self.handle_event(seq, h)
+
+    def begin_mark(self):
+        self.set_mark(self.c, None)
+
+    def end_mark(self):
+        self.set_mark(self.mb, self.c)
+
+    def key_ctrl_x_c(self):
+        raise KeyboardInterrupt()
+
+    def key_ctrl_x_ctrl_c(self):
+        self.key_ctrl_x_c()
+
+    def key_ctrl_x_s(self):
+        self.key_ctrl_s()
+
+    def key_ctrl_x_ctrl_s(self):
+        self.key_ctrl_x_s()
+
+    def key_ctrl_space(self):
+        self.begin_mark()
+
+    def key_ctrl_w(self):
+        self.end_mark()
+        self.cut_selection()
+
+    def key_alt_w(self):
+        self.end_mark()
+        self.copy_selection()
+
+    def key_ctrl_y(self):
+        self.paste_from_buffer()
+
+    def paste(self, pos, txt):
+        self.t.insert(pos, txt)
+        self.set_pos(pos + len(txt))
+
+    def paste_from_buffer(self):
+        self.paste(self.c, self.buf)
+
+    def copy_to_buffer(self, txt):
+        self.buf = txt
+
+    def get_range(self, fr, to):
+        return ''.join(self.t.at(p) for p in range(fr, to))
+
+    def cut_range(self, fr, to):
+        try:
+            return self.get_range(fr, to)
+        finally:
+            self.t.delete(fr, to)
+
+    def cut_selection(self):
+        fr, to = self.get_unmark()
+
+        self.set_pos(fr)
+        self.copy_to_buffer(self.cut_range(fr, to))
+
+    def copy_selection(self):
+        self.copy_to_buffer(self.get_range(*self.get_unmark()))
 
     def key_tab(self):
         self.run_indent()
@@ -1111,7 +1214,7 @@ class Editor:
 
     def key_delete(self):
         self.unmark()
-        self.t.delete(self.c)
+        self.t.delete(self.c, self.c + 1)
 
     def key_ctrl_s(self):
         self.b.pub('show-search-dialog')
@@ -1133,6 +1236,7 @@ class Editor:
             self.b.msg('index error')
 
     def handle_char(self, ch):
+        self.b.msg('unicode: ' + ', '.join(str(x) for x in list(ch.encode())))
         self.unmark()
         self.t.insert(self.c, ch)
         self.one_right()
