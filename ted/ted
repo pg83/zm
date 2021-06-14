@@ -1625,6 +1625,8 @@ def main():
                     pass
 
                 ed.b = PubSub()
+    except KeyboardInterrupt:
+        raise
     except:
         ed.save(fn + '.bak')
 
