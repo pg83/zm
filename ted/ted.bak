@@ -31,6 +31,9 @@ if 'graal' in os.path.basename(sys.executable):
         return CHRT[c]
 
 
+PROFILE = os.environ.get('PROFILE', '')
+
+
 def str_hash(s):
     return hashlib.md5(s.encode()).hexdigest()
 
@@ -108,7 +111,8 @@ class Channel:
     def runq(self):
         try:
             while True:
-                self.q.put(retval(self.i.read(1)))
+                for c in self.i.read(128):
+                    self.q.put(retval(c))
         except Exception as e:
             def err():
                 raise e
@@ -121,13 +125,22 @@ class Channel:
     def recv(self):
         return ord(self.q.get()())
 
-    def next(self):
+    def recv_nowait(self):
+        return ord(self.q.get_nowait()())
+
+    def next_from(self, f):
         try:
             return self.b.popleft()
         except IndexError:
             pass
 
-        return self.recv()
+        return f()
+
+    def next(self):
+        return self.next_from(self.recv)
+
+    def next_nowait(self):
+        return self.next_from(self.recv_nowait)
 
     def read_seq(self, ch):
         while True:
@@ -211,7 +224,7 @@ KMAP = [
     ('[23~', 'f11'),
     ('[24~', 'f12'),
     ('[33~', 'f19'),
-] + [(x, f'alt-{x}') for x in string.ascii_lowercase]
+] + [(x, f'alt-{x}') for x in (string.ascii_lowercase + string.digits)]
 
 
 def make_scan_trie():
@@ -232,6 +245,10 @@ def make_scan_trie():
         res[k] = v
 
     return res
+
+
+class BadInput(Exception):
+    pass
 
 
 class InputStream:
@@ -260,8 +277,23 @@ class InputStream:
         self.ch = ch
 
     def next(self):
-        key = self.ch.next()
+        return self.scan_event(self.ch.next())
 
+    def next_nowait(self):
+        return self.scan_event(self.ch.next_nowait())
+
+    def next_bulk(self, n):
+        res = [self.next()]
+
+        try:
+            while len(res) < n:
+                res.append(self.next_nowait())
+        except queue.Empty:
+            pass
+
+        return res
+
+    def scan_event(self, key):
         if key < 128:
             if key == 27:
                 return self.scan_escape()
@@ -274,7 +306,7 @@ class InputStream:
             if key >= 32:
                 return chr(key)
 
-            raise Exception(f'bad key {key}')
+            raise BadInput(str(key))
 
         res = self.scan_utf8(key)
 
@@ -303,7 +335,7 @@ class InputStream:
                 if v != 'int':
                     return v
             else:
-                raise Exception(f'unknown escape sequence {p}')
+                raise BadInput(p)
 
 
 class Color24:
@@ -319,16 +351,8 @@ class Color24:
         return csi(38, 2, *self.t) + 'm'
 
 
-def bg8(n):
-    return csi(48, 5, n) + 'm'
-
-
-def fg8(n):
-    return csi(38, 5, n) + 'm'
-
-
-TBL8BG = [bg8(n) for n in range(0, 256)]
-TBL8FG = [fg8(n) for n in range(0, 256)]
+TBL8BG = [csi(48, 5, n) + 'm' for n in range(0, 256)]
+TBL8FG = [csi(38, 5, n) + 'm' for n in range(0, 256)]
 
 
 class Color8:
@@ -344,22 +368,23 @@ class Color8:
         return TBL8FG[self.n]
 
 
-def bg4(n):
-    if n < 8:
-        return csi(40 + n) + 'm'
+def gen_tbl4():
+    def bg4(n):
+        if n < 8:
+            return csi(40 + n) + 'm'
 
-    return csi(92 + n) + 'm'
+        return csi(92 + n) + 'm'
+
+    def fg4(n):
+        if n < 8:
+            return csi(30 + n) + 'm'
+
+        return csi(82 + n) + 'm'
+
+    return [bg4(x) for x in range(0, 16)], [fg4(x) for x in range(0, 16)]
 
 
-def fg4(n):
-    if n < 8:
-        return csi(30 + n) + 'm'
-
-    return csi(82 + n) + 'm'
-
-
-TBL4BG = [bg4(x) for x in range(0, 16)]
-TBL4FG = [fg4(x) for x in range(0, 16)]
+TBL4BG, TBL4FG = gen_tbl4()
 
 
 class Color4:
@@ -479,7 +504,10 @@ def asyncmngr():
 
 
 def schedule(f):
-    asyncmngr().schedule(f)
+    if PROFILE:
+        f()
+    else:
+        asyncmngr().schedule(f)
 
 
 class Display:
@@ -532,14 +560,15 @@ class Display:
 
 class Panel:
     def __init__(self, w, h, p):
-        self.w = w
-        self.h = h
-        self.p = p
+        def pixels():
+            for y in range(0, h):
+                for x in range(0, w):
+                    yield x, y, p
+
+        self.d = list(pixels())
 
     def pixels(self, attrs):
-        for y in range(0, self.h):
-            for x in range(0, self.w):
-                yield x, y, self.p
+        return self.d
 
 
 class Handle:
@@ -563,12 +592,13 @@ class Stack:
     def __init__(self):
         self.o = []
 
+    def push_raw(self, w):
+        self.o.append(w)
+
+        return w
+
     def push(self, w):
-        h = Handle(w)
-
-        self.o.append(h)
-
-        return h
+        return self.push_raw(Handle(w))
 
     def pop(self):
         return self.o.pop()
@@ -588,28 +618,10 @@ class Stack:
         self.o[-1].dispatch(ev)
 
 
-class Combine(Stack):
+class Collection(Stack):
     def pixels(self, attrs):
         for o in self.o:
             yield from o.pixels(attrs)
-
-
-class EventLoop:
-    def __init__(self, ch, inp=None):
-        self.d = Display(ch)
-        self.i = inp or InputStream(ch)
-
-    def loop(self, w):
-        while True:
-            self.d.flip(w.pixels(dict(focus=True)))
-            w.dispatch(self.i.next())
-
-
-def parse_color(c):
-    if c:
-        return prepare(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
-
-    return white()
 
 
 def guess_lexer(p, d):
@@ -649,11 +661,11 @@ class HighLight:
             try:
                 return self.col[c]
             except KeyError:
-                self.col[c] = parse_color(c)
+                self.col[c] = prepare(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
 
     def style(self, typ):
         try:
-            return self.parse_color(self.stl.style_for_token(typ).get('color', ''))
+            return self.parse_color(self.stl.style_for_token(typ)['color'])
         except KeyError:
             return white()
 
@@ -879,7 +891,7 @@ class Editor:
     def y_for(self, c):
         return self.t.y(c)
 
-    def iter_xypc(self, fr, to):
+    def iter_xyc(self, fr, to):
         if fr == to:
             return
 
@@ -893,7 +905,7 @@ class Editor:
                 x = 0
                 y += 1
             else:
-                yield x, y, p, c
+                yield x, y, c
 
                 x += 1
 
@@ -965,8 +977,8 @@ class Editor:
                 if c != ' ':
                     yield x, y, Attrs(c=c, f=col)
 
-        for x, y, p, c in self.iter_xypc(*self.get_mark()):
-            yield x, y, Attrs(c=c, b=gray8(6))
+        for x, y, c in self.iter_xyc(*self.get_mark()):
+            yield x, y, Attrs(c=c, b=gray8(5))
 
         bm = self.bracket_match()
 
@@ -1511,12 +1523,15 @@ class YesNo(Label):
 
 
 def editor_widget(ed, bus, w, h):
+    if w < 10 or h < 5:
+        return Panel(w, h, Attrs(c=' ', b=Color4(9), f=white()))
+
     mw_w = Stack()
 
-    st_w = mw_w.push(Combine()).w
+    st_w = mw_w.push_raw(Collection())
 
-    st_w.push(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
-    st_w.push(Rect(w, h))
+    st_w.push_raw(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
+    st_w.push_raw(Rect(w, h))
 
     ln_w = LineNo(0, h - 2)
     vl_w = VLine(h)
@@ -1605,24 +1620,34 @@ def editor_widget(ed, bus, w, h):
     return mw_w
 
 
-class FixedInput:
+class ProfileInputStream:
     def __init__(self):
         def gen():
-            for n in range(0, 3):
+            for n in range(0, 10):
                 for i in range(0, 150):
                     yield 'down'
 
                 for i in range(0, 150):
                     yield 'up'
 
+            while True:
+                yield 'ctrl-x-c'
+
         self.g = gen()
 
-    def next(self):
-        try:
-            return next(self.g)
-        except StopIteration:
-            raise Exception('shit')
-            return 'ctrl-x-c'
+    def next_bulk(self, n):
+        return [next(self.g) for i in range(0, n)]
+
+
+def event_loop(d, i, w, bus):
+    while True:
+        d.flip(w.pixels(dict(focus=True)))
+
+        for ev in i.next_bulk(32):
+            try:
+                w.dispatch(ev)
+            except BadInput as e:
+                bus.msg(f'bad input: {e}')
 
 
 def main():
@@ -1635,10 +1660,11 @@ def main():
                 ed.b.sub('save', lambda: ed.save(fn))
 
                 try:
-                    #ev = EventLoop(ch)
-                    ev = EventLoop(ch, FixedInput())
+                    d = Display(ch)
+                    i = ProfileInputStream() if PROFILE else InputStream(ch)
+                    w = editor_widget(ed, ed.b, d.dx, d.dy)
 
-                    return ev.loop(editor_widget(ed, ed.b, ev.d.dx, ev.d.dy))
+                    return event_loop(d, i, w, ed.b)
                 except SigWinch:
                     pass
 
@@ -1652,7 +1678,7 @@ def main():
 
 
 try:
-    if os.environ.get('PROFILE', ''):
+    if PROFILE:
         cProfile.run('main()')
     else:
         main()
