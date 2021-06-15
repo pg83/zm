@@ -1509,7 +1509,7 @@ class YesNo(Label):
 def editor_widget(ed, bus, w, h):
     mw_w = Stack()
 
-    st_w = mw_w.push(Combine()).w
+    st_w = mw_w.push_raw(Combine())
 
     st_w.push_raw(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
     st_w.push_raw(Rect(w, h))
