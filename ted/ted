@@ -479,7 +479,8 @@ def asyncmngr():
 
 
 def schedule(f):
-    asyncmngr().schedule(f)
+    f()
+    #asyncmngr().schedule(f)
 
 
 class Display:
@@ -532,14 +533,15 @@ class Display:
 
 class Panel:
     def __init__(self, w, h, p):
-        self.w = w
-        self.h = h
-        self.p = p
+        def pixels():
+            for y in range(0, h):
+                for x in range(0, w):
+                    yield x, y, p
+
+        self.d = list(pixels())
 
     def pixels(self, attrs):
-        for y in range(0, self.h):
-            for x in range(0, self.w):
-                yield x, y, self.p
+        return self.d
 
 
 class Handle:
@@ -563,12 +565,13 @@ class Stack:
     def __init__(self):
         self.o = []
 
+    def push_raw(self, w):
+        self.o.append(w)
+
+        return w
+
     def push(self, w):
-        h = Handle(w)
-
-        self.o.append(h)
-
-        return h
+        return self.push_raw(Handle(w))
 
     def pop(self):
         return self.o.pop()
@@ -595,23 +598,14 @@ class Combine(Stack):
 
 
 class EventLoop:
-    def __init__(self, ch):
+    def __init__(self, ch, inp=None):
         self.d = Display(ch)
-        self.i = InputStream(ch)
+        self.i = inp or InputStream(ch)
 
     def loop(self, w):
-        attrs = {'focus': True}
-
         while True:
-            self.d.flip(w.pixels(attrs))
+            self.d.flip(w.pixels(dict(focus=True)))
             w.dispatch(self.i.next())
-
-
-def parse_color(c):
-    if c:
-        return prepare(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
-
-    return white()
 
 
 def guess_lexer(p, d):
@@ -651,11 +645,11 @@ class HighLight:
             try:
                 return self.col[c]
             except KeyError:
-                self.col[c] = parse_color(c)
+                self.col[c] = prepare(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
 
     def style(self, typ):
         try:
-            return self.parse_color(self.stl.style_for_token(typ).get('color', ''))
+            return self.parse_color(self.stl.style_for_token(typ)['color'])
         except KeyError:
             return white()
 
@@ -745,6 +739,12 @@ class TextArray:
 
     def line_start(self, y):
         return 0 if y == 0 else self.p[y - 1] + 1
+
+    def iter_chars(self, fr):
+        while True:
+            yield self.d[fr]
+
+            fr += 1
 
     def length(self):
         return len(self.d)
@@ -934,23 +934,20 @@ class Editor:
             pass
 
     def lines_from(self, fr):
-        y = fr
         l = ''
 
-        for i in itertools.count(self.t.line_start(fr)):
-            ch = self.t.at(i)
-
+        for ch in self.t.iter_chars(self.t.line_start(fr)):
             if ch == '\n':
-                yield y, l
+                yield l
 
                 l = ''
-                y += 1
             else:
                 l += ch
 
     def lines(self, fr, to):
         try:
-            yield from itertools.islice(self.lines_from(fr), 0, to - fr)
+            for j, l in enumerate(itertools.islice(self.lines_from(fr), 0, to - fr)):
+                yield j + fr, l
         except IndexError:
             pass
 
@@ -1514,8 +1511,8 @@ def editor_widget(ed, bus, w, h):
 
     st_w = mw_w.push(Combine()).w
 
-    st_w.push(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
-    st_w.push(Rect(w, h))
+    st_w.push_raw(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
+    st_w.push_raw(Rect(w, h))
 
     ln_w = LineNo(0, h - 2)
     vl_w = VLine(h)
@@ -1604,6 +1601,25 @@ def editor_widget(ed, bus, w, h):
     return mw_w
 
 
+class FixedInput:
+    def __init__(self):
+        def gen():
+            for n in range(0, 10):
+                for i in range(0, 150):
+                    yield 'down'
+
+                for i in range(0, 150):
+                    yield 'up'
+
+            while True:
+                yield 'ctrl-x-c'
+
+        self.g = gen()
+
+    def next(self):
+        return next(self.g)
+
+
 def main():
     fn = sys.argv[1]
     ed = Editor(fn, PubSub())
@@ -1614,7 +1630,8 @@ def main():
                 ed.b.sub('save', lambda: ed.save(fn))
 
                 try:
-                    ev = EventLoop(ch)
+                    #ev = EventLoop(ch)
+                    ev = EventLoop(ch, FixedInput())
 
                     return ev.loop(editor_widget(ed, ed.b, ev.d.dx, ev.d.dy))
                 except SigWinch:
