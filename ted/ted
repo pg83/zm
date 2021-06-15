@@ -5,6 +5,7 @@ import io
 import os
 import sys
 import queue
+import bisect
 import string
 import signal
 import hashlib
@@ -640,7 +641,7 @@ class HighLight:
     }
 
     def __init__(self, p, d):
-        self.lex = guess_lexer(p, d[:10000])
+        self.lex = guess_lexer(p, d[:5000])
         self.stl = ps.get_style_by_name('material')
         self.lns = {}
         self.col = {}
@@ -712,51 +713,6 @@ class TextArray:
         self.split()
 
     def split(self):
-        self.l = self.d.split('\n')
-
-    def at(self, pos):
-        if pos < 0:
-            raise IndexError()
-
-        if pos == len(self.d):
-            return None
-
-        return self.d[pos]
-
-    def delete(self, fr, to):
-        self.d = self.d[:fr] + self.d[to:]
-        self.split()
-
-    def insert(self, pos, c):
-        self.d = self.d[:pos] + c + self.d[pos:]
-        self.split()
-
-    def y(self, pos):
-        return self.d[:pos].count('\n')
-
-    def lines(self, fr, to):
-        try:
-            for i in range(fr, to):
-                yield i, self.l[i]
-        except IndexError:
-            pass
-
-    def length(self):
-        return len(self.d)
-
-    def result(self):
-        return ('\n'.join(x.rstrip() for x in self.l)).strip() + '\n'
-
-    def search(self, t, fr):
-        return self.d.find(t, fr)
-
-
-class TextArray2:
-    def __init__(self, d):
-        self.d = d
-        self.split()
-
-    def split(self):
         p = []
 
         for n, c in enumerate(self.d):
@@ -785,95 +741,35 @@ class TextArray2:
         self.split()
 
     def y(self, pos):
-        a = 0
-        b = len(self.p)
+        return bisect.bisect_left(self.p, pos)
 
-        while b - a > 1:
-            m = (b + a) // 2
+    def lines_til_inf(self, fr):
+        pr = self.p[fr - 1] + 1 if fr > 0 else 0
 
-            if pos < self.p[m]:
-                b = m
-            else:
-                a = m
-
-        while self.p[a] < pos:
-            a += 1
-
-        return a
-
-    def do_lines(self, fr, to):
-        if fr > 0:
-            pr = self.p[fr - 1] + 1
-        else:
-            pr = 0
-
-        for l in range(fr, to):
+        for l in itertools.count(fr):
             nx = self.p[l]
 
             yield l, self.d[pr:nx]
 
             pr = nx + 1
 
-    def lines(self, fr, to):
+    def lines_til_end(self, fr):
         try:
-            yield from self.do_lines(fr, to)
+            yield from self.lines_til_inf(fr)
         except IndexError:
             pass
+
+    def lines(self, fr, to):
+        return itertools.islice(self.lines_til_end(fr), 0, to - fr)
 
     def length(self):
         return len(self.d)
 
     def result(self):
-        return ('\n'.join(x.rstrip() for x in self.d.split())).strip() + '\n'
+        return ('\n'.join(l.rstrip() for y, l in self.lines_til_end(0))).strip() + '\n'
 
     def search(self, t, fr):
         return self.d.find(t, fr)
-
-
-class TextCache:
-    def __init__(self, t):
-        self.t = t
-        self.clear()
-
-    def clear(self):
-        self.c = {}
-
-    def at(self, pos):
-        return self.t.at(pos)
-
-    def insert(self, pos, ch):
-        self.clear()
-        self.t.insert(pos, ch)
-
-    def delete(self, fr, to):
-        self.clear()
-        self.t.delete(fr, to)
-
-    def y(self, pos):
-        cp = pos - pos % 256
-
-        if cp not in self.c:
-            self.c[cp] = self.t.y(cp)
-
-        res = self.c[cp]
-
-        for c in range(cp, pos):
-            if self.at(c) == '\n':
-                res += 1
-
-        return res
-
-    def lines(self, fr, to):
-        return self.t.lines(fr, to)
-
-    def length(self):
-        return self.t.length()
-
-    def result(self):
-        return self.t.result()
-
-    def search(self, t, fr):
-        return self.t.search(t, fr)
 
 
 def gen_brackets():
@@ -933,8 +829,7 @@ class Editor:
         self.md5 = str_hash(d)
         self.s = EmacsSequencer()
         self.h = HighLight(p, d)
-        #self.t = TextCache(TextArray(d))
-        self.t = TextArray2(d)
+        self.t = TextArray(d)
         self.c = 0
         self.b = b
         self.unmark()
@@ -1186,14 +1081,17 @@ class Editor:
         self.begin_mark()
 
     def key_ctrl_w(self):
+        self.b.msg('cut')
         self.end_mark()
         self.cut_selection()
 
     def key_alt_w(self):
+        self.b.msg('copy')
         self.end_mark()
         self.copy_selection()
 
     def key_ctrl_y(self):
+        self.b.msg('paste')
         self.paste_from_buffer()
 
     def paste(self, pos, txt):
