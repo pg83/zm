@@ -73,6 +73,10 @@ def csi(*args):
     return esc(res)
 
 
+def csim(*args):
+    return csi(*args) + 'm'
+
+
 def title(t):
     return chr(27) + ']0;' + t + chr(7)
 
@@ -356,14 +360,14 @@ class Color24:
         self.t = (r, g, b)
 
     def bg(self):
-        return csi(48, 2, *self.t) + 'm'
+        return csim(48, 2, *self.t)
 
     def fg(self):
-        return csi(38, 2, *self.t) + 'm'
+        return csim(38, 2, *self.t)
 
 
-TBL8BG = [csi(48, 5, n) + 'm' for n in range(0, 256)]
-TBL8FG = [csi(38, 5, n) + 'm' for n in range(0, 256)]
+TBL8BG = [csim(48, 5, n) for n in range(0, 256)]
+TBL8FG = [csim(38, 5, n) for n in range(0, 256)]
 
 
 class Color8:
@@ -379,23 +383,8 @@ class Color8:
         return TBL8FG[self.n]
 
 
-def gen_tbl4():
-    def bg4(n):
-        if n < 8:
-            return csi(40 + n) + 'm'
-
-        return csi(92 + n) + 'm'
-
-    def fg4(n):
-        if n < 8:
-            return csi(30 + n) + 'm'
-
-        return csi(82 + n) + 'm'
-
-    return [bg4(x) for x in range(0, 16)], [fg4(x) for x in range(0, 16)]
-
-
-TBL4BG, TBL4FG = gen_tbl4()
+TBL4BG = [csim(40 + n if n < 8 else 92 + n) for n in range(0, 16)]
+TBL4FG = [csim(30 + n if n < 8 else 82 + n) for n in range(0, 16)]
 
 
 class Color4:
@@ -431,10 +420,10 @@ def prepare(c):
 
 class DefaultColor:
     def fg(self):
-        return csi(39) + 'm'
+        return csim(39)
 
     def bg(self):
-        return csi(49) + 'm'
+        return csim(49)
 
 
 def black():
@@ -868,16 +857,21 @@ class Editor:
         except FileNotFoundError:
             d = ''
 
+        d = d.replace('\t', '    ')
+
         self.fn = fn
         self.md5 = str_hash(d)
         self.ic = {}
         self.s = EmacsSequencer()
         self.h = HighLight(self.fn, d)
         self.t = TextArray(d)
-        self.c = int(db.get(self.fn, 0))
+        self.c = min(int(db.get(self.fn + '/cursor', 0)), self.t.length())
         self.b = bus
         self.unmark()
         self.copy_to_buffer('')
+
+    def store(self, db):
+        db.set(self.fn + '/cursor', self.c)
 
     def get_unmark(self):
         try:
@@ -996,20 +990,20 @@ class Editor:
     def lines_from(self, fr):
         l = ''
 
-        for ch in self.t.iter_chars(self.t.line_start(fr)):
-            if ch == '\n':
-                yield l
+        try:
+            for ch in self.t.iter_chars(self.t.line_start(fr)):
+                if ch == '\n':
+                    yield l
 
-                l = ''
-            else:
-                l += ch
+                    l = ''
+                else:
+                    l += ch
+        except IndexError:
+            yield l
 
     def lines(self, fr, to):
-        try:
-            for j, l in enumerate(itertools.islice(self.lines_from(fr), 0, to - fr)):
-                yield j + fr, l
-        except IndexError:
-            pass
+        for j, l in enumerate(itertools.islice(self.lines_from(fr), 0, to - fr)):
+            yield j + fr, l
 
     def render(self, x1, y1, x2, y2):
         for y, s in self.lines(y1, y2):
@@ -1558,8 +1552,17 @@ class YesNo(Label):
 
 
 def editor_widget(ed, bus, w, h):
-    if w < 10 or h < 5:
-        return Panel(w, h, Attrs(c=' ', b=Color4(9), f=white()))
+    if w < 10 or h < 4:
+        panel = Panel(w, h, Attrs(c=' ', b=Color4(9), f=white()))
+
+        class Fake:
+            def pixels(self, attrs):
+                return panel.pixels(attrs)
+
+            def dispatch(self, ev):
+                pass
+
+        return Fake()
 
     mw_w = Stack()
 
@@ -1748,6 +1751,7 @@ def main():
 
         raise
     finally:
+        ed.store(db)
         db.close()
 
 
