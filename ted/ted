@@ -4,10 +4,12 @@ import re
 import io
 import os
 import sys
+import json
 import queue
 import bisect
 import string
 import signal
+import sqlite3
 import hashlib
 import cProfile
 import fractions
@@ -65,6 +67,10 @@ def csi(*args):
         res += str(a)
 
     return esc(res)
+
+
+def title(t):
+    return chr(27) + ']0;' + t + chr(7)
 
 
 def move(x, y):
@@ -652,7 +658,7 @@ class HighLight:
     }
 
     def __init__(self, p, d):
-        self.lex = guess_lexer(p, d[:5000])
+        self.lex = guess_lexer(p, d[:1000])
         self.stl = ps.get_style_by_name('material')
         self.lns = {}
         self.col = {}
@@ -810,29 +816,26 @@ class EmacsSequencer:
         if ev == 'ctrl-x':
             self.state = ev
         else:
-            prev = self.state
-
-            self.state = ''
-
-            if prev:
-                return prev + '-' + ev
-
-            return ev
+            try:
+                return self.state + '-' + ev if self.state else ev
+            finally:
+                self.state = ''
 
 
 class Editor:
     BRKT = dict(gen_brackets())
 
-    def __init__(self, p, b):
-        with open(p) as f:
+    def __init__(self, fn, db, bus, **attrs):
+        with open(fn) as f:
             d = f.read()
 
+        self.fn = fn
         self.md5 = str_hash(d)
         self.s = EmacsSequencer()
-        self.h = HighLight(p, d)
+        self.h = HighLight(self.fn, d)
         self.t = TextArray(d)
-        self.c = 0
-        self.b = b
+        self.c = int(db.get(self.fn, 0))
+        self.b = bus
         self.unmark()
         self.copy_to_buffer('')
 
@@ -1651,21 +1654,55 @@ def event_loop(d, i, w, bus):
                 bus.msg(f'bad input: {e}')
 
 
+def load_config(p):
+    try:
+        return json.loads(open(p, 'r').read())
+    except FileNotFoundError:
+        return {}
+
+
+class Db:
+    def __init__(self, p):
+        self.c = sqlite3.connect(p)
+
+        try:
+            self.c.execute('CREATE TABLE db (key TEXT UNIQUE, value TEXT)')
+        except Exception as e:
+            if 'table db already exists' not in str(e):
+                raise
+
+    def get(self, k, d):
+        for r in self.c.execute(f'SELECT value FROM db WHERE key = "{k}"'):
+            return r[0]
+
+        return d
+
+    def set(self, k, v):
+        self.c.execute(f'INSERT OR REPLACE INTO db (key, value) VALUES ("{k}", "{v}")')
+
+    def close(self):
+        self.c.commit()
+        self.c.close()
+
+
 def main():
-    fn = sys.argv[1]
-    ed = Editor(fn, PubSub())
+    pr = os.path.expanduser('~/.config/ted')
+    fn = os.path.normpath(os.path.abspath(sys.argv[1]))
+    db = Db(pr + '/ted.db')
+    ed = Editor(fn, db, PubSub(), **load_config(pr + '/ted.json'))
 
     try:
         with channel() as ch:
+            ch.send(title(os.path.basename(fn)))
+
             while True:
                 ed.b.sub('save', lambda: ed.save(fn))
 
                 try:
                     d = Display(ch)
                     i = ProfileInputStream() if PROFILE else InputStream(ch)
-                    w = editor_widget(ed, ed.b, d.dx, d.dy)
 
-                    return event_loop(d, i, w, ed.b)
+                    return event_loop(d, i, editor_widget(ed, ed.b, d.dx, d.dy), ed.b)
                 except SigWinch:
                     pass
 
@@ -1676,6 +1713,8 @@ def main():
         ed.save(fn + '.bak')
 
         raise
+    finally:
+        db.close()
 
 
 try:
