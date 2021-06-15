@@ -743,30 +743,14 @@ class TextArray:
     def y(self, pos):
         return bisect.bisect_left(self.p, pos)
 
-    def lines_til_inf(self, fr):
-        pr = self.p[fr - 1] + 1 if fr > 0 else 0
-
-        for l in itertools.count(fr):
-            nx = self.p[l]
-
-            yield l, self.d[pr:nx]
-
-            pr = nx + 1
-
-    def lines_til_end(self, fr):
-        try:
-            yield from self.lines_til_inf(fr)
-        except IndexError:
-            pass
-
-    def lines(self, fr, to):
-        return itertools.islice(self.lines_til_end(fr), 0, to - fr)
+    def line_start(self, y):
+        return 0 if y == 0 else self.p[y - 1] + 1
 
     def length(self):
         return len(self.d)
 
     def result(self):
-        return ('\n'.join(l.rstrip() for y, l in self.lines_til_end(0))).strip() + '\n'
+        return ('\n'.join(l.rstrip() for l in self.d.split('\n'))).strip() + '\n'
 
     def search(self, t, fr):
         return self.d.find(t, fr)
@@ -949,8 +933,29 @@ class Editor:
         except IndexError:
             pass
 
+    def lines_from(self, fr):
+        y = fr
+        l = ''
+
+        for i in itertools.count(self.t.line_start(fr)):
+            ch = self.t.at(i)
+
+            if ch == '\n':
+                yield y, l
+
+                l = ''
+                y += 1
+            else:
+                l += ch
+
+    def lines(self, fr, to):
+        try:
+            yield from itertools.islice(self.lines_from(fr), 0, to - fr)
+        except IndexError:
+            pass
+
     def render(self, x1, y1, x2, y2):
-        for y, s in self.t.lines(y1, y2):
+        for y, s in self.lines(y1, y2):
             l = self.h.style_line(s)
 
             for x in range(x1, min(x2, len(l))):
