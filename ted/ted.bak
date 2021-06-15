@@ -637,7 +637,7 @@ class Collection(Stack):
 
 def guess_lexer(p, d):
     try:
-        return pl.guess_lexer_for_filename(p, d[:5000])
+        return pl.guess_lexer_for_filename(p, d)
     except pu.ClassNotFound:
         return pl.guess_lexer(d)
 
@@ -662,7 +662,7 @@ class HighLight:
     }
 
     def __init__(self, p, d):
-        self.lex = guess_lexer(p, d)
+        self.lex = guess_lexer(p, d[:1000])
         self.stl = ps.get_style_by_name('material')
         self.lns = {}
         self.col = {}
@@ -828,8 +828,10 @@ class EmacsSequencer:
 
 class IndentContext:
     def __init__(self, l):
-        self.o = 0
         self.i = self.calc_indent_for(l)
+        self.o = 0
+
+        self.next_indent()
 
     def next_indent(self):
         res = self.i[self.o:]
@@ -862,11 +864,8 @@ class Editor:
     BRKT = dict(gen_brackets())
 
     def __init__(self, fn, db, bus, **attrs):
-        try:
-            with open(fn) as f:
-                d = f.read()
-        except FileNotFoundError:
-            d = ''
+        with open(fn) as f:
+            d = f.read()
 
         self.fn = fn
         self.md5 = str_hash(d)
@@ -1691,7 +1690,7 @@ def event_loop(d, i, w, bus):
 def load_config(p):
     try:
         return json.loads(open(p, 'r').read())
-    except Exception:
+    except FileNotFoundError:
         return {}
 
 
