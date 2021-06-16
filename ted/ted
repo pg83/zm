@@ -5,6 +5,7 @@ import io
 import os
 import sys
 import json
+import math
 import queue
 import bisect
 import string
@@ -588,7 +589,7 @@ class Handle:
         self.y = y
 
 
-class Stack:
+class Collection:
     def __init__(self):
         self.o = []
 
@@ -604,24 +605,30 @@ class Stack:
         return self.o.pop()
 
     def pixels(self, attrs):
-        for n, o in enumerate(self.o):
-            if n < len(self.o) - 1:
-                a = attrs.copy()
-
-                a['focus'] = False
-            else:
-                a = attrs
-
-            yield from o.pixels(a)
+        for o in self.o:
+            yield from o.pixels(attrs)
 
     def dispatch(self, ev):
         self.o[-1].dispatch(ev)
 
 
-class Collection(Stack):
+def dict_update(d, **attrs):
+     d = d.copy()
+
+     d.update(attrs)
+
+     return d
+
+
+class Stack(Collection):
     def pixels(self, attrs):
-        for o in self.o:
-            yield from o.pixels(attrs)
+        for n, o in enumerate(self.o):
+            if n < len(self.o) - 1:
+                a = dict_update(attrs, focus=False)
+            else:
+                a = attrs
+
+            yield from o.pixels(a)
 
 
 def guess_lexer(p, d):
@@ -632,7 +639,7 @@ def guess_lexer(p, d):
 
 
 class HighLight:
-    CALL = re.compile('([a-zA-Z0-9]\w*)\(')
+    CALL = re.compile('([a-zA-Z]\w*)\(')
 
     DFLT = {
         'dict',
@@ -817,8 +824,8 @@ class EmacsSequencer:
 
 class IndentContext:
     def __init__(self, l):
-        self.o = 0
         self.i = self.calc_indent_for(l)
+        self.o = 0
 
     def next_indent(self):
         res = self.i[self.o:]
@@ -847,17 +854,19 @@ class IndentContext:
         return s
 
 
+def load_text(fn):
+    try:
+        with open(fn) as f:
+            return f.read().replace('\t', '    ')
+    except FileNotFoundError:
+        return ''
+
+
 class Editor:
     BRKT = dict(gen_brackets())
 
     def __init__(self, fn, db, bus, **attrs):
-        try:
-            with open(fn) as f:
-                d = f.read()
-        except FileNotFoundError:
-            d = ''
-
-        d = d.replace('\t', '    ')
+        d = load_text(fn)
 
         self.fn = fn
         self.md5 = str_hash(d)
@@ -1005,6 +1014,10 @@ class Editor:
         for j, l in enumerate(itertools.islice(self.lines_from(fr), 0, to - fr)):
             yield j + fr, l
 
+    def get_line(self, y):
+        for l in self.lines_from(y):
+            return l
+
     def render(self, x1, y1, x2, y2):
         for y, s in self.lines(y1, y2):
             l = self.h.style_line(s)
@@ -1059,6 +1072,10 @@ class Editor:
                 return self.ic[key]
             except KeyError:
                 self.ic[key] = IndentContext(bi)
+
+    def clear_indent_cache(self, c):
+        if c == '\n':
+            self.ic.clear()
 
     def calc_indent(self):
         return self.get_indent_ctx(self.y_for(self.c), self.get_indent_base_line(self.c)).next_indent()
@@ -1256,6 +1273,7 @@ class Editor:
 
     def key_delete(self):
         self.unmark()
+        self.clear_indent_cache(self.getch())
         self.t.delete(self.c, self.c + 1)
 
     def key_ctrl_s(self):
@@ -1278,6 +1296,7 @@ class Editor:
     def handle_char(self, ch):
         self.b.msg('unicode: ' + ', '.join(str(x) for x in list(ch.encode())))
         self.unmark()
+        self.clear_indent_cache(ch)
         self.t.insert(self.c, ch)
         self.one_right()
 
@@ -1444,7 +1463,9 @@ class HGrad:
 
     def pixels(self, attrs):
         for i in range(0, self.w):
-            yield i, 0, Attrs(b=gray24(32 - (i * 32) // self.w))
+            v = math.pow(i / self.w, 0.8)
+
+            yield i, 0, Attrs(b=gray24(int(32 - v * 32)))
 
 
 class TextInput:
@@ -1551,18 +1572,22 @@ class YesNo(Label):
              self.on_no()
 
 
+def fake_widget(w, h):
+    panel = Panel(w, h, Attrs(c=' ', b=Color4(9), f=white()))
+
+    class Fake:
+        def pixels(self, attrs):
+            yield from panel.pixels(attrs)
+
+        def dispatch(self, ev):
+            pass
+
+    return Fake()
+
+
 def editor_widget(ed, bus, w, h):
-    if w < 10 or h < 4:
-        panel = Panel(w, h, Attrs(c=' ', b=Color4(9), f=white()))
-
-        class Fake:
-            def pixels(self, attrs):
-                return panel.pixels(attrs)
-
-            def dispatch(self, ev):
-                pass
-
-        return Fake()
+    if w < 15 or h < 5:
+        return fake_widget(w, h)
 
     mw_w = Stack()
 
@@ -1725,8 +1750,9 @@ class Db:
 def main():
     pr = os.path.expanduser('~/.config/ted')
     fn = os.path.normpath(os.path.abspath(sys.argv[1]))
-    db = Db(pr + '/ted.db')
-    ed = Editor(fn, db, PubSub(), **load_config(pr + '/ted.json'))
+    db = Db(os.path.join(pr, 'ted.db'))
+    cf = load_config(os.path.join(pr, 'ted.json'))
+    ed = Editor(fn, db, PubSub(), **cf)
 
     try:
         with channel() as ch:
