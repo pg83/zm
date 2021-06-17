@@ -857,17 +857,18 @@ class IndentContext:
 def load_text(fn):
     try:
         with open(fn) as f:
-            return f.read().replace('\t', '    ')
+            return (os.stat(f.fileno()).st_mode, f.read().replace('\t', '    '))
     except FileNotFoundError:
-        return ''
+        return (0o644, '')
 
 
 class Editor:
     BRKT = dict(gen_brackets())
 
     def __init__(self, fn, db, bus, **attrs):
-        d = load_text(fn)
+        m, d = load_text(fn)
 
+        self.st_mode = m
         self.fn = fn
         self.md5 = str_hash(d)
         self.ic = {}
@@ -919,6 +920,7 @@ class Editor:
         with open(t, 'w') as f:
             f.write(self.t.result())
 
+        os.chmod(t, self.st_mode)
         os.rename(t, p)
 
     def complete_ratio(self):
@@ -1706,14 +1708,14 @@ def event_loop(d, i, w, bus):
     while True:
         d.flip(w.pixels(dict(focus=True)))
 
-        for ev in i.next_bulk(32):
-            try:
+        try:
+            for ev in i.next_bulk(32):
                 w.dispatch(ev)
-            except BadInput as e:
-                bus.msg(f'bad input: {e}')
 
-            if len(ev) > 1:
-                bus.msg(ev)
+                if len(ev) > 1:
+                    bus.msg(ev)
+        except BadInput as e:
+            bus.msg(f'bad input: {e}')
 
 
 def load_config(p):
