@@ -34,15 +34,21 @@ class Iface:
                 raise Exception('expected ' + new_md5 + ' checksum')
 
     def header(self):
-        if out := os.environ.get('out'):
+        out = os.environ.get('out')
+
+        if out:
             prepare_dir(out)
 
-        if tmp := os.environ.get('tmp'):
+        tmp = os.environ.get('tmp')
+
+        if tmp:
             prepare_dir(tmp)
             os.chdir(tmp)
 
     def footer(self):
-        if tmp := os.environ.get('tmp'):
+        tmp = os.environ.get('tmp')
+
+        if tmp:
             shutil.rmtree(tmp)
 
 

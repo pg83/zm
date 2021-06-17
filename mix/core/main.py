@@ -35,7 +35,9 @@ def print_help():
 
 
 def main(args, binary):
-    if hndl := find_handler(args):
+    hndl = find_handler(args)
+
+    if hndl:
         k, v, a = hndl
 
         ctx = {
