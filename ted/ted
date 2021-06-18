@@ -884,8 +884,10 @@ class TextArray:
         return 0 if y == 0 else self.p[y - 1] + 1
 
     def iter_chars(self, fr):
+        d = self.d
+
         while True:
-            yield self.d[fr]
+            yield d[fr]
 
             fr += 1
 
@@ -910,12 +912,13 @@ class SearchContext:
         self.e = e
 
     def search_from(self, t, c):
-        p = self.e.t.search(t, c)
+        e = self.e
+        p = e.t.search(t, c)
 
         if p >= 0:
-            self.e.set_mark(p, p + len(t))
-            self.e.set_pos(p)
-            self.e.b.pub('cursor', p)
+            e.set_mark(p, p + len(t))
+            e.set_pos(p)
+            e.b.pub('cursor', p)
 
         return p
 
@@ -933,18 +936,13 @@ class EmacsSequencer:
         self.state = ''
 
     def dispatch(self, ev):
-        t, v = ev['t'], ev['v']
-
-        if t == 'k':
-            if v == 'ctrl-x':
-                self.state = v
-            else:
-                try:
-                    return {'t': 'k', 'v': (self.state + '-' + v if self.state else v)}
-                finally:
-                    self.state = ''
+        if ev == 'ctrl-x':
+            self.state = ev
         else:
-            return ev
+            try:
+                return self.state + '-' + ev if self.state else ev
+            finally:
+                self.state = ''
 
 
 class MouseSequencer:
@@ -963,6 +961,25 @@ class MouseSequencer:
             self.press = False
 
         return ev
+
+
+class EventSequencer:
+    def __init__(self):
+        self.k = EmacsSequencer()
+        self.m = MouseSequencer()
+
+    def dispatch(self, ev):
+        t, v = ev['t'], ev['v']
+
+        if t == 'k':
+            v = self.k.dispatch(v)
+
+            if v:
+                return dict_update(ev, v=v)
+        elif t == 'm':
+            return dict_update(ev, v=self.m.dispatch(v))
+        else:
+            return ev
 
 
 class IndentContext:
@@ -1015,8 +1032,7 @@ class Editor:
         self.fn = fn
         self.md5 = str_hash(d)
         self.ic = {}
-        self.s = EmacsSequencer()
-        self.ms = MouseSequencer()
+        self.seq = EventSequencer()
         self.h = HighLight(self.fn, d)
         self.t = TextArray(d)
         self.c = min(int(db.get(self.fn + '/cursor', 0)), self.t.length())
@@ -1272,7 +1288,7 @@ class Editor:
             self.key_delete()
 
     def dispatch(self, ev, h):
-        ev = self.s.dispatch(ev)
+        ev = self.seq.dispatch(ev)
 
         if ev:
             t, v = ev['t'], ev['v']
@@ -1444,16 +1460,13 @@ class Editor:
         self.b.pub('show-search-dialog')
 
     def handle_mouse(self, ev):
-        ev = self.ms.dispatch(ev)
+        if ev.get('press'):
+            c = self.pos_for_xy(ev['x'], ev['y'])
 
-        if ev:
-            if ev['press']:
-                c = self.pos_for_xy(ev['x'], ev['y'])
-
-                if ev.get('drag'):
-                    self.set_mark(self.mb, c)
-                else:
-                    self.set_mark(c, c)
+            if ev.get('drag'):
+                self.set_mark(self.mb, c)
+            else:
+                self.set_mark(c, c)
 
     def handle_key(self, ev, h):
         def unknown():
