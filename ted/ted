@@ -111,9 +111,13 @@ class Channel:
         self.l = threading.Lock()
 
         os.system('stty raw')
-        self.send(csi('?25l'))
+        self.send(csi('?25l') + csi('?9h') + csi('?1000h') + csi('?1002h') + csi('?1006h'))
         threading.Thread(target=self.runq, daemon=True).start()
         signal.signal(signal.SIGWINCH, self.sigwinch)
+
+    def fini(self):
+        os.system('tput reset')
+        os.system('stty -raw')
 
     def title(self, t):
         self.send(title(t))
@@ -123,10 +127,6 @@ class Channel:
 
     def input_stream(self):
         return InputStream(self)
-
-    def fini(self):
-        os.system('tput reset')
-        os.system('stty -raw')
 
     def sigwinch(self, *args):
         def err():
@@ -231,6 +231,7 @@ class Channel:
 
 
 KMAP = [
+    ('[<', 'sgr'),
     ('[A', 'up'),
     ('[B', 'down'),
     ('[C', 'right'),
@@ -335,21 +336,51 @@ class InputStream:
     def scan_event(self, key):
         if key < 128:
             if key == 27:
-                return self.scan_escape()
+                res = self.scan_escape()
+
+                if res == 'sgr':
+                    return self.scan_sgr()
+
+                return {'t': 'k', 'v': res}
 
             val = self.ASCII.get(key)
 
             if val:
-                return val
+                return {'t': 'k', 'v': val}
 
             if key >= 32:
-                return chr(key)
+                return {'t': 'c', 'v': chr(key)}
 
             raise BadInput(str(key))
 
         res = self.scan_utf8(key)
+        res = self.BROKEN_UNICODE.get(res, res)
 
-        return self.BROKEN_UNICODE.get(res, res)
+        if len(res) > 1:
+            return {'t': 'k', 'v': res}
+
+        return {'t': 'c', 'v': res}
+
+    def scan_sgr(self):
+        r = ''
+
+        while True:
+            ch = chr(self.ch.next())
+
+            if ch in ('M', 'm'):
+                return self.parse_sgr(r, ch)
+
+            r += ch
+
+    def parse_sgr(self, v, k):
+        ev = {'press': k == 'M'}
+
+        p, x, y = v.split(';')
+
+        ev['x'] = int(x) - 1
+        ev['y'] = int(y) - 1
+
+        return {'t': 'm', 'v': ev}
 
     def scan_utf8(self, key):
         runes = [key]
@@ -637,6 +668,13 @@ class Panel:
     def pixels(self, attrs):
         return self.d
 
+    def dispatch(self, ev):
+        return False
+
+
+def copy_dict(ev):
+    return json.loads(json.dumps(ev))
+
 
 class Handle:
     def __init__(self, w):
@@ -648,7 +686,19 @@ class Handle:
             yield x + self.x, y + self.y, c
 
     def dispatch(self, ev):
-        self.w.dispatch(ev)
+        if ev['t'] == 'm':
+            ev = copy_dict(ev)
+            v = ev['v']
+
+            if v['x'] >= self.x and v['y'] >= self.y:
+                v['x'] = v['x'] - self.x
+                v['y'] = v['y'] - self.y
+
+                return self.w.dispatch(ev)
+            else:
+                return False
+        else:
+            return self.w.dispatch(ev)
 
     def move(self, x, y):
         self.x = x
@@ -675,11 +725,15 @@ class Collection:
             yield from o.pixels(attrs)
 
     def dispatch(self, ev):
-        self.o[-1].dispatch(ev)
+        for o in reversed(self.o):
+            if o.dispatch(ev):
+                return True
+
+        return False
 
 
 def dict_update(d, **attrs):
-     d = d.copy()
+     d = copy_dict(d)
 
      d.update(attrs)
 
@@ -879,13 +933,36 @@ class EmacsSequencer:
         self.state = ''
 
     def dispatch(self, ev):
-        if ev == 'ctrl-x':
-            self.state = ev
+        t, v = ev['t'], ev['v']
+
+        if t == 'k':
+            if v == 'ctrl-x':
+                self.state = v
+            else:
+                try:
+                    return {'t': 'k', 'v': (self.state + '-' + v if self.state else v)}
+                finally:
+                    self.state = ''
         else:
-            try:
-                return self.state + '-' + ev if self.state else ev
-            finally:
-                self.state = ''
+            return ev
+
+
+class MouseSequencer:
+    def __init__(self):
+        self.press = False
+
+    def dispatch(self, ev):
+        ev = ev.copy()
+
+        if ev['press']:
+            if self.press:
+                ev['drag'] = True
+            else:
+                self.press = True
+        else:
+            self.press = False
+
+        return ev
 
 
 class IndentContext:
@@ -939,6 +1016,7 @@ class Editor:
         self.md5 = str_hash(d)
         self.ic = {}
         self.s = EmacsSequencer()
+        self.ms = MouseSequencer()
         self.h = HighLight(self.fn, d)
         self.t = TextArray(d)
         self.c = min(int(db.get(self.fn + '/cursor', 0)), self.t.length())
@@ -1032,11 +1110,23 @@ class Editor:
     def y(self):
         return self.y_for(self.c)
 
-    def iter_chars_fwd(self, p):
-        while True:
-            yield p, self.t.at(p)
+    def pos_for_xy(self, x, y):
+        r = self.t.line_start(y)
 
-            p += 1
+        for i, c in enumerate(self.t.iter_chars(r)):
+            if i >= x:
+                break
+
+            r += 1
+
+            if c == '\n':
+                break
+
+        return r
+
+    def iter_chars_fwd(self, p):
+        for i, c in enumerate(self.t.iter_chars(p)):
+            yield i + p, c
 
     def iter_chars_bck(self, p):
         while True:
@@ -1182,13 +1272,19 @@ class Editor:
             self.key_delete()
 
     def dispatch(self, ev, h):
-        seq = self.s.dispatch(ev)
+        ev = self.s.dispatch(ev)
 
-        if seq:
-            if len(seq) == 1:
-                self.handle_char(seq)
-            else:
-                self.handle_event(seq, h)
+        if ev:
+            t, v = ev['t'], ev['v']
+
+            if t == 'c':
+                self.handle_char(v)
+            elif t == 'm':
+                self.handle_mouse(v)
+            elif t == 'k':
+                self.handle_key(v, h)
+
+        return True
 
     def begin_mark(self):
         self.set_mark(self.c, None)
@@ -1347,7 +1443,19 @@ class Editor:
     def key_ctrl_s(self):
         self.b.pub('show-search-dialog')
 
-    def handle_event(self, ev, h):
+    def handle_mouse(self, ev):
+        ev = self.ms.dispatch(ev)
+
+        if ev:
+            if ev['press']:
+                c = self.pos_for_xy(ev['x'], ev['y'])
+
+                if ev.get('drag'):
+                    self.set_mark(self.mb, c)
+                else:
+                    self.set_mark(c, c)
+
+    def handle_key(self, ev, h):
         def unknown():
             self.b.msg(f'do not know to do: {ev}')
 
@@ -1362,7 +1470,6 @@ class Editor:
             self.b.msg('index error')
 
     def handle_char(self, ch):
-        self.b.msg('unicode: ' + ', '.join(str(x) for x in list(ch.encode())))
         self.unmark()
         self.clear_indent_cache(ch)
         self.t.insert(self.c, ch)
@@ -1382,8 +1489,12 @@ class ViewPort:
         bx = int(self.x)
         by = int(self.y)
 
-        for x, y, a in self.e.render(bx, by, bx + self.w, by + self.h):
-            yield x - bx, y - by, a
+        ex = bx + self.w
+        ey = by + self.h
+
+        for x, y, a in self.e.render(bx, by, ex, ey):
+            if x < ex and y < ey:
+                yield x - bx, y - by, a
 
         if attrs['focus']:
             yield self.cx, self.cy, ReverseAttrs()
@@ -1402,8 +1513,19 @@ class ViewPort:
             self.adjust()
 
     def dispatch(self, ev):
-        self.e.dispatch(ev, self.h)
-        self.adjust()
+        if ev['t'] == 'm':
+            ev = copy_dict(ev)
+            v = ev['v']
+
+            v['x'] = v['x'] + int(self.x)
+            v['y'] = v['y'] + int(self.y)
+
+        if self.e.dispatch(ev, self.h):
+            self.adjust()
+
+            return True
+
+        return False
 
     def adjust(self):
         oy = self.y
@@ -1463,9 +1585,12 @@ class Rect:
         for x, y, c in self.chars(**attrs):
             yield x, y, Attrs(c=chr(c))
 
+    def dispatch(self, ev):
+        return False
+
 
 @contextlib.contextmanager
-def channel():
+def terminal_channel():
     ch = Channel()
 
     try:
@@ -1482,6 +1607,9 @@ class Label:
         for x, c in enumerate(self.t):
             yield x, 0, Attrs(c=c)
 
+    def dispatch(self, ev):
+        return False
+
 
 class VLine:
     def __init__(self, h):
@@ -1495,6 +1623,9 @@ class VLine:
 
         for y in range(1, self.h - 1):
             yield 0, y, a
+
+    def dispatch(self, ev):
+        return False
 
 
 class LineNo:
@@ -1524,6 +1655,9 @@ class LineNo:
             for x, c in enumerate(l):
                 yield dx + x, y, c
 
+    def dispatch(self, ev):
+        return False
+
 
 class HGrad:
     def __init__(self, w):
@@ -1534,6 +1668,9 @@ class HGrad:
             v = math.pow(i / self.w, 0.8)
 
             yield i, 0, Attrs(b=gray24(int(32 - v * 32)))
+
+    def dispatch(self, ev):
+        return False
 
 
 class TextInput:
@@ -1571,16 +1708,21 @@ class TextInput:
                 yield x - x1, 0, a
 
     def dispatch(self, ev):
+        t, v = ev['t'], ev['v']
+
         try:
-            if len(ev) == 1:
-                self.dispatch_chr(ev)
+            if t == 'c':
+                self.dispatch_chr(v)
                 self.key_right()
-            else:
-                self.dispatch_ev(ev)
+            elif t == 'k':
+                self.dispatch_ev(v)
         except IndexError:
             pass
 
         self.adjust()
+
+        # TODO
+        return True
 
     def dispatch_chr(self, ch):
         self.t = self.t[:self.c] + ch + self.t[self.c:]
@@ -1634,10 +1776,15 @@ class YesNo(Label):
         pass
 
     def dispatch(self, ev):
-         if ev == 'y':
-             self.on_yes()
-         else:
-             self.on_no()
+        t, v = ev['t'], ev['v']
+
+        if t == 'c':
+            if v == 'y':
+                self.on_yes()
+            else:
+                self.on_no()
+
+        return True
 
 
 def fake_widget(w, h):
@@ -1648,7 +1795,7 @@ def fake_widget(w, h):
             yield from panel.pixels(attrs)
 
         def dispatch(self, ev):
-            pass
+            return True
 
     return Fake()
 
@@ -1770,16 +1917,31 @@ class ProfileInputStream:
         return [next(self.g) for i in range(0, n)]
 
 
+def describe_event(ev):
+    t, v = ev['t'], ev['v']
+
+    if t == 'c':
+        v = ', '.join(str(x) for x in v.encode())
+
+        return f'unicode: {v}'
+
+    if t == 'k':
+        return f'key: {v}'
+
+    if t == 'm':
+        return f'mouse: {v}'
+
+    return f'unknown: {ev}'
+
+
 def event_loop(d, i, w, bus):
     while True:
         d.flip(w.pixels(dict(focus=True)))
 
         try:
             for ev in i.next_bulk(32):
+                bus.msg(f'got {describe_event(ev)}')
                 w.dispatch(ev)
-
-                if len(ev) > 1:
-                    bus.msg(ev)
         except Interrupt:
             pass
         except BadInput as e:
@@ -1817,7 +1979,7 @@ class Db:
         self.c.close()
 
 
-def main(path, channel=channel):
+def main(path, channel):
     pr = os.path.expanduser('~/.config/ted')
     fn = os.path.normpath(os.path.abspath(path))
     db = Db(os.path.join(pr, 'ted.db'))
@@ -1890,6 +2052,8 @@ class Worker:
     def dispatch(self, ev):
         self.s.send((json.dumps({'e': ev}) + '\n').encode())
 
+        return True
+
 
 class Server:
     def __init__(self, q):
@@ -1920,12 +2084,15 @@ class Server:
         if ev == 'ctrl-c':
             raise KeyboardInterrupt()
 
-        if self.w:
-            self.w[-1].dispatch(ev)
+        for w in reversed(self.w):
+            if w.dispatch(ev):
+                return True
+
+        return False
 
 
 def run_server():
-    with channel() as ch:
+    with terminal_channel() as ch:
         s = Server(ch.q)
         d = Display(ch)
         i = InputStream(ch)
@@ -1994,7 +2161,7 @@ class Client:
 
 
 @contextlib.contextmanager
-def tui_client():
+def tui_channel():
     c = Client()
 
     try:
@@ -2004,18 +2171,21 @@ def tui_client():
 
 
 def run_client(path):
-    main(path, tui_client)
+    main(path, tui_channel)
 
 
 if __name__ == '__main__':
     try:
+        def run_main():
+            main(sys.argv[1], terminal_channel)
+
         if sys.argv[1] == 'server':
             run_server()
         elif sys.argv[1] == 'client':
             run_client(sys.argv[2])
         elif PROFILE:
-            cProfile.run('main()')
+            cProfile.run('run_main()')
         else:
-            main(sys.argv[1])
+            run_main()
     except KeyboardInterrupt:
         pass
