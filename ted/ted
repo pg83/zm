@@ -5,6 +5,7 @@ import io
 import os
 import sys
 import json
+import time
 import math
 import queue
 import bisect
@@ -683,8 +684,8 @@ class Handle:
             v = ev['v']
 
             if v['x'] >= self.x and v['y'] >= self.y:
-                v['x'] = v['x'] - self.x
-                v['y'] = v['y'] - self.y
+                v['x'] -= self.x
+                v['y'] -= self.y
 
                 return self.w.dispatch(ev)
             else:
@@ -842,10 +843,12 @@ class TextArray:
         if pos < 0:
             raise IndexError()
 
-        if pos == len(self.d):
+        d = self.d
+
+        if pos == len(d):
             return None
 
-        return self.d[pos]
+        return d[pos]
 
     def delete(self, fr, to):
         self.d = self.d[:fr] + self.d[to:]
@@ -862,12 +865,7 @@ class TextArray:
         return 0 if y == 0 else self.p[y - 1] + 1
 
     def iter_chars(self, fr):
-        d = self.d
-
-        while True:
-            yield d[fr]
-
-            fr += 1
+        return map(self.d.__getitem__, itertools.count(fr))
 
     def length(self):
         return len(self.d)
@@ -1000,6 +998,10 @@ def load_text(fn):
         return (0o644, '')
 
 
+def rev_str(s):
+    return s[::-1]
+
+
 class Editor:
     BRKT = dict(gen_brackets())
 
@@ -1068,7 +1070,7 @@ class Editor:
         n = 0
 
         try:
-            for _, c in self.iter_chars_bck(c - 1):
+            for c in self.iter_chars_bck_1(c - 1):
                 if c == '\n':
                     break
 
@@ -1125,11 +1127,12 @@ class Editor:
     def iter_chars_fwd(self, p):
         return enumerate(self.t.iter_chars(p), p)
 
-    def iter_chars_bck(self, p):
-        while True:
-            yield p, self.t.at(p)
+    def iter_chars_bck_1(self, p):
+        return map(self.t.at, itertools.count(p, -1))
 
-            p -= 1
+    def iter_chars_bck(self, p):
+        for i, c in enumerate(self.iter_chars_bck_1(p)):
+            yield p - i, c
 
     def find_bracket_match(self, cur):
         o = self.t.at(cur)
@@ -1151,11 +1154,11 @@ class Editor:
         except IndexError:
             pass
 
-    def lines_from(self, fr):
+    def split_lines(self, it):
         l = ''
 
         try:
-            for ch in self.t.iter_chars(self.t.line_start(fr)):
+            for ch in it:
                 if ch == '\n':
                     yield l
 
@@ -1165,19 +1168,11 @@ class Editor:
         except IndexError:
             yield l
 
+    def lines_from(self, fr):
+        return self.split_lines(self.t.iter_chars(self.t.line_start(fr)))
+
     def iter_lines_before(self, p):
-        l = ''
-
-        try:
-            for _, ch in self.iter_chars_bck(p - 1):
-                if ch == '\n':
-                    yield l
-
-                    l = ''
-                else:
-                    l = ch + l
-        except IndexError:
-            yield l
+        return map(rev_str, self.split_lines(self.iter_chars_bck_1(p - 1)))
 
     def lines(self, fr, to):
         return enumerate(itertools.islice(self.lines_from(fr), to - fr), fr)
@@ -1507,8 +1502,8 @@ class ViewPort:
             ev = copy_dict(ev)
             v = ev['v']
 
-            v['x'] = v['x'] + int(self.x)
-            v['y'] = v['y'] + int(self.y)
+            v['x'] += int(self.x)
+            v['y'] += int(self.y)
 
         if self.e.dispatch(ev, self.h):
             self.adjust()
@@ -2002,6 +1997,16 @@ def main(path, channel):
     db = Db(os.path.join(pr, 'ted.db'))
     cf = load_config(os.path.join(pr, 'ted.json'))
     ed = Editor(fn, db, PubSub(), **cf)
+
+    if 0:
+        t = time.time()
+        x = 0
+
+        for i in range(0, 1000):
+            for l in ed.lines_from(0):
+                x += len(l)
+
+        print(x, time.time() - t)
 
     try:
         with channel() as ch:
