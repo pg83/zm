@@ -331,7 +331,7 @@ class InputStream:
             pass
 
     def next_bulk(self, n):
-        return list(itertools.islice(self.iter_next(), 0, n))
+        return list(itertools.islice(self.iter_next(), n))
 
     def scan_event(self, key):
         if key < 128:
@@ -725,37 +725,29 @@ class Collection:
             yield from o.pixels(attrs)
 
     def dispatch(self, ev):
-        for o in reversed(self.o):
-            if o.dispatch(ev):
-                return True
-
-        return False
+        return any(o.dispatch(ev) for o in reversed(self.o))
 
 
 def dict_update(d, **attrs):
-     d = copy_dict(d)
-
-     d.update(attrs)
-
-     return d
+    return dict(itertools.chain(d.items(), attrs.items()))
 
 
 class Stack(Collection):
     def pixels(self, attrs):
-        for n, o in enumerate(self.o):
-            if n < len(self.o) - 1:
-                a = dict_update(attrs, focus=False)
-            else:
-                a = attrs
+        def it():
+            last = len(self.o) - 1
 
-            yield from o.pixels(a)
+            for n, o in enumerate(self.o):
+                yield o.pixels(dict_update(attrs, focus=False) if n < last else attrs)
+
+        return itertools.chain.from_iterable(it())
 
 
 def guess_lexer(p, d):
     try:
         return pl.guess_lexer_for_filename(p, d[:5000])
     except pu.ClassNotFound:
-        return pl.guess_lexer(d)
+        return pl.guess_lexer(d[:10000])
 
 
 class HighLight:
@@ -1107,9 +1099,7 @@ class Editor:
         x = self.x_for(fr)
         y = self.y_for(fr)
 
-        for p in range(fr, to):
-            c = self.t.at(p)
-
+        for c in itertools.islice(self.t.iter_chars(fr), to - fr):
             if c == '\n':
                 x = 0
                 y += 1
@@ -1184,8 +1174,22 @@ class Editor:
         except IndexError:
             yield l
 
+    def iter_lines_before(self, p):
+        s = ''
+
+        for ch in self.iter_chars_before(p):
+            if ch == '\n':
+                yield s
+
+                s = ''
+            else:
+                s = ch + s
+
+        if s:
+            yield s
+
     def lines(self, fr, to):
-        for j, l in enumerate(itertools.islice(self.lines_from(fr), 0, to - fr)):
+        for j, l in enumerate(itertools.islice(self.lines_from(fr), to - fr)):
             yield j + fr, l
 
     def get_line(self, y):
@@ -1216,20 +1220,6 @@ class Editor:
                 yield c
         except IndexError:
             pass
-
-    def iter_lines_before(self, p):
-        s = ''
-
-        for ch in self.iter_chars_before(p):
-            if ch == '\n':
-                yield s
-
-                s = ''
-            else:
-                s = ch + s
-
-        if s:
-            yield s
 
     def get_indent_base_line(self, p):
         for i in itertools.islice(self.iter_lines_before(p), 1, None):
@@ -1797,7 +1787,9 @@ class YesNo(Label):
             else:
                 self.on_no()
 
-        return True
+            return True
+
+        return False
 
 
 def fake_widget(w, h):
@@ -1805,7 +1797,7 @@ def fake_widget(w, h):
 
     class Fake:
         def pixels(self, attrs):
-            yield from panel.pixels(attrs)
+            return panel.pixels(attrs)
 
         def dispatch(self, ev):
             return True
@@ -1924,7 +1916,11 @@ class ProfileInputStream:
             while True:
                 yield 'ctrl-x-c'
 
-        self.g = gen()
+        def gen_ev():
+            for v in gen():
+                yield {'t': 'k', 'v': v}
+
+        self.g = gen_ev()
 
     def next_bulk(self, n):
         return [next(self.g) for i in range(0, n)]
@@ -2090,18 +2086,13 @@ class Server:
         threading.Thread(target=w.runq, daemon=True).start()
 
     def pixels(self, attrs):
-        for w in self.w:
-            yield from w.pixels(attrs)
+        return itertools.chain.from_iterable(w.pixels(attrs) for w in self.w)
 
     def dispatch(self, ev):
         if ev == 'ctrl-c':
             raise KeyboardInterrupt()
 
-        for w in reversed(self.w):
-            if w.dispatch(ev):
-                return True
-
-        return False
+        return any(w.dispatch(ev) for w in reversed(self.w))
 
 
 def run_server():
