@@ -1,25 +1,27 @@
-$untar $src/pypy* && cd pypy*
+$untar $src/pypy* && cd pypy* && $untar $src/pyc*
 
-cat << EOF > clang
-#!$(which dash)
-$(which clang) $CPPFLAGS $CFLAGS $LDFLAGS -w \$@
-EOF
+export PYTHONPATH=$(echo $(pwd)/pyc*)
 
-cat << EOF > clang++
-#!$(which dash)
-$(which clang++) $CPPFLAGS $CFLAGS $LDFLAGS -w \$@
-EOF
+setup_compiler
 
-chmod +x clang clang++
+python2 rpython/bin/rpython --make-jobs $make_thrs -Ojit pypy/goal/targetpypystandalone.py \
+    --withoutmod-pyexpat \
+    --withoutmod-zlib
 
-export TMPDIR=$(pwd)
-export PATH="$(pwd):$PATH"
-export CC=$(which clang)
+./pypy3-c lib_pypy/pypy_tools/build_cffi_imports.py || true
 
-/usr/bin/python2 rpython/bin/rpython --make-jobs $make_thrs -Ojit pypy/goal/targetpypystandalone.py
-./pypy3-c lib_pypy/pypy_tools/build_cffi_imports.py
+for i in bin include lib pypy3-c; do
+    mkdir -p $out/$i
+done
 
-mkdir -p $out/{bin,include,lib,pypy3-c}
-cp -R {include,lib_pypy,lib-python,pypy3-c} $out/pypy3-c
+for i in include lib_pypy lib-python pypy3-c; do
+    cp -R $i $out/pypy3-c/
+done
+
 cp libpypy3-c.dylib $out/lib/
-ln -s $out/pypy3-c/pypy3-c $out/bin/pypy3
+install_name_tool -change @rpath/libpypy3-c.dylib $out/lib/libpypy3-c.dylib $out/pypy3-c/pypy3-c
+cd $out/bin &&  ln -s ../pypy3-c/pypy3-c pypy3
+
+rm -rf $tmp
+
+exit 0

@@ -20,19 +20,13 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://downloads.python.org/pypy/pypy3.7-v7.3.5-src.tar.bz2',
-                    'md5': 'dcde1bd64a4c8287b539e6a592166ece',
-                },
-                {
-                    'url': 'https://files.pythonhosted.org/packages/0f/86/e19659527668d70be91d0369aeaa055b4eb396b0f387a4f92293a20035bd/pycparser-2.20.tar.gz',
-                    'md5': 'b8f88de737db8c346ee8d31c07c7a25a',
+                    'url': 'https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tar.xz',
+                    'md5': 'fd6cc8ec0a78c44036f825e739f36e5a',
                 },
             ],
             'depends': libs + [
-                'dev/lang/python2',
-                'dev/build/pkg-config',
                 'dev/build/make',
-                'env/compiler',
+                'dev/build/pkg-config',
                 'stdenv',
             ],
         },

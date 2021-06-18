@@ -10,6 +10,7 @@ import queue
 import bisect
 import string
 import signal
+import socket
 import sqlite3
 import hashlib
 import cProfile
@@ -97,6 +98,10 @@ class SigWinch(Exception):
     pass
 
 
+class Interrupt(Exception):
+    pass
+
+
 class Channel:
     def __init__(self):
         self.b = deque()
@@ -110,6 +115,15 @@ class Channel:
         threading.Thread(target=self.runq, daemon=True).start()
         signal.signal(signal.SIGWINCH, self.sigwinch)
 
+    def title(self, t):
+        self.send(title(t))
+
+    def display(self):
+        return Display(self)
+
+    def input_stream(self):
+        return InputStream(self)
+
     def fini(self):
         os.system('tput reset')
         os.system('stty -raw')
@@ -117,7 +131,7 @@ class Channel:
     def sigwinch(self, *args):
         def err():
             if self.l.locked():
-                return self.q.get()()
+                return
 
             raise SigWinch()
 
@@ -138,10 +152,19 @@ class Channel:
         self.o.write(cmd.encode())
 
     def recv(self):
-        return self.q.get()()
+        res = self.q.get()()
+
+        if res is not None:
+            return res
+
+        raise Interrupt()
 
     def recv_nowait(self):
-        return self.q.get_nowait()()
+        while True:
+            res = self.q.get_nowait()()
+
+            if res is not None:
+                return res
 
     def next_from(self, f):
         try:
@@ -366,6 +389,9 @@ class Color24:
     def fg(self):
         return csim(38, 2, *self.t)
 
+    def as_dict(self):
+        return {'t': '2', 'v': self.t}
+
 
 TBL8BG = [csim(48, 5, n) for n in range(0, 256)]
 TBL8FG = [csim(38, 5, n) for n in range(0, 256)]
@@ -382,6 +408,9 @@ class Color8:
 
     def fg(self):
         return TBL8FG[self.n]
+
+    def as_dict(self):
+        return {'t': '8', 'n': self.n}
 
 
 TBL4BG = [csim(40 + n if n < 8 else 92 + n) for n in range(0, 16)]
@@ -400,13 +429,16 @@ class Color4:
     def fg(self):
         return TBL4FG[self.n]
 
+    def as_dict(self):
+        return {'t': '4', 'n': self.n}
+
 
 class PreparedColor:
     __slots__ = ('b', 'f')
 
-    def __init__(self, c):
-        self.b = c.bg()
-        self.f = c.fg()
+    def __init__(self, b, f):
+        self.b = b
+        self.f = f
 
     def bg(self):
         return self.b
@@ -414,9 +446,12 @@ class PreparedColor:
     def fg(self):
         return self.f
 
+    def as_dict(self):
+        return {'t': 'p', 'b': self.b, 'f': self.f}
+
 
 def prepare(c):
-    return PreparedColor(c)
+    return PreparedColor(c.bg(), c.fg())
 
 
 class DefaultColor:
@@ -425,6 +460,9 @@ class DefaultColor:
 
     def bg(self):
         return csim(49)
+
+    def as_dict(self):
+        return {'t': 'd'}
 
 
 def black():
@@ -462,6 +500,34 @@ class Attrs:
         c2, b2, f2 = self.t
 
         return Attrs(c=c2 or c1, b=b2 or b1, f=f2 or f1)
+
+    def as_dict(self):
+        c, b, f = self.t
+
+        return {'c': c, 'b': b.as_dict(), 'f': f.as_dict()}
+
+
+def color_from_dict(d):
+    t = d['t']
+
+    if t == '4':
+        return Color4(d['n'])
+
+    if t == '8':
+        return Color8(d['n'])
+
+    if t == '2':
+        return Color24(*d['v'])
+
+    if t == 'd':
+        return DefaultColor()
+
+    if t == 'p':
+        return PreparedColor(d['b'], d['f'])
+
+
+def attrs_from_dict(d):
+    return Attrs(c=d['c'], b=color_from_dict(d['b']), f=color_from_dict(d['f']))
 
 
 class ReverseAttrs:
@@ -1714,6 +1780,8 @@ def event_loop(d, i, w, bus):
 
                 if len(ev) > 1:
                     bus.msg(ev)
+        except Interrupt:
+            pass
         except BadInput as e:
             bus.msg(f'bad input: {e}')
 
@@ -1749,23 +1817,23 @@ class Db:
         self.c.close()
 
 
-def main():
+def main(path, channel=channel):
     pr = os.path.expanduser('~/.config/ted')
-    fn = os.path.normpath(os.path.abspath(sys.argv[1]))
+    fn = os.path.normpath(os.path.abspath(path))
     db = Db(os.path.join(pr, 'ted.db'))
     cf = load_config(os.path.join(pr, 'ted.json'))
     ed = Editor(fn, db, PubSub(), **cf)
 
     try:
         with channel() as ch:
-            ch.send(title(os.path.basename(fn)))
+            ch.title(os.path.basename(fn))
 
             while True:
                 ed.b.sub('save', lambda: ed.save(fn))
 
                 try:
-                    d = Display(ch)
-                    i = ProfileInputStream() if PROFILE else InputStream(ch)
+                    d = ch.display()
+                    i = ProfileInputStream() if PROFILE else ch.input_stream()
 
                     return event_loop(d, i, editor_widget(ed, ed.b, d.dx, d.dy), ed.b)
                 except SigWinch:
@@ -1783,10 +1851,171 @@ def main():
         db.close()
 
 
-try:
-    if PROFILE:
-        cProfile.run('main()')
-    else:
-        main()
-except KeyboardInterrupt:
-    pass
+class Worker:
+    def __init__(self, s, q):
+        self.s = s
+        self.q = q
+        self.d = {}
+
+    def runq(self):
+        try:
+            self.runqx()
+        except:
+            os.abort()
+
+    def runqx(self):
+        l = []
+        c = []
+
+        while True:
+            for ch in self.s.recv(10000):
+                if ch == 10:
+                    c.append(json.loads(bytes(l).decode()))
+                    l = []
+                else:
+                    l.append(ch)
+
+            if c:
+                self.q.put(functools.partial(self.commands, c))
+                c = []
+
+    def commands(self, c):
+        for v in c:
+            self.d[(v['x'], v['y'])] = attrs_from_dict(v['a'])
+
+    def pixels(self, attrs):
+        for (x, y), a in self.d.items():
+            yield x, y, a
+
+    def dispatch(self, ev):
+        self.s.send((json.dumps({'e': ev}) + '\n').encode())
+
+
+class Server:
+    def __init__(self, q):
+        self.q = q
+        self.s = socket.socket(socket.AF_UNIX)
+        self.s.bind('/Users/pg83/display')
+        self.s.listen()
+        self.w = []
+
+        threading.Thread(target=self.acceptor, daemon=True).start()
+
+    def acceptor(self):
+        while True:
+            self.q.put(functools.partial(self.new_conn, self.s.accept()[0]))
+
+    def new_conn(self, s):
+        w = Worker(s, self.q)
+
+        self.w.append(w)
+
+        threading.Thread(target=w.runq, daemon=True).start()
+
+    def pixels(self, attrs):
+        for w in self.w:
+            yield from w.pixels(attrs)
+
+    def dispatch(self, ev):
+        if ev == 'ctrl-c':
+            raise KeyboardInterrupt()
+
+        if self.w:
+            self.w[-1].dispatch(ev)
+
+
+def run_server():
+    with channel() as ch:
+        s = Server(ch.q)
+        d = Display(ch)
+        i = InputStream(ch)
+        p = PubSub()
+
+        event_loop(d, i, s, p)
+
+
+class Client:
+    def __init__(self):
+        self.s = socket.socket(socket.AF_UNIX)
+        self.s.connect('/Users/pg83/display')
+
+    def title(self, t):
+        pass
+
+    def display(self):
+        return self
+
+    def input_stream(self):
+        return self
+
+    @property
+    def dx(self):
+        return 50
+
+    @property
+    def dy(self):
+        return 20
+
+    def fini(self):
+        self.s.close()
+
+    def flip(self, pixels):
+        s = {}
+
+        for x, y, a in pixels:
+            k = (x, y)
+
+            if k in s:
+                s[k] = a.combine(s[k])
+            else:
+                s[k] = a
+
+        d = ''
+
+        for k in s:
+            x, y = k
+            a = s[k]
+
+            d += json.dumps({'x': x, 'y': y, 'a': a.as_dict()})
+            d += '\n'
+
+        if d:
+            self.s.send(d.encode())
+
+    def next_bulk(self, n):
+        l = []
+
+        while True:
+            for n in self.s.recv(1):
+                if n == 10:
+                    return [json.loads(bytes(l).decode())['e']]
+
+                l.append(n)
+
+
+@contextlib.contextmanager
+def tui_client():
+    c = Client()
+
+    try:
+        yield c
+    finally:
+        c.fini()
+
+
+def run_client(path):
+    main(path, tui_client)
+
+
+if __name__ == '__main__':
+    try:
+        if sys.argv[1] == 'server':
+            run_server()
+        elif sys.argv[1] == 'client':
+            run_client(sys.argv[2])
+        elif PROFILE:
+            cProfile.run('main()')
+        else:
+            main(sys.argv[1])
+    except KeyboardInterrupt:
+        pass
