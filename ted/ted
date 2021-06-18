@@ -28,13 +28,6 @@ import pygments.lexers as pl
 import pygments.styles as ps
 
 
-if 'graal' in os.path.basename(sys.executable):
-    CHRT = dict((x, chr(x)) for x in range(0, 10000))
-
-    def chr(c):
-        return CHRT[c]
-
-
 PROFILE = os.environ.get('PROFILE', '')
 
 
@@ -611,12 +604,8 @@ def schedule(f):
 class Display:
     def __init__(self, ch):
         self.ch = ch
-
-        dx, dy = self.ch.dims()
-
-        self.dx = dx
-        self.dy = dy
         self.dd = {}
+        self.dx, self.dy = self.ch.dims()
 
     def flip(self, pixels):
         ds = ''
@@ -682,8 +671,11 @@ class Handle:
         self.move(0, 0)
 
     def pixels(self, attrs):
+        dx = self.x
+        dy = self.y
+
         for x, y, c in self.w.pixels(attrs):
-            yield x + self.x, y + self.y, c
+            yield x + dx, y + dy, c
 
     def dispatch(self, ev):
         if ev['t'] == 'm':
@@ -721,8 +713,7 @@ class Collection:
         return self.o.pop()
 
     def pixels(self, attrs):
-        for o in self.o:
-            yield from o.pixels(attrs)
+        return itertools.chain.from_iterable(o.pixels(attrs) for o in self.o)
 
     def dispatch(self, ev):
         return any(o.dispatch(ev) for o in reversed(self.o))
@@ -828,12 +819,7 @@ class HighLight:
             try:
                 return self.lns[l]
             except KeyError:
-                r = list(self.style_line_impl(l))
-
-                if len(l) != len(r):
-                    r = [(x, white()) for x in l]
-
-                self.lns[l] = r
+                self.lns[l] = list(self.style_line_impl(l))
 
 
 class TextArray:
@@ -1081,11 +1067,14 @@ class Editor:
     def x_for(self, c):
         n = 0
 
-        for c in self.iter_chars_before(c):
-            if c == '\n':
-                break
+        try:
+            for _, c in self.iter_chars_bck(c - 1):
+                if c == '\n':
+                    break
 
-            n += 1
+                n += 1
+        except IndexError:
+            pass
 
         return n
 
@@ -1116,6 +1105,9 @@ class Editor:
     def y(self):
         return self.y_for(self.c)
 
+    def set_y(self, y):
+        self.set_pos(self.pos_for_xy(self.x, y))
+
     def pos_for_xy(self, x, y):
         r = self.t.line_start(y)
 
@@ -1131,8 +1123,7 @@ class Editor:
         return r
 
     def iter_chars_fwd(self, p):
-        for i, c in enumerate(self.t.iter_chars(p)):
-            yield i + p, c
+        return enumerate(self.t.iter_chars(p), p)
 
     def iter_chars_bck(self, p):
         while True:
@@ -1175,22 +1166,21 @@ class Editor:
             yield l
 
     def iter_lines_before(self, p):
-        s = ''
+        l = ''
 
-        for ch in self.iter_chars_before(p):
-            if ch == '\n':
-                yield s
+        try:
+            for _, ch in self.iter_chars_bck(p - 1):
+                if ch == '\n':
+                    yield l
 
-                s = ''
-            else:
-                s = ch + s
-
-        if s:
-            yield s
+                    l = ''
+                else:
+                    l = ch + l
+        except IndexError:
+            yield l
 
     def lines(self, fr, to):
-        for j, l in enumerate(itertools.islice(self.lines_from(fr), to - fr)):
-            yield j + fr, l
+        return enumerate(itertools.islice(self.lines_from(fr), to - fr), fr)
 
     def get_line(self, y):
         for l in self.lines_from(y):
@@ -1213,13 +1203,6 @@ class Editor:
 
         if bm is not None:
             yield self.x_for(bm), self.y_for(bm), Attrs(f=black(), b=Color4(12))
-
-    def iter_chars_before(self, p):
-        try:
-            for p, c in self.iter_chars_bck(p - 1):
-                yield c
-        except IndexError:
-            pass
 
     def get_indent_base_line(self, p):
         for i in itertools.islice(self.iter_lines_before(p), 1, None):
@@ -1488,6 +1471,10 @@ class ViewPort:
         self.h = h
         self.adjust()
 
+    def set_y(self, y):
+        self.e.set_y(y)
+        self.adjust()
+
     def pixels(self, attrs):
         bx = int(self.x)
         by = int(self.y)
@@ -1659,7 +1646,18 @@ class LineNo:
                 yield dx + x, y, c
 
     def dispatch(self, ev):
+        if ev['t'] == 'm':
+            y = ev['v']['y']
+
+            if y < self.h:
+                self.on_select(self.s + y)
+
+                return True
+
         return False
+
+    def on_select(self, lineno):
+        pass
 
 
 class HGrad:
@@ -1816,12 +1814,20 @@ def editor_widget(ed, bus, w, h):
     st_w.push_raw(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
     st_w.push_raw(Rect(w, h))
 
-    ln_w = LineNo(0, h - 2)
     vl_w = VLine(h)
     lb_w = Label()
     cp_w = HGrad(w - 2)
     pp_w = Panel(1, 1, Attrs(b=gray8(14)))
     vp_w = ViewPort(w, h - 2, ed)
+
+    class EditorLineNo(LineNo):
+        def on_select(self, lineno):
+            try:
+                vp_w.set_y(lineno)
+            except IndexError:
+                bus.msg('index error')
+
+    ln_w = EditorLineNo(0, h - 2)
 
     class SearchInput(TextInput):
         def on_text_change(self):
@@ -1938,7 +1944,7 @@ def describe_event(ev):
         return f'key: {v}'
 
     if t == 'm':
-        return f'mouse: {v}'
+        return f'mouse: {str(v)[1:-1]}'
 
     return f'unknown: {ev}'
 
@@ -1951,10 +1957,12 @@ def event_loop(d, i, w, bus):
             for ev in i.next_bulk(32):
                 bus.msg(f'got {describe_event(ev)}')
                 w.dispatch(ev)
-        except Interrupt:
-            pass
+        except SigWinch:
+            raise
         except BadInput as e:
             bus.msg(f'bad input: {e}')
+        except Exception as e:
+            bus.msg(f'shit happen: {e}')
 
 
 def load_config(p):
