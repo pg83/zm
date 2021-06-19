@@ -367,12 +367,13 @@ class InputStream:
             r += ch
 
     def parse_sgr(self, v, k):
-        ev = {'press': k == 'M'}
-
         p, x, y = v.split(';')
 
-        ev['x'] = int(x) - 1
-        ev['y'] = int(y) - 1
+        ev = {
+            'press': (k == 'M'),
+            'x': int(x) - 1,
+            'y': int(y) - 1,
+        }
 
         return {'t': 'm', 'v': ev}
 
@@ -791,8 +792,10 @@ class HighLight:
         cf = self.style(pt.Name.Function)
 
         for m in re.finditer(self.CALL, l):
-            if m[1][0].islower():
-                if m[1] in self.DFLT:
+            mm = m[1]
+
+            if mm[0].islower():
+                if mm in self.DFLT:
                     co = cc
                 else:
                     co = cf
@@ -820,7 +823,20 @@ class HighLight:
             try:
                 return self.lns[l]
             except KeyError:
-                self.lns[l] = list(self.style_line_impl(l))
+                r = list(self.style_line_impl(l))
+
+                if len(r) != len(l):
+                    r = [(c, white()) for c in l]
+
+                self.lns[l] = r
+
+
+def calc_split(d):
+    for n, c in enumerate(d):
+        if c == '\n':
+            yield n
+
+    yield len(d)
 
 
 class TextArray:
@@ -829,15 +845,7 @@ class TextArray:
         self.split()
 
     def split(self):
-        p = []
-
-        for n, c in enumerate(self.d):
-            if c == '\n':
-                p.append(n)
-
-        p.append(len(self.d))
-
-        self.p = p
+        self.p = list(calc_split(self.d))
 
     def at(self, pos):
         if pos < 0:
@@ -864,7 +872,7 @@ class TextArray:
     def line_start(self, y):
         return 0 if y == 0 else self.p[y - 1] + 1
 
-    def iter_chars(self, fr):
+    def iter_chars_fwd(self, fr):
         return map(self.d.__getitem__, itertools.count(fr))
 
     def length(self):
@@ -1090,7 +1098,7 @@ class Editor:
         x = self.x_for(fr)
         y = self.y_for(fr)
 
-        for c in itertools.islice(self.t.iter_chars(fr), to - fr):
+        for c in itertools.islice(self.t.iter_chars_fwd(fr), to - fr):
             if c == '\n':
                 x = 0
                 y += 1
@@ -1113,7 +1121,7 @@ class Editor:
     def pos_for_xy(self, x, y):
         r = self.t.line_start(y)
 
-        for i, c in enumerate(self.t.iter_chars(r)):
+        for i, c in enumerate(self.t.iter_chars_fwd(r)):
             if i >= x:
                 break
 
@@ -1125,7 +1133,7 @@ class Editor:
         return r
 
     def iter_chars_fwd(self, p):
-        return enumerate(self.t.iter_chars(p), p)
+        return enumerate(self.t.iter_chars_fwd(p), p)
 
     def iter_chars_bck_1(self, p):
         return map(self.t.at, itertools.count(p, -1))
@@ -1169,7 +1177,7 @@ class Editor:
             yield l
 
     def lines_from(self, fr):
-        return self.split_lines(self.t.iter_chars(self.t.line_start(fr)))
+        return self.split_lines(self.t.iter_chars_fwd(self.t.line_start(fr)))
 
     def iter_lines_before(self, p):
         return map(rev_str, self.split_lines(self.iter_chars_bck_1(p - 1)))
@@ -2007,6 +2015,8 @@ def main(path, channel):
                 x += len(l)
 
         print(x, time.time() - t)
+
+        return
 
     try:
         with channel() as ch:
