@@ -5,24 +5,9 @@ $unzip $src/664* && cd apple*
     cat CMakeLists.txt | sed -e 's/SHARED/STATIC/' > tmp && mv tmp CMakeLists.txt
 )
 
-dash=$(which dash)
-
-ln -s $dash sh
-
-cat << EOF > gcc
-#!$dash
-$(which gcc) $CPPFLAGS $CFLAGS $LDFLAGS -w \$@
-EOF
-
-cat << EOF > g++
-#!$dash
-$(which g++) $CPPFLAGS $CXXFLAGS $LDFLAGS -w \$@
-EOF
-
-ln -s gcc clang && ln -s g++ clang++ && chmod +x gcc g++
-
-export PATH="$(pwd):$PATH"
-
+echo > ps && chmod +x ps
+ln -s $(which dash) sh
+setup_compiler
 mkdir build && cd build
 
 cmake ../src/llvm \

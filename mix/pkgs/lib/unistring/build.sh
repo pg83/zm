@@ -2,6 +2,7 @@ $untar $src/lib* && cd lib*
 
 ln -s $(which dash) sh
 export PATH="$(pwd):$PATH"
+export CPPFLAGS="-Dlocale_charset=unistring_locale_charset $CPPFLAGS"
 
 dash ./configure $COFLAGS --prefix=$out --disable-shared --enable-static
 make -j $make_thrs

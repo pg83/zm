@@ -30,7 +30,7 @@ def package(mix):
                 'stdenv',
             ],
         },
-        'runtime': {
-            'depends': libs,
-        },
+#        'runtime': {
+#            'depends': libs,
+#        },
     }

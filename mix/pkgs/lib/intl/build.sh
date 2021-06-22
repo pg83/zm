@@ -2,6 +2,7 @@ $untar $src/gettext* && cd gettext*
 
 ln -s $(which dash) sh
 export PATH="$(pwd):$PATH"
+export CPPFLAGS="-Dlocale_charset=intl_locale_charset $CPPFLAGS"
 
 dash ./configure $COFLAGS --prefix=$out --disable-shared --enable-static --with-included-libxml --with-included-gettext --enable-relocatable --disable-c++
 make -j $make_thrs

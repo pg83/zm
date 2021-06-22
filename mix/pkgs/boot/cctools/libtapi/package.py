@@ -19,6 +19,7 @@ def package(mix):
                 'boot/libcxx',
                 'boot/diffutils',
                 'boot/bin/stdenv',
+                'env/compiler',
             ],
         },
     }
