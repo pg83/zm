@@ -875,6 +875,9 @@ class TextArray:
     def iter_chars_fwd(self, fr):
         return map(self.d.__getitem__, itertools.count(fr))
 
+    def iter_chars_bck(self, fr):
+        return map(self.d.__getitem__, itertools.count(fr, -1))
+
     def length(self):
         return len(self.d)
 
@@ -1078,7 +1081,7 @@ class Editor:
         n = 0
 
         try:
-            for c in self.iter_chars_bck_1(c - 1):
+            for c in self.t.iter_chars_bck(c - 1):
                 if c == '\n':
                     break
 
@@ -1135,12 +1138,8 @@ class Editor:
     def iter_chars_fwd(self, p):
         return enumerate(self.t.iter_chars_fwd(p), p)
 
-    def iter_chars_bck_1(self, p):
-        return map(self.t.at, itertools.count(p, -1))
-
     def iter_chars_bck(self, p):
-        for i, c in enumerate(self.iter_chars_bck_1(p)):
-            yield p - i, c
+        return zip(itertools.count(p, -1), self.t.iter_chars_bck(p))
 
     def find_bracket_match(self, cur):
         o = self.t.at(cur)
@@ -1180,7 +1179,7 @@ class Editor:
         return self.split_lines(self.t.iter_chars_fwd(self.t.line_start(fr)))
 
     def iter_lines_before(self, p):
-        return map(rev_str, self.split_lines(self.iter_chars_bck_1(p - 1)))
+        return map(rev_str, self.split_lines(self.t.iter_chars_bck(p - 1)))
 
     def lines(self, fr, to):
         return enumerate(itertools.islice(self.lines_from(fr), to - fr), fr)
@@ -1475,8 +1474,9 @@ class ViewPort:
         self.adjust()
 
     def set_y(self, y):
-        self.e.set_y(y)
-        self.adjust()
+        if self.y != y:
+            self.e.set_y(y)
+            self.adjust()
 
     def pixels(self, attrs):
         bx = int(self.x)
@@ -1529,8 +1529,12 @@ class ViewPort:
         while self.cx < 0:
             self.x -= hw
 
+        self.x = max(self.x, 0)
+
         while self.cy < 0:
             self.y -= hh
+
+        self.y = max(self.y, 0)
 
         while self.cx >= self.w:
             self.x += hw
@@ -1964,8 +1968,6 @@ def event_loop(d, i, w, bus):
             raise
         except BadInput as e:
             bus.msg(f'bad input: {e}')
-        except Exception as e:
-            bus.msg(f'shit happen: {e}')
 
 
 def load_config(p):

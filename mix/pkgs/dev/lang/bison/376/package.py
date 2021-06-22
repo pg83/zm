@@ -12,7 +12,7 @@ def package(mix):
                 'lib/intl',
                 'dev/lang/m4',
                 'dev/lang/perl5',
-                'dev/lang/bison341',
+                'dev/lang/bison/361b',
                 'dev/build/make',
                 'stdenv',
             ],

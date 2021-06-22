@@ -3,6 +3,7 @@ $unzip $src/*.zip && cd mrust* && ln -s $src/rustc* ./
 echo > empty.c
 gcc -c empty.c -o empty.o
 ar q librt.a empty.o
+
 cp librt.a libstdc++.a
 cp librt.a libgcc_s.a
 cp librt.a libSecurity.a
@@ -10,8 +11,6 @@ cp librt.a libCoreFoundation.a
 
 cat << EOF > fake.c
 int CFMutableAttributedStringGetTypeID() {return 0;}
-void ENGINE_load_builtin_engines() {}
-void ENGINE_register_all_complete() {}
 EOF
 
 gcc -c fake.c -o fake.o
