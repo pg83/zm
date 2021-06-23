@@ -4,15 +4,13 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/gnu/bison/bison-3.7.6.tar.xz',
-                    'md5': 'd61aa92e3562cb7292b004ce96173cf7',
+                    'url': 'https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.lz',
+                    'md5': 'a04b480d7455f0f5bdc6d36959e08e4c',
                 },
             ],
             'depends': [
-                'lib/intl',
                 'dev/lang/m4',
-                'dev/lang/perl5',
-                'dev/lang/bison/361b',
+                'dev/lang/byacc',
                 'dev/build/make',
                 'stdenv',
             ],

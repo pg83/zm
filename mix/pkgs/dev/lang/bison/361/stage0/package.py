@@ -11,8 +11,9 @@ def package(mix):
             'depends': [
                 'lib/intl',
                 'dev/lang/m4',
+                'dev/lang/flex',
                 'dev/lang/perl5',
-                'dev/lang/bison/351',
+                'dev/lang/bison/351/stage1',
                 'dev/build/make',
                 'stdenv',
             ],

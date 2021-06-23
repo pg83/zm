@@ -4,12 +4,8 @@ def package(mix):
             'script': mix.files.build_sh,
             'fetch': [
                 {
-                    'url': 'https://ftp.gnu.org/gnu/bison/bison-3.4.1.tar.xz',
-                    'md5': '201286a573b12da109df96282fe4ff4a',
-                },
-                {
-                    'url': 'https://storage.yandexcloud.net/mix-cache/bison-bootstrap-master.tar.bz2',
-                    'md5': '425bbc1c4a21e708f05d35c62210f5ee',
+                    'url': 'https://ftp.gnu.org/gnu/bison/bison-3.7.6.tar.xz',
+                    'md5': 'd61aa92e3562cb7292b004ce96173cf7',
                 },
             ],
             'depends': [
@@ -17,6 +13,7 @@ def package(mix):
                 'dev/lang/m4',
                 'dev/lang/flex',
                 'dev/lang/perl5',
+                'dev/lang/bison/376/stage0',
                 'dev/build/make',
                 'stdenv',
             ],
