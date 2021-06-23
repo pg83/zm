@@ -7,9 +7,13 @@ def package(mix):
                     'url': 'https://github.com/thepowersgang/mrustc/archive/78742ef9de9e162373b46ac179bc2724d45a3cd7.zip',
                     'md5': 'a7020e5434609495269611e2abcb95d1',
                 },
+#                {
+#                    'url': 'https://static.rust-lang.org/dist/rustc-1.29.0-src.tar.gz',
+#                    'md5': '54c3f0ffb826bdcc2a7395468828a94c',
+#                },
                 {
-                    'url': 'https://static.rust-lang.org/dist/rustc-1.29.0-src.tar.gz',
-                    'md5': '54c3f0ffb826bdcc2a7395468828a94c',
+                    'url': 'https://static.rust-lang.org/dist/rustc-1.19.0-src.tar.gz',
+                    'md5': '75e779670ac79edf023497a9c37eb35d',
                 },
             ],
             'depends': [

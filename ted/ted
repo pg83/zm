@@ -876,7 +876,11 @@ class TextArray:
         return map(self.d.__getitem__, itertools.count(fr))
 
     def iter_chars_bck(self, fr):
-        return map(self.d.__getitem__, itertools.count(fr, -1))
+        def endf():
+            raise IndexError()
+            yield
+
+        return map(self.d.__getitem__, itertools.chain(range(fr, -1, -1), endf()))
 
     def length(self):
         return len(self.d)
@@ -886,6 +890,9 @@ class TextArray:
 
     def search(self, t, fr):
         return self.d.find(t, fr)
+
+    def line_count(self):
+        return len(self.p) - 1
 
 
 def gen_brackets():
@@ -970,8 +977,8 @@ class EventSequencer:
 
 
 class IndentContext:
-    def __init__(self, l):
-        self.i = self.calc_indent_for(l)
+    def __init__(self, l, cl):
+        self.i = self.calc_indent_for(l, cl)
         self.o = 0
 
     def next_indent(self):
@@ -984,7 +991,7 @@ class IndentContext:
 
         return res
 
-    def calc_indent_for(self, l):
+    def calc_indent_for(self, l, cl):
         s = ''
 
         for c in l:
@@ -996,6 +1003,9 @@ class IndentContext:
         if l and l[-1] in (':', '{', '[', '('):
             s += '    '
         elif l.strip().split(' ')[0] in ('return', 'break', 'continue', 'raise', 'throw', 'pass'):
+            s = s[4:]
+
+        if cl in ('}', ']', ')'):
             s = s[4:]
 
         return s
@@ -1011,6 +1021,21 @@ def load_text(fn):
 
 def rev_str(s):
     return s[::-1]
+
+
+def split_lines(it):
+    l = ''
+
+    try:
+        for ch in it:
+            if ch == '\n':
+                yield l
+
+                l = ''
+            else:
+                l += ch
+    except IndexError:
+        yield l
 
 
 class Editor:
@@ -1081,8 +1106,8 @@ class Editor:
         n = 0
 
         try:
-            for c in self.t.iter_chars_bck(c - 1):
-                if c == '\n':
+            for ch in self.t.iter_chars_bck(c - 1):
+                if ch == '\n':
                     break
 
                 n += 1
@@ -1161,31 +1186,17 @@ class Editor:
         except IndexError:
             pass
 
-    def split_lines(self, it):
-        l = ''
-
-        try:
-            for ch in it:
-                if ch == '\n':
-                    yield l
-
-                    l = ''
-                else:
-                    l += ch
-        except IndexError:
-            yield l
-
-    def lines_from(self, fr):
-        return self.split_lines(self.t.iter_chars_fwd(self.t.line_start(fr)))
+    def iter_lines_from(self, fr):
+        return split_lines(self.t.iter_chars_fwd(self.t.line_start(fr)))
 
     def iter_lines_before(self, p):
-        return map(rev_str, self.split_lines(self.t.iter_chars_bck(p - 1)))
+        return map(rev_str, split_lines(self.t.iter_chars_bck(p - 1)))
 
     def lines(self, fr, to):
-        return enumerate(itertools.islice(self.lines_from(fr), to - fr), fr)
+        return enumerate(itertools.islice(self.iter_lines_from(fr), to - fr), fr)
 
     def get_line(self, y):
-        for l in self.lines_from(y):
+        for l in self.iter_lines_from(y):
             return l
 
     def render(self, x1, y1, x2, y2):
@@ -1213,29 +1224,27 @@ class Editor:
 
         return ''
 
-    def get_indent_ctx(self, y, bi):
-        key = struct_hash([y, bi])
+    def get_indent_ctx(self, y, bi, cl):
+        key = struct_hash([y, bi, cl])
 
         while True:
             try:
                 return self.ic[key]
             except KeyError:
-                self.ic[key] = IndentContext(bi)
-
-    def clear_indent_cache(self, c):
-        if c == '\n':
-            self.ic.clear()
+                self.ic[key] = IndentContext(bi, cl)
 
     def calc_indent(self):
-        return self.get_indent_ctx(self.y_for(self.c), self.get_indent_base_line(self.c)).next_indent()
+        y = self.y
+        cl = self.get_line(y).strip()
+        bi = self.get_indent_base_line(self.c)
+
+        return self.get_indent_ctx(y, bi, cl).next_indent()
 
     def ins_indent(self):
         indent = self.calc_indent()
 
         self.b.msg(f'indent: {indent}')
-
-        for ch in indent:
-            self.handle_char(ch)
+        self.insert_text(self.c, indent)
 
     def run_indent(self):
         self.key_home()
@@ -1316,8 +1325,7 @@ class Editor:
         self.paste_from_buffer()
 
     def paste(self, pos, txt):
-        self.t.insert(pos, txt)
-        self.set_pos(pos + len(txt))
+        self.insert_text(pos, txt)
 
     def paste_from_buffer(self):
         self.paste(self.c, self.buf)
@@ -1359,7 +1367,7 @@ class Editor:
 
     def key_lf(self):
         self.handle_char('\n')
-        self.run_indent()
+        #self.run_indent()
 
     def key_home(self):
         try:
@@ -1428,7 +1436,10 @@ class Editor:
 
     def key_delete(self):
         self.unmark()
-        self.clear_indent_cache(self.getch())
+
+        if self.getch() == '\n':
+            self.ic.clear()
+
         self.t.delete(self.c, self.c + 1)
 
     def key_ctrl_s(self):
@@ -1457,11 +1468,23 @@ class Editor:
         except IndexError:
             self.b.msg('index error')
 
-    def handle_char(self, ch):
+    def insert_text(self, pos, text):
         self.unmark()
-        self.clear_indent_cache(ch)
-        self.t.insert(self.c, ch)
-        self.one_right()
+
+        if '\n' in text:
+            self.ic.clear()
+
+        self.t.insert(pos, text)
+        self.set_pos(pos + len(text))
+
+    def handle_char(self, ch):
+        self.insert_text(self.c, ch)
+
+        if ch == '\n':
+            self.run_indent()
+        elif self.get_line(self.y).strip() in (')', '}', ']'):
+            self.run_indent()
+            self.one_right()
 
 
 class ViewPort:
@@ -1545,13 +1568,21 @@ class ViewPort:
         if oy != self.y:
             self.pub_lineno()
 
+        self.pub_xy()
+
+    def pub_xy(self):
         self.e.b.pub('xy', {
             'x': self.cx,
             'y': self.cy,
+            'c': self.e.t.line_count(),
         })
 
     def pub_lineno(self):
         self.e.b.pub('lineno', int(self.y))
+
+    def pub_all(self):
+        self.pub_xy()
+        self.pub_lineno()
 
 
 class Rect:
@@ -1629,12 +1660,20 @@ class LineNo:
     def __init__(self, s, h):
         self.s = s
         self.h = h
+        self.m = s + h
+
+    @property
+    def f(self):
+        return min(self.s + self.h, self.m)
 
     def set_lineno(self, s):
         self.s = s
 
+    def set_max(self, v):
+        self.m = v
+
     def width(self):
-        return len(str(self.s + self.h))
+        return len(str(self.f))
 
     def pixels(self, attrs):
         f = gray8(8)
@@ -1645,7 +1684,7 @@ class LineNo:
     def chars(self):
         w = self.width()
 
-        for y, s in enumerate(range(self.s, self.s + self.h)):
+        for y, s in enumerate(range(self.s, self.f)):
             l = str(s)
             dx = w - len(l)
 
@@ -1654,10 +1693,10 @@ class LineNo:
 
     def dispatch(self, ev):
         if ev['t'] == 'm':
-            y = ev['v']['y']
+            y = self.s + ev['v']['y']
 
-            if y < self.h:
-                self.on_select(self.s + y)
+            if y < self.f:
+                self.on_select(y)
 
                 return True
 
@@ -1775,6 +1814,9 @@ class TextInput:
         while self.cx >= self.w:
             self.x += hw
 
+        self.x = max(self.x, 0)
+        self.x = min(self.w, self.w - 1)
+
 
 class YesNo(Label):
     def on_yes(self):
@@ -1891,6 +1933,7 @@ def editor_widget(ed, bus, w, h):
     def on_xy(c):
         pp_h.move(vl_h.x, int(ln_h.y + (ln_w.h - 1) * ed.complete_ratio()))
         cp_h.move(1, vp_h.y + c['y'])
+        ln_w.set_max(c['c'])
 
     def on_show_search_dialog():
         ti_w.reset()
@@ -1911,7 +1954,7 @@ def editor_widget(ed, bus, w, h):
         if k.startswith('on_'):
             bus.sub(k[3:].replace('_', '-'), locals()[k])
 
-    vp_w.pub_lineno()
+    vp_w.pub_all()
 
     return mw_w
 
@@ -2001,6 +2044,28 @@ class Db:
         self.c.close()
 
 
+def test_perf_1(ed):
+    t = time.time()
+    x = 0
+
+    for i in range(0, 1000):
+        for l in ed.iter_lines_from(0):
+            x += len(l)
+
+    print(x, time.time() - t)
+
+
+def test_perf_2(ed):
+    t = time.time()
+    x = 0
+
+    for i in range(0, 1000):
+        for l in ed.iter_lines_before(20000):
+            x += len(l)
+
+    print(x, time.time() - t)
+
+
 def main(path, channel):
     pr = os.path.expanduser('~/.config/ted')
     fn = os.path.normpath(os.path.abspath(path))
@@ -2008,17 +2073,7 @@ def main(path, channel):
     cf = load_config(os.path.join(pr, 'ted.json'))
     ed = Editor(fn, db, PubSub(), **cf)
 
-    if 0:
-        t = time.time()
-        x = 0
-
-        for i in range(0, 1000):
-            for l in ed.lines_from(0):
-                x += len(l)
-
-        print(x, time.time() - t)
-
-        return
+    #return test_perf_2(ed)
 
     try:
         with channel() as ch:

@@ -24,8 +24,9 @@ echo > ps && chmod +x ps
 ln -s $(which bash) sh
 ln -s gcc cc
 
-(cd script-overrides && ln -s stable-1.29.0-linux stable-1.29.0-macos)
-(cd script-overrides && ln -s stable-1.39.0-linux stable-1.39.0-macos)
+(cd script-overrides && ln -s stable-1.19.0-linux stable-1.19.0-macos)
+
+echo '1.19.0' > rust-version
 
 cat Makefile | sed -e 's/VERSION_GIT.*/QW -DVERSION_BUILDTIME=\\"\\" -DVERSION_GIT_ISDIRTY=1 -DVERSION_GIT_FULLHASH=\\"\\" -DVERSION_GIT_SHORTHASH=\\"\\" -DVERSION_GIT_BRANCH=1 /' | sed -e 's/-Wl,--whole-archive/-Wl,-all_load/' | sed -e 's/-Wl,--no-whole-archive/-Wl,-noall_load/' > qw && mv qw Makefile
 cat Makefile | sed -e 's/rcD/rc/' > qw && mv qw Makefile
