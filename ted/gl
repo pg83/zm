@@ -1,0 +1,125 @@
+#!/usr/bin/env python3
+
+import sys
+
+import OpenGL
+
+OpenGL.ERROR_CHECKING = False
+
+import OpenGL.GL as gl
+import OpenGL.GLU as glu
+import OpenGL.GLUT as glut
+
+
+class Ted(dict):
+    def __init__(self):
+        self.__dict__ = self
+        self.__name__ = 'ted'
+        exec(open('./ted').read().encode(), self, self)
+
+
+ted = Ted()
+
+
+class GLWindow:
+    def __init__(self, t, w, b):
+        self.d = w
+
+        self.w = 100 * 10
+        self.h = 20 * 30
+
+        glut.glutInit(sys.argv)
+        glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA)
+        glut.glutInitWindowSize(self.w, self.h)
+        glut.glutCreateWindow(t)
+        glut.glutReshapeFunc(self.reshape)
+        glut.glutDisplayFunc(self.display)
+
+    def reshape(self, w, h):
+        print(f'reshape {w} {h}')
+
+        self.w = w
+        self.h = h
+
+        gl.glViewport(0, 0, w, h)
+        gl.glMatrixMode(gl.GL_PROJECTION)
+        gl.glLoadIdentity()
+        glu.gluOrtho2D(0, w, 0, h)
+        gl.glMatrixMode(gl.GL_MODELVIEW)
+        gl.glLoadIdentity()
+
+    def display(self):
+        print('display')
+
+        gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+        gl.glBegin(gl.GL_QUADS)
+
+        s = {}
+
+        for x, y, a in self.d.pixels(dict(focus=True)):
+            k = (19 - y, x)
+
+            if k in s:
+                s[k] = a.combine(s[k])
+            else:
+                s[k] = a
+
+        for k in sorted(s):
+            y, x = k
+            a = s[k]
+
+            r, g, b = a.t[2].rgb()
+
+            r = r / 255.0
+            g = g / 255.0
+            b = b / 255.0
+
+            x1 = x * 10
+            y1 = y * 30
+            x2 = x1 + 10
+            y2 = y1 + 30
+
+            gl.glColor3f(r, g, b)
+            gl.glVertex2i(x1, y1)
+            gl.glColor3f(r, g, b)
+            gl.glVertex2i(x2, y1)
+            gl.glColor3f(r, g, b)
+            gl.glVertex2i(x2, y2)
+            gl.glColor3f(r, g, b)
+            gl.glVertex2i(x1, y2)
+
+        gl.glEnd()
+
+        glut.glutSwapBuffers()
+
+    def run(self):
+        glut.glutMainLoop()
+
+
+class EventLoop:
+    @property
+    def dx(self):
+        return 100
+
+    @property
+    def dy(self):
+        return 20
+
+    def fini(self):
+        pass
+
+    def display(self):
+        return self
+
+    def input_stream(self):
+        return self
+
+    def title(self, t):
+        self.t = t
+
+    def event_loop(self, d, i, w, b):
+        GLWindow(self.t, w, b).run()
+
+
+if __name__ == '__main__':
+    ted.main(sys.argv[1], EventLoop)

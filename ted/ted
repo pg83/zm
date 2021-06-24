@@ -11,15 +11,15 @@ import queue
 import bisect
 import string
 import signal
-import socket
 import sqlite3
 import hashlib
 import cProfile
 import fractions
-import itertools
 import threading
 import functools
 import contextlib
+
+import itertools as itt
 
 from collections import deque, defaultdict
 
@@ -115,12 +115,6 @@ class Channel:
 
     def title(self, t):
         self.send(title(t))
-
-    def display(self):
-        return Display(self)
-
-    def input_stream(self):
-        return InputStream(self)
 
     def sigwinch(self, *args):
         def err():
@@ -325,7 +319,7 @@ class InputStream:
             pass
 
     def next_bulk(self, n):
-        return list(itertools.islice(self.iter_next(), n))
+        return list(itt.islice(self.iter_next(), n))
 
     def scan_event(self, key):
         if key < 128:
@@ -418,6 +412,9 @@ class Color24:
     def as_dict(self):
         return {'t': '2', 'v': self.t}
 
+    def rgb(self):
+        return self.t
+
 
 TBL8BG = [csim(48, 5, n) for n in range(0, 256)]
 TBL8FG = [csim(38, 5, n) for n in range(0, 256)]
@@ -437,6 +434,9 @@ class Color8:
 
     def as_dict(self):
         return {'t': '8', 'n': self.n}
+
+    def rgb(self):
+        return (self.n, self.n, self.n)
 
 
 TBL4BG = [csim(40 + n if n < 8 else 92 + n) for n in range(0, 16)]
@@ -458,26 +458,8 @@ class Color4:
     def as_dict(self):
         return {'t': '4', 'n': self.n}
 
-
-class PreparedColor:
-    __slots__ = ('b', 'f')
-
-    def __init__(self, b, f):
-        self.b = b
-        self.f = f
-
-    def bg(self):
-        return self.b
-
-    def fg(self):
-        return self.f
-
-    def as_dict(self):
-        return {'t': 'p', 'b': self.b, 'f': self.f}
-
-
-def prepare(c):
-    return PreparedColor(c.bg(), c.fg())
+    def rgb(self):
+        return (self.n * 16, self.n * 16, self.n * 16)
 
 
 class DefaultColor:
@@ -489,6 +471,9 @@ class DefaultColor:
 
     def as_dict(self):
         return {'t': 'd'}
+
+    def rgb(self):
+        return (0, 0, 0)
 
 
 def black():
@@ -503,11 +488,8 @@ def gray8(n):
     return Color8(232 + n)
 
 
-TBLGR24 = [prepare(Color24(i, i, i)) for i in range(0, 256)]
-
-
 def gray24(n):
-    return TBLGR24[n]
+    return Color24(n, n, n)
 
 
 class Attrs:
@@ -715,14 +697,14 @@ class Collection:
         return self.o.pop()
 
     def pixels(self, attrs):
-        return itertools.chain.from_iterable(o.pixels(attrs) for o in self.o)
+        return itt.chain.from_iterable(o.pixels(attrs) for o in self.o)
 
     def dispatch(self, ev):
         return any(o.dispatch(ev) for o in reversed(self.o))
 
 
 def dict_update(d, **attrs):
-    return dict(itertools.chain(d.items(), attrs.items()))
+    return dict(itt.chain(d.items(), attrs.items()))
 
 
 class Stack(Collection):
@@ -733,7 +715,7 @@ class Stack(Collection):
             for n, o in enumerate(self.o):
                 yield o.pixels(dict_update(attrs, focus=False) if n < last else attrs)
 
-        return itertools.chain.from_iterable(it())
+        return itt.chain.from_iterable(it())
 
 
 def guess_lexer(p, d):
@@ -773,7 +755,7 @@ class HighLight:
             try:
                 return self.col[c]
             except KeyError:
-                self.col[c] = prepare(Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)))
+                self.col[c] = Color24(int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16))
 
     def style(self, typ):
         try:
@@ -873,14 +855,14 @@ class TextArray:
         return 0 if y == 0 else self.p[y - 1] + 1
 
     def iter_chars_fwd(self, fr):
-        return map(self.d.__getitem__, itertools.count(fr))
+        return map(self.d.__getitem__, itt.count(fr))
 
     def iter_chars_bck(self, fr):
         def endf():
             raise IndexError()
             yield
 
-        return map(self.d.__getitem__, itertools.chain(range(fr, -1, -1), endf()))
+        return map(self.d.__getitem__, itt.chain(range(fr, -1, -1), endf()))
 
     def length(self):
         return len(self.d)
@@ -1100,7 +1082,7 @@ class Editor:
         os.rename(t, p)
 
     def complete_ratio(self):
-        return fractions.Fraction(self.c + 1, self.t.length() + 1)
+        return fractions.Fraction(self.c, max(self.t.length(), 1))
 
     def x_for(self, c):
         n = 0
@@ -1126,7 +1108,7 @@ class Editor:
         x = self.x_for(fr)
         y = self.y_for(fr)
 
-        for c in itertools.islice(self.t.iter_chars_fwd(fr), to - fr):
+        for c in itt.islice(self.t.iter_chars_fwd(fr), to - fr):
             if c == '\n':
                 x = 0
                 y += 1
@@ -1147,24 +1129,13 @@ class Editor:
         self.set_pos(self.pos_for_xy(self.x, y))
 
     def pos_for_xy(self, x, y):
-        r = self.t.line_start(y)
-
-        for i, c in enumerate(self.t.iter_chars_fwd(r)):
-            if i >= x:
-                break
-
-            r += 1
-
-            if c == '\n':
-                break
-
-        return r
+        return self.t.line_start(y) + min(len(self.get_line(y)), x)
 
     def iter_chars_fwd(self, p):
         return enumerate(self.t.iter_chars_fwd(p), p)
 
     def iter_chars_bck(self, p):
-        return zip(itertools.count(p, -1), self.t.iter_chars_bck(p))
+        return zip(itt.count(p, -1), self.t.iter_chars_bck(p))
 
     def find_bracket_match(self, cur):
         o = self.t.at(cur)
@@ -1193,7 +1164,7 @@ class Editor:
         return map(rev_str, split_lines(self.t.iter_chars_bck(p - 1)))
 
     def lines(self, fr, to):
-        return enumerate(itertools.islice(self.iter_lines_from(fr), to - fr), fr)
+        return enumerate(itt.islice(self.iter_lines_from(fr), to - fr), fr)
 
     def get_line(self, y):
         for l in self.iter_lines_from(y):
@@ -1218,7 +1189,7 @@ class Editor:
             yield self.x_for(bm), self.y_for(bm), Attrs(f=black(), b=Color4(12))
 
     def get_indent_base_line(self, p):
-        for i in itertools.islice(self.iter_lines_before(p), 1, None):
+        for i in itt.islice(self.iter_lines_before(p), 1, None):
             if i.strip():
                 return i
 
@@ -1508,6 +1479,9 @@ class ViewPort:
         ex = bx + self.w
         ey = by + self.h
 
+        if attrs['focus']:
+            yield self.cx, self.cy, Attrs(c=' ', f=white())
+
         for x, y, a in self.e.render(bx, by, ex, ey):
             if x < ex and y < ey:
                 yield x - bx, y - by, a
@@ -1615,16 +1589,6 @@ class Rect:
 
     def dispatch(self, ev):
         return False
-
-
-@contextlib.contextmanager
-def terminal_channel():
-    ch = Channel()
-
-    try:
-        yield ch
-    finally:
-        ch.fini()
 
 
 class Label:
@@ -1741,6 +1705,8 @@ class TextInput:
         return self.c - self.x
 
     def render(self):
+        yield self.c, Attrs(c=' ', f=white())
+
         for x, c in enumerate(self.t):
             yield x, Attrs(c=c)
 
@@ -1815,7 +1781,7 @@ class TextInput:
             self.x += hw
 
         self.x = max(self.x, 0)
-        self.x = min(self.w, self.w - 1)
+        self.x = min(self.x, self.w - 1)
 
 
 class YesNo(Label):
@@ -1860,7 +1826,7 @@ def editor_widget(ed, bus, w, h):
 
     st_w = mw_w.push_raw(Collection())
 
-    st_w.push_raw(Panel(w, h, Attrs(c=' ', b=prepare(DefaultColor()), f=white())))
+    st_w.push_raw(Panel(w, h, Attrs(c=' ', b=DefaultColor(), f=DefaultColor())))
     st_w.push_raw(Rect(w, h))
 
     vl_w = VLine(h)
@@ -1936,6 +1902,7 @@ def editor_widget(ed, bus, w, h):
         ln_w.set_max(c['c'])
 
     def on_show_search_dialog():
+        bus.msg('search dialog')
         ti_w.reset()
         mw_w.push(ti_w).move(1, h - 1)
 
@@ -1948,6 +1915,7 @@ def editor_widget(ed, bus, w, h):
         ed.search_context().search_next(t)
 
     def on_show_save_dialog():
+        bus.msg('save dialog')
         mw_w.push(sd_w).move(1, h - 1)
 
     for k in list(locals()):
@@ -1999,18 +1967,35 @@ def describe_event(ev):
     return f'unknown: {ev}'
 
 
-def event_loop(d, i, w, bus):
-    while True:
-        d.flip(w.pixels(dict(focus=True)))
+class Terminal(Channel):
+    def display(self):
+        return Display(self)
 
-        try:
-            for ev in i.next_bulk(32):
-                bus.msg(f'got {describe_event(ev)}')
-                w.dispatch(ev)
-        except SigWinch:
-            raise
-        except BadInput as e:
-            bus.msg(f'bad input: {e}')
+    def input_stream(self):
+        return InputStream(self)
+
+    def event_loop(self, d, i, w, bus):
+        while True:
+            d.flip(w.pixels(dict(focus=True)))
+
+            try:
+                for ev in i.next_bulk(32):
+                    bus.msg(f'got {describe_event(ev)}')
+                    w.dispatch(ev)
+            except SigWinch:
+                raise
+            except BadInput as e:
+                bus.msg(f'bad input: {e}')
+
+
+@contextlib.contextmanager
+def channel(factory):
+    ch = factory()
+
+    try:
+        yield ch
+    finally:
+        ch.fini()
 
 
 def load_config(p):
@@ -2066,7 +2051,7 @@ def test_perf_2(ed):
     print(x, time.time() - t)
 
 
-def main(path, channel):
+def main(path, factory):
     pr = os.path.expanduser('~/.config/ted')
     fn = os.path.normpath(os.path.abspath(path))
     db = Db(os.path.join(pr, 'ted.db'))
@@ -2076,7 +2061,7 @@ def main(path, channel):
     #return test_perf_2(ed)
 
     try:
-        with channel() as ch:
+        with channel(factory) as ch:
             ch.title(os.path.basename(fn))
 
             while True:
@@ -2086,7 +2071,7 @@ def main(path, channel):
                     d = ch.display()
                     i = ProfileInputStream() if PROFILE else ch.input_stream()
 
-                    return event_loop(d, i, editor_widget(ed, ed.b, d.dx, d.dy), ed.b)
+                    return ch.event_loop(d, i, editor_widget(ed, ed.b, d.dx, d.dy), ed.b)
                 except SigWinch:
                     pass
 
@@ -2102,172 +2087,12 @@ def main(path, channel):
         db.close()
 
 
-class Worker:
-    def __init__(self, s, q):
-        self.s = s
-        self.q = q
-        self.d = {}
-
-    def runq(self):
-        try:
-            self.runqx()
-        except:
-            os.abort()
-
-    def runqx(self):
-        l = []
-        c = []
-
-        while True:
-            for ch in self.s.recv(10000):
-                if ch == 10:
-                    c.append(json.loads(bytes(l).decode()))
-                    l = []
-                else:
-                    l.append(ch)
-
-            if c:
-                self.q.put(functools.partial(self.commands, c))
-                c = []
-
-    def commands(self, c):
-        for v in c:
-            self.d[(v['x'], v['y'])] = attrs_from_dict(v['a'])
-
-    def pixels(self, attrs):
-        for (x, y), a in self.d.items():
-            yield x, y, a
-
-    def dispatch(self, ev):
-        self.s.send((json.dumps({'e': ev}) + '\n').encode())
-
-        return True
-
-
-class Server:
-    def __init__(self, q):
-        self.q = q
-        self.s = socket.socket(socket.AF_UNIX)
-        self.s.bind('/Users/pg83/display')
-        self.s.listen()
-        self.w = []
-
-        threading.Thread(target=self.acceptor, daemon=True).start()
-
-    def acceptor(self):
-        while True:
-            self.q.put(functools.partial(self.new_conn, self.s.accept()[0]))
-
-    def new_conn(self, s):
-        w = Worker(s, self.q)
-
-        self.w.append(w)
-
-        threading.Thread(target=w.runq, daemon=True).start()
-
-    def pixels(self, attrs):
-        return itertools.chain.from_iterable(w.pixels(attrs) for w in self.w)
-
-    def dispatch(self, ev):
-        if ev == 'ctrl-c':
-            raise KeyboardInterrupt()
-
-        return any(w.dispatch(ev) for w in reversed(self.w))
-
-
-def run_server():
-    with terminal_channel() as ch:
-        s = Server(ch.q)
-        d = Display(ch)
-        i = InputStream(ch)
-        p = PubSub()
-
-        event_loop(d, i, s, p)
-
-
-class Client:
-    def __init__(self):
-        self.s = socket.socket(socket.AF_UNIX)
-        self.s.connect('/Users/pg83/display')
-
-    def title(self, t):
-        pass
-
-    def display(self):
-        return self
-
-    def input_stream(self):
-        return self
-
-    @property
-    def dx(self):
-        return 50
-
-    @property
-    def dy(self):
-        return 20
-
-    def fini(self):
-        self.s.close()
-
-    def flip(self, pixels):
-        s = {}
-
-        for x, y, a in pixels:
-            k = (x, y)
-
-            if k in s:
-                s[k] = a.combine(s[k])
-            else:
-                s[k] = a
-
-        d = ''
-
-        for k in s:
-            x, y = k
-            a = s[k]
-
-            d += json.dumps({'x': x, 'y': y, 'a': a.as_dict()})
-            d += '\n'
-
-        if d:
-            self.s.send(d.encode())
-
-    def next_bulk(self, n):
-        l = []
-
-        while True:
-            for n in self.s.recv(1):
-                if n == 10:
-                    return [json.loads(bytes(l).decode())['e']]
-
-                l.append(n)
-
-
-@contextlib.contextmanager
-def tui_channel():
-    c = Client()
-
-    try:
-        yield c
-    finally:
-        c.fini()
-
-
-def run_client(path):
-    main(path, tui_channel)
-
-
 if __name__ == '__main__':
     try:
         def run_main():
-            main(sys.argv[1], terminal_channel)
+            main(sys.argv[1], Terminal)
 
-        if sys.argv[1] == 'server':
-            run_server()
-        elif sys.argv[1] == 'client':
-            run_client(sys.argv[2])
-        elif PROFILE:
+        if PROFILE:
             cProfile.run('run_main()')
         else:
             run_main()
