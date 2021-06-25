@@ -11,6 +11,7 @@ def package(mix):
             'depends': [
                 'boot/python',
                 'boot/libcxx',
+                'boot/coreutils',
                 'boot/bin/stdenv',
             ],
         },

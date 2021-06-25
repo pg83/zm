@@ -11,6 +11,7 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/coreutils',
                 'boot/bin/stdenv',
             ],
         },

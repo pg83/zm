@@ -10,6 +10,7 @@ def package(mix):
             ],
             'depends': [
                 'boot/make',
+                'boot/coreutils',
                 'boot/bin/stdenv',
             ],
         },

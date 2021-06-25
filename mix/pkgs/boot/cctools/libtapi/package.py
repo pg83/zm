@@ -18,6 +18,7 @@ def package(mix):
                 'boot/python',
                 'boot/libcxx',
                 'boot/diffutils',
+                'boot/coreutils',
                 'boot/bin/stdenv',
                 'env/compiler',
             ],

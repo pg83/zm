@@ -15,6 +15,7 @@ def package(mix):
                 'boot/libcxx',
                 'boot/cctools/libtapi',
                 'boot/diffutils',
+                'boot/coreutils',
                 'boot/bin/stdenv',
             ],
         },

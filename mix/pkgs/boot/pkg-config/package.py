@@ -13,6 +13,7 @@ def package(mix):
                 'boot/iconv',
                 'boot/diffutils',
                 'boot/findutils',
+                'boot/coreutils',
                 'boot/bin/stdenv',
             ],
         },

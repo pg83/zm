@@ -16,6 +16,7 @@ def package(mix):
                 'boot/cmake',
                 'boot/python',
                 'boot/ninja',
+                'boot/coreutils',
                 'boot/bin/stdenv',
             ],
         },
