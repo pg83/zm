@@ -51,6 +51,15 @@ class Iface:
         if tmp:
             shutil.rmtree(tmp)
 
+    def which(self, x):
+        for p in os.environ['PATH'].split(':'):
+            pp = os.path.join(p, x)
+
+            if os.path.isfile(pp):
+                return pp
+
+        raise Exception(f'{x} not found')
+
 
 def cli_misc_runpy(ctx):
     sys.argv = ['runpy'] + ctx['args']

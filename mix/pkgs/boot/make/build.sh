@@ -1,8 +1,11 @@
-export CPPFLAGS="-w -I./glob -Dglob=make_glob -Dglobfree=make_globfree -Dfnmatch=make_fnmatch $CPPFLAGS"
-
 $untar $src/make-* && cd make-*
 
-dash ./configure --prefix=$out --disable-load --disable-dependency-tracking
+export CPPFLAGS="-w -I./glob -Dglob=make_glob -Dglobfree=make_globfree -Dfnmatch=make_fnmatch $CPPFLAGS"
 
-make -j $make_thrs
-make install
+export PATH="$(pwd):$PATH"
+export ACCEPT_INFERIOR_RM_PROGRAM=yes
+
+dash ./configure --prefix=$out --disable-load --disable-dependency-tracking
+dash ./build.sh && mv ./make ./newmake
+./newmake
+./make install

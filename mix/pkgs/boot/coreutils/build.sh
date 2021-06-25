@@ -1,14 +1,13 @@
 $untar $src/coreutils-* && cd coreutils-*
 
+export ACCEPT_INFERIOR_RM_PROGRAM=yes
 export FORCE_UNSAFE_CONFIGURE=1
 export CFLAGS="$CFLAGS $LDFLAGS $LIBS -w"
 
 dash ./configure --prefix=$out --libexecdir=$out/bin --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks
 
-make -j $make_thrs || true
+make LN_S=ln -j $make_thrs
 
-echo >> src/libstdbuf.c
-echo >> 'int main() {}' >> src/libstdbuf.c
+export PATH="$(pwd)/src:$PATH"
 
-make -j $make_thrs
 make install

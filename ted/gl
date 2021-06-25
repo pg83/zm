@@ -21,17 +21,13 @@ class Ted(dict):
 ted = Ted()
 
 
-class GLWindow:
-    def __init__(self, t, w, b):
-        self.d = w
+class Window:
+    def __init__(self, w, h, t):
+        self.w = w
+        self.h = h
 
-        self.w = 100 * 10
-        self.h = 20 * 30
-
-        glut.glutInit(sys.argv)
-        glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA)
         glut.glutInitWindowSize(self.w, self.h)
-        glut.glutCreateWindow(t)
+        self.c = glut.glutCreateWindow(t)
         glut.glutReshapeFunc(self.reshape)
         glut.glutDisplayFunc(self.display)
 
@@ -48,16 +44,43 @@ class GLWindow:
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
+        self.on_reshape()
+
     def display(self):
         print('display')
 
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+        self.on_render()
+        glut.glutSwapBuffers()
+
+    def on_reshape(self):
+        pass
+
+    def on_render(self):
+        pass
+
+    def title(self, t):
+        pass
+
+
+class Display(Window):
+    def __init__(self, w):
+        Window.__init__(self, 1000, 600, 'display')
+        self.widget = w
+
+    def on_reshape(self):
+        self.widget.reshape(self)
+
+    def on_render(self):
         gl.glBegin(gl.GL_QUADS)
 
         s = {}
 
-        for x, y, a in self.d.pixels(dict(focus=True)):
-            k = (19 - y, x)
+        dx = self.dx
+        dy = self.dy
+
+        for x, y, a in self.widget.pixels(dict(focus=True)):
+            k = (dy - y - 1, x)
 
             if k in s:
                 s[k] = a.combine(s[k])
@@ -70,55 +93,39 @@ class GLWindow:
 
             r, g, b = a.t[2].rgb()
 
-            r = r / 255.0
-            g = g / 255.0
-            b = b / 255.0
-
             x1 = x * 10
-            y1 = y * 30
+            y1 = y * 25
             x2 = x1 + 10
-            y2 = y1 + 30
+            y2 = y1 + 25
 
-            gl.glColor3f(r, g, b)
+            gl.glColor3f(r / 255.0, g / 255.0, b / 255.0)
             gl.glVertex2i(x1, y1)
-            gl.glColor3f(r, g, b)
             gl.glVertex2i(x2, y1)
-            gl.glColor3f(r, g, b)
             gl.glVertex2i(x2, y2)
-            gl.glColor3f(r, g, b)
             gl.glVertex2i(x1, y2)
 
         gl.glEnd()
 
-        glut.glutSwapBuffers()
-
-    def run(self):
-        glut.glutMainLoop()
-
-
-class EventLoop:
     @property
     def dx(self):
-        return 100
+        return self.w // 10
 
     @property
     def dy(self):
-        return 20
+        return self.h // 25
+
+
+class EventLoop:
+    def __init__(self):
+        glut.glutInit(sys.argv)
+        glut.glutInitDisplayMode(glut.GLUT_DOUBLE | glut.GLUT_RGBA)
 
     def fini(self):
         pass
 
-    def display(self):
-        return self
-
-    def input_stream(self):
-        return self
-
-    def title(self, t):
-        self.t = t
-
-    def event_loop(self, d, i, w, b):
-        GLWindow(self.t, w, b).run()
+    def event_loop(self, w):
+        d = Display(w)
+        glut.glutMainLoop()
 
 
 if __name__ == '__main__':

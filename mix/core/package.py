@@ -53,7 +53,7 @@ cd "$tmp" && mkdir tmp && echo > tmpenv
 export TMPDIR="$tmp/tmp"
 
 echo "$PATH" | tr ':' '\n' | tac | while read p; do
-    env=$(realpath -m "$p/../env")
+    env=$(dirname "$p")/env
 
     if test -f "$env"; then
         cat "$env" >> "$tmp/tmpenv"

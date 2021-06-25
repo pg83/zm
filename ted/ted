@@ -47,6 +47,8 @@ class PubSub:
     def sub(self, t, f):
         self.s[t].append(f)
 
+        return self
+
     def pub(self, t, *args, **kwargs):
         for f in self.s.get(t, []):
             f(*args, **kwargs)
@@ -590,6 +592,9 @@ class Display:
         self.ch = ch
         self.dd = {}
         self.dx, self.dy = self.ch.dims()
+
+    def title(self, t):
+        self.ch.title(t)
 
     def flip(self, pixels):
         ds = ''
@@ -1967,35 +1972,37 @@ def describe_event(ev):
     return f'unknown: {ev}'
 
 
-class Terminal(Channel):
-    def display(self):
-        return Display(self)
+class EventLoop:
+    def __init__(self):
+        self.c = Channel()
 
-    def input_stream(self):
-        return InputStream(self)
+    def fini(self):
+        self.c.fini()
 
-    def event_loop(self, d, i, w, bus):
+    def event_loop(self, w):
+        while True:
+            try:
+                d = Display(self.c)
+                i = ProfileInputStream() if PROFILE else InputStream(self.c)
+
+                w.reshape(d)
+
+                return self.event_loop_step(d, i, w)
+            except SigWinch:
+                pass
+
+    def event_loop_step(self, d, i, w):
         while True:
             d.flip(w.pixels(dict(focus=True)))
 
             try:
                 for ev in i.next_bulk(32):
-                    bus.msg(f'got {describe_event(ev)}')
+                    w.msg(f'got {describe_event(ev)}')
                     w.dispatch(ev)
             except SigWinch:
                 raise
             except BadInput as e:
-                bus.msg(f'bad input: {e}')
-
-
-@contextlib.contextmanager
-def channel(factory):
-    ch = factory()
-
-    try:
-        yield ch
-    finally:
-        ch.fini()
+                w.msg(f'bad input: {e}')
 
 
 def load_config(p):
@@ -2029,68 +2036,95 @@ class Db:
         self.c.close()
 
 
-def test_perf_1(ed):
-    t = time.time()
-    x = 0
+class Main:
+    def __init__(self, path):
+        pr = os.path.expanduser('~/.config/ted')
+        cf = load_config(os.path.join(pr, 'ted.json'))
+        fn = os.path.normpath(os.path.abspath(path))
 
-    for i in range(0, 1000):
-        for l in ed.iter_lines_from(0):
-            x += len(l)
+        self.db = Db(os.path.join(pr, 'ted.db'))
+        self.ed = Editor(fn, self.db, self, **cf)
 
-    print(x, time.time() - t)
+    def pub(self, t, *args, **kwargs):
+        self.bs.pub(t, *args, **kwargs)
+
+    def msg(self, m):
+        self.pub('message', m)
+
+    def save(self, fn):
+        self.ed.save(fn)
+
+    def save_file(self):
+        self.save(self.ed.fn)
+
+    def save_backup(self):
+        self.save(self.ed.fn + '.bak')
+
+    def create_bus(self):
+        return PubSub().sub('save', self.save_file)
+
+    def reshape(self, d):
+        d.title(os.path.basename(self.ed.fn))
+
+        self.bs = self.create_bus()
+        self.wi = editor_widget(self.ed, self.bs, d.dx, d.dy)
+
+    def pixels(self, attrs):
+        return self.wi.pixels(attrs)
+
+    def dispatch(self, ev):
+        return self.wi.dispatch(ev)
+
+    def test_perf_1(self):
+        t = time.time()
+        x = 0
+
+        for i in range(0, 1000):
+            for l in self.ed.iter_lines_from(0):
+                x += len(l)
+
+        print(x, time.time() - t)
+
+    def test_perf_2(self):
+        t = time.time()
+        x = 0
+
+        for i in range(0, 1000):
+            for l in self.ed.iter_lines_before(20000):
+                x += len(l)
+
+        print(x, time.time() - t)
+
+    def fini(self):
+        self.ed.store(self.db)
+        self.db.close()
 
 
-def test_perf_2(ed):
-    t = time.time()
-    x = 0
-
-    for i in range(0, 1000):
-        for l in ed.iter_lines_before(20000):
-            x += len(l)
-
-    print(x, time.time() - t)
-
-
-def main(path, factory):
-    pr = os.path.expanduser('~/.config/ted')
-    fn = os.path.normpath(os.path.abspath(path))
-    db = Db(os.path.join(pr, 'ted.db'))
-    cf = load_config(os.path.join(pr, 'ted.json'))
-    ed = Editor(fn, db, PubSub(), **cf)
-
-    #return test_perf_2(ed)
-
+@contextlib.contextmanager
+def context(ch):
     try:
-        with channel(factory) as ch:
-            ch.title(os.path.basename(fn))
-
-            while True:
-                ed.b.sub('save', lambda: ed.save(fn))
-
-                try:
-                    d = ch.display()
-                    i = ProfileInputStream() if PROFILE else ch.input_stream()
-
-                    return ch.event_loop(d, i, editor_widget(ed, ed.b, d.dx, d.dy), ed.b)
-                except SigWinch:
-                    pass
-
-                ed.b = PubSub()
-    except KeyboardInterrupt:
-        raise
-    except:
-        ed.save(fn + '.bak')
-
-        raise
+        yield ch
     finally:
-        ed.store(db)
-        db.close()
+        ch.fini()
+
+
+def main(path, loop):
+    with context(Main(path)) as m:
+        try:
+            with context(loop()) as l:
+                return l.event_loop(m)
+        except KeyboardInterrupt:
+            raise
+        except:
+            m.save_backup()
+
+            raise
 
 
 if __name__ == '__main__':
     try:
         def run_main():
-            main(sys.argv[1], Terminal)
+            main(sys.argv[1], EventLoop)
 
         if PROFILE:
             cProfile.run('run_main()')
