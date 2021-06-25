@@ -4,11 +4,12 @@ export SHELL="$0"
 
 export ROOT=
 
+export AR=ar
 export CC=clang
 export LD=clang
 export STRIP=strip
 export RANLIB=ranlib
-export CPPFLAGS="-D_DARWIN_NO_64_BIT_INODE -Dgetopt=h_getopt -Doptarg=h_optarg -Doptind=h_optind -Dopterr=h_opterr -Doptopt=h_optopt -I../libcommon $CPPFLAGS"
+export CPPFLAGS="-w -D_DARWIN_NO_64_BIT_INODE -Dgetopt=h_getopt -Doptarg=h_optarg -Doptind=h_optind -Dopterr=h_opterr -Doptopt=h_optopt -I../libcommon $CPPFLAGS"
 
 export MANDIR=$out/man
 export SV3BIN=$out/sv3
@@ -25,7 +26,7 @@ export UCBINST=install
 export MANINST=install
 
 export PATH="$DEFBIN:$PATH"
-export MAKE=/usr/bin/make
+export MAKE="bmake RANLIB=$RANLIB"
 
 cd heirloom
 
@@ -122,6 +123,7 @@ done
     $MAKE -f Makefile.mk && $MAKE -f Makefile.mk install
 )
 
+export YACC=yacc
 export PATH="$(pwd):$PATH"
 
 ln -s $SHELL sh
@@ -164,5 +166,3 @@ for p in "$SV3BIN" "$SU3BIN" "$S42BIN" "$SUSBIN" "$UCBBIN" "$out/tmp"; do
 done
 
 cd $out/bin && ln -s cat tac && ln -s nawk awk
-
-#cpio dd diff diff3 who
