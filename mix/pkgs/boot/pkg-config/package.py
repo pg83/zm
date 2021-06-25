@@ -9,8 +9,8 @@ def package(mix):
                 },
             ],
             'depends': [
-                'boot/make',
                 'boot/iconv',
+                'boot/autohell',
                 'boot/diffutils',
                 'boot/findutils',
                 'boot/coreutils',

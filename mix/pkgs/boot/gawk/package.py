@@ -9,8 +9,11 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/sed',
+                'boot/grep',
                 'boot/make',
                 'boot/coreutils',
+                'boot/heirloom',
                 'boot/bin/stdenv',
             ],
         },

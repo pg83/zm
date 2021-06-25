@@ -9,8 +9,9 @@ def package(mix):
                 },
             ],
             'depends': [
-                'boot/make',
+                'env/cmake',
                 'boot/libcxx',
+                'boot/autohell',
                 'boot/coreutils',
                 'boot/bin/stdenv',
             ],

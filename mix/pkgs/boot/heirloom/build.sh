@@ -163,6 +163,6 @@ for p in "$SV3BIN" "$SU3BIN" "$S42BIN" "$SUSBIN" "$UCBBIN" "$out/tmp"; do
     cp/cp $p/* $out/bin
 done
 
-cd $out/bin && ln -s cat tac
+cd $out/bin && ln -s cat tac && ln -s nawk awk
 
 #cpio dd diff diff3 who

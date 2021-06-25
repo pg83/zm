@@ -11,6 +11,7 @@ def package(mix):
             'depends': [
                 'boot/make',
                 'boot/coreutils',
+                'boot/heirloom',
                 'boot/bin/stdenv',
             ],
         },

@@ -9,7 +9,7 @@ def package(mix):
                 },
             ],
             'depends': [
-                'boot/make',
+                'boot/autohell',
                 'boot/coreutils',
                 'boot/bin/stdenv',
             ],

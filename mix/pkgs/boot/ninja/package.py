@@ -9,6 +9,7 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/sed',
                 'boot/python',
                 'boot/libcxx',
                 'boot/coreutils',

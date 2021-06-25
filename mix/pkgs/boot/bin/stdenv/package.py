@@ -1,6 +1,7 @@
 def package(mix):
     deps = [
-        'boot/bin/darwin',
+        #'boot/bin/darwin',
+        'boot/bin/mix',
     ]
 
     return {

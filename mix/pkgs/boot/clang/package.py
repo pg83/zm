@@ -12,10 +12,11 @@ def package(mix):
             ],
             'depends': [
                 'boot/which',
-                'boot/libcxx',
                 'boot/cmake',
-                'boot/python',
                 'boot/ninja',
+                'boot/python',
+                'boot/libcxx',
+                'boot/autohell',
                 'boot/coreutils',
                 'boot/bin/stdenv',
             ],
