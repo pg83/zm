@@ -1,4 +1,4 @@
-$unzip $src/7* && cd heirloom*
+$unzip $src/*.zip && cd heirloom*
 
 export SHELL="$0"
 
@@ -49,7 +49,7 @@ export LDFLAGS="../libcommon/libcommon.a $LDFLAGS"
     cd mkdir && $MAKE -f Makefile.mk
 )
 
-for i in bin share man man/man1 man/man1b man/man2 man/man1n man/man1m; do
+for i in lib bin share man man/man1 man/man1b man/man2 man/man1n man/man1m; do
     mkdir/mkdir $out/$i
 done
 
@@ -102,6 +102,16 @@ for i in sed cksum cmp col copy cut date dc df dircmp du ed expand file find fmt
         cd $i && $MAKE -f Makefile.mk && $MAKE -f Makefile.mk install
     )
 done
+
+(
+    export CPPFLAGS="-DUSE_TERMCAP=1 $CPPFLAGS"
+    cd ls && $MAKE -f Makefile.mk && $MAKE -f Makefile.mk install
+)
+
+(
+    export CPPFLAGS="-DEXTERN=extern $CPPFLAGS"
+    cd diff && $MAKE -f Makefile.mk && $MAKE -f Makefile.mk install
+)
 
 (
     cd ../heirloom-devtools/yacc

@@ -4,8 +4,8 @@ def package(mix):
             'script': mix.files.build_py,
             'fetch': [
                 {
-                    'url': 'https://github.com/pg83/heirloom/archive/7d0ef303ebab2fee61dc894caf6f3bfde564b7be.zip',
-                    'md5': 'ca952ec8bd49691d0be22f9e013fd053',
+                    'url': 'https://github.com/pg83/heirloom/archive/c36382e29f4578ebe43ea398fa0f6f654b1d7fb7.zip',
+                    'md5': '1b302a8842925412a079ea5123a95ebe',
                 },
             ],
             'depends': [

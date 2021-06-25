@@ -7,7 +7,5 @@ export CFLAGS="$CFLAGS $LDFLAGS $LIBS -w"
 dash ./configure --prefix=$out --libexecdir=$out/bin --without-gmp --enable-no-install-program=stdbuf --enable-single-binary=symlinks
 
 make LN_S=ln -j $make_thrs
-
-export PATH="$(pwd)/src:$PATH"
-
+PATH="$(pwd)/src:$PATH"
 make install
