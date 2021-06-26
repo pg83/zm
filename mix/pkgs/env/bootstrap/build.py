@@ -1,6 +1,6 @@
 import os
 
-data = '''
+data = r'''
 export untar="$exe $mix misc untar"
 export unzip="$exe $mix misc unzip"
 '''

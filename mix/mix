@@ -9,4 +9,7 @@ sys.excepthook = traceback.print_exception
 
 import core.main as cm
 
-cm.main(sys.argv[1:], os.path.normpath(os.path.abspath(__file__)))
+try:
+    cm.main(sys.argv[1:], os.path.normpath(os.path.abspath(__file__)))
+except KeyboardInterrupt:
+    pass

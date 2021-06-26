@@ -1,7 +1,7 @@
 import os
 
 
-data = '''
+data = r'''
 {{mix.files.build_sh.data}}
 '''
 

@@ -139,6 +139,10 @@ class Package:
         return os.path.join(self.manager.where, self.name)
 
     @property
+    def urls(self):
+        return self._d.get('build', {}).get('fetch', [])
+
+    @property
     @cu.cached_method
     def files(self):
         return FileLoader(self)

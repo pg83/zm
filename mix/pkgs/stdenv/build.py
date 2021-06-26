@@ -1,7 +1,7 @@
 import os
 
 
-data = '''
+data = r'''
 export untar="bsdtar xf"
 export unzip="unzip"
 '''

@@ -50,3 +50,11 @@ class Manager:
             'nodes': list(self.iter_build_commands(names)),
             'targets': [self.load_package(x).out_dir + '/touch' for x in names],
         }
+
+    def all_packages(self):
+        w = self.where
+
+        for a, b, c in os.walk(w):
+            for x in c:
+                if x == 'package.py':
+                    yield self.load_package(a[len(w) + 1:])

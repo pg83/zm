@@ -5,5 +5,5 @@ export ACCEPT_INFERIOR_RM_PROGRAM=yes
 
 dash ./configure --prefix=$out --disable-load --disable-dependency-tracking
 dash ./build.sh && mv ./make ./newmake
-./newmake
+./newmake -j $make_thrs
 ./make install
