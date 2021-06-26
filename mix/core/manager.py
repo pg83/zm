@@ -23,6 +23,10 @@ class Manager:
     def where(self):
         return self._w
 
+    def load_file(self, path):
+        with open(os.path.join(self.where, path)) as f:
+            return f.read()
+
     def load_package(self, name):
         while True:
             try:

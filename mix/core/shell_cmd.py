@@ -41,6 +41,8 @@ def fetch_url(url, out):
         for c in iter_chunks():
             cnt += len(c)
 
-            print('got ' + str(cnt) + ' bytes')
+            print('\r' + chr(27) + '[0K' + f'got {cnt} bytes', end='')
 
             f.write(c)
+
+        print('')

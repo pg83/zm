@@ -17,12 +17,9 @@ class FileLoader:
         path = os.path.join(self._p.where, name.replace('_', '.'))
 
         with open(path, 'r') as f:
-            data = f.read()
-            tmpl = jinja2.Template(data, keep_trailing_newline=True).render(mix=self._p)
-
             return {
                 'kind': os.path.basename(path).split('.')[-1],
-                'data': tmpl,
+                'data': self._p.render(f.read()),
             }
 
 
@@ -88,8 +85,22 @@ mix.footer()
 FETCH_SRC_SCRIPT = '''
 import sys
 
-mix.fetch_url(sys.argv[1], sys.argv[2])
-mix.check_md5(sys.argv[2], sys.argv[3])
+md5 = sys.argv[-1]
+out = sys.argv[-2]
+
+def fetch():
+    for url in sys.argv[1:-2]:
+        try:
+            mix.fetch_url(url, out)
+
+            return True
+        except Exception as e:
+            print(f'fetch failed: {e}')
+
+if not fetch():
+    raise Exception('can not fetch {out}, all attemps failed')
+
+mix.check_md5(out, md5)
 '''.strip()
 
 
@@ -122,6 +133,15 @@ class Package:
         self._m = mngr
         self._d = exec_mod(self.files.package_py['data'], self)
         self._u = struct_hash([self._d, list(self.iter_env())])
+
+    def render(self, data):
+        return jinja2.Template(data, keep_trailing_newline=True).render(mix=self)
+
+    def file(self, p):
+        return self.render(self.manager.load_file(p))
+
+    def package(self, p):
+        return self.manager.load_package(p)
 
     def base64(self, data):
         return base64.b64encode(data.encode('utf-8')).decode('utf-8')
@@ -276,15 +296,15 @@ class Package:
             'ph': self.build_ph_script,
         }[build['kind']](build['data'], dict(iter_env()))
 
-    def fetch_src_script(self, url, md5):
-        path = os.path.join(self.src_dir_for([url, md5]), os.path.basename(url))
+    def fetch_src_script(self, urls, out, md5):
+        path = os.path.join(self.src_dir_for([out, md5]), out)
 
         def iter_env():
             yield from self.iter_env()
 
             yield 'out', os.path.dirname(path)
 
-        return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), [url, path, md5])
+        return self.build_py_script(FETCH_SRC_SCRIPT, dict(iter_env()), urls + [path, md5])
 
     def empty_script(self):
         return self.build_py_script('', dict(out=self.out_dir))
@@ -314,7 +334,10 @@ class Package:
         extra = []
 
         for ui in self._d['build'].get('fetch', []):
-            script = self.fetch_src_script(ui['url'], ui.get('md5', ''))
+            md5 = ui.get('md5', '')
+            url = ui['url']
+            urls = ['https://storage.yandexcloud.net/mix-cache/cache/' + md5, url]
+            script = self.fetch_src_script(urls, os.path.basename(url), md5)
             path = script['args'][-2]
 
             cmd = {

@@ -1,4 +1,5 @@
 import os
+import hashlib
 import subprocess
 
 import core.manager as cm
@@ -33,30 +34,33 @@ def cli_cache(ctx):
         for p in cm.Manager(binary, where).all_packages():
             yield from p.urls
 
-    def iter_fetch():
-        in_cache = set(list_cache())
+    in_cache = set(list_cache())
 
-        for el in iter_urls():
-            name = el.get('md5', '')
-
-            if not name:
-                print(f'skip malformed url: {el}')
-
-                continue
-
-            if name not in in_cache:
-                yield el
-
-                in_cache.add(name)
-
-    for el in iter_fetch():
+    for el in iter_urls():
         print(f'process {el}')
 
+        if 'md5' not in el:
+            print(f'no md5 in {el}, skip')
+
+            continue
+
         md5 = el['md5']
+
+        if md5 in in_cache:
+            continue
+
         url = el['url']
 
         try:
             cs.fetch_url(url, md5)
+
+            if hashlib.md5(open(md5, 'rb').read()).hexdigest() != md5:
+                print(f'incorrect md5 in {el}, skip')
+
+                continue
+
             store_cache(md5)
         finally:
             os.unlink(md5)
+
+        in_cache.add(md5)
