@@ -10,8 +10,6 @@ cxx_src=$(ls src/*.cpp)
 c_srcs=$(ls src/*.c)
 asm_srcs=$(ls src/*.S)
 
-#echo 'extern *void_ZN9libunwind15Registers_arm646jumptoEv;' >> unwind.c
-
 for s in $cxx_src; do
     g++ $CXXFLAGS -c $s -o obj/$(basename $s).o
 done

@@ -4,7 +4,7 @@ base64 -d << EOF > fix.py
 {{mix.base64(mix.files.fix_py.data)}}
 EOF
 
-export MACOSX_DEPLOYMENT_TARGET=11.0
+export MACOSX_DEPLOYMENT_TARGET=10.6
 export CFLAGS="$CPPFLAGS $CFLAGS"
 export CXXFLAGS="$CPPFLAGS $CXXFLAGS"
 export FCOFLAGS=$(echo "$COFLAGS" | tr ' ' '\n' | grep -v 'with-system-ffi' | tr '\n' ' ')
