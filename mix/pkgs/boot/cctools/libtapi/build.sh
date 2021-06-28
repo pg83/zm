@@ -1,22 +1,23 @@
-$unzip $src/664* && cd apple*
+$unzip $src/*.zip && cd apple*
 
 (
     cd src/llvm/projects/libtapi/tools/libtapi
     cat CMakeLists.txt | sed -e 's/SHARED/STATIC/' > tmp && mv tmp CMakeLists.txt
 )
 
-echo > ps && chmod +x ps
-ln -s $(which dash) sh
-setup_compiler
-mkdir build && cd build
+export CPPFLAGS="-I$(pwd)/src/llvm/projects/clang/include -I$(pwd)/build/projects/clang/include $CPPFLAGS"
 
-cmake ../src/llvm \
-      -DCMAKE_CXX_FLAGS="-I$(pwd)/../src/llvm/projects/clang/include -I$(pwd)/projects/clang/include" \
-      -DLLVM_INCLUDE_TESTS=OFF \
-      -DCMAKE_BUILD_TYPE=RELEASE \
-      -DCMAKE_INSTALL_PREFIX=$out \
-      -DTAPI_REPOSITORY_STRING=1100.0.11 \
-      -DTAPI_FULL_VERSION=11.0.0
+ln -s $(which dash) sh
+
+setup_compiler
+
+build_cmake_prepare \
+    -DLLVM_INCLUDE_TESTS=OFF \
+    -DTAPI_REPOSITORY_STRING=1100.0.11 \
+    -DTAPI_FULL_VERSION=11.0.0 \
+    ../src/llvm
+
+cd build && make -j $make_thrs
 
 for p in projects/libtapi/tools/tapi projects/libtapi/tools/libtapi projects/libtapi/include; do
     (

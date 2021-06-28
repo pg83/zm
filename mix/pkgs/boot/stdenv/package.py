@@ -1,14 +1,11 @@
 def package(mix):
     deps = [
-        'boot/dash',
-        'boot/which',
         'boot/clang',
-        'boot/coreutils',
     ]
 
     return {
         'build': {
-            'script': mix.files.build_sh,
+            'script': mix.files.build_py,
             'depends': deps,
         },
         'runtime': {
@@ -16,6 +13,9 @@ def package(mix):
                 'boot/sed',
                 'boot/gawk',
                 'boot/grep',
+                'boot/dash',
+                'boot/which',
+                'boot/coreutils',
                 'boot/diffutils',
                 'env/bootstrap',
             ],

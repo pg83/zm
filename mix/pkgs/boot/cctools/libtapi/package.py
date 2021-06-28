@@ -21,6 +21,7 @@ def package(mix):
                 'boot/coreutils',
                 'boot/bin/stdenv',
                 'env/compiler',
+                'env/cmake',
             ],
         },
     }

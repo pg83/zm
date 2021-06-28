@@ -5,10 +5,8 @@ def package(mix):
 
     return {
         'build': {
-            'script': mix.files.build_sh,
-            'depends': deps + [
-                'boot/stdenv',
-            ],
+            'script': mix.files.build_py,
+            'depends': deps,
         },
         'runtime': {
             'depends': deps,

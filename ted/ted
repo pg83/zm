@@ -845,6 +845,10 @@ class TextArray:
 
         return d[pos]
 
+    def replace(self, fr, to):
+        self.d = self.d.replace(fr, to)
+        self.split()
+
     def delete(self, fr, to):
         self.d = self.d[:fr] + self.d[to:]
         self.split()
@@ -1035,7 +1039,6 @@ class Editor:
         self.fn = fn
         self.md5 = str_hash(d)
         self.ic = {}
-        self.seq = EventSequencer()
         self.h = HighLight(self.fn, d)
         self.t = TextArray(d)
         self.c = min(int(db.get(self.fn + '/cursor', 0)), self.t.length())
@@ -1248,17 +1251,14 @@ class Editor:
             self.key_delete()
 
     def dispatch(self, ev, h):
-        ev = self.seq.dispatch(ev)
+        t, v = ev['t'], ev['v']
 
-        if ev:
-            t, v = ev['t'], ev['v']
-
-            if t == 'c':
-                self.handle_char(v)
-            elif t == 'm':
-                self.handle_mouse(v)
-            elif t == 'k':
-                self.handle_key(v, h)
+        if t == 'c':
+            self.handle_char(v)
+        elif t == 'm':
+            self.handle_mouse(v)
+        elif t == 'k':
+            self.handle_key(v, h)
 
         return True
 
@@ -1267,6 +1267,9 @@ class Editor:
 
     def end_mark(self):
         self.set_mark(self.mb, self.c)
+
+    def key_ctrl_r(self):
+        self.b.pub('show-replace-dialog')
 
     def key_ctrl_x_c(self):
         if str_hash(self.t.result()) == self.md5:
@@ -1343,7 +1346,6 @@ class Editor:
 
     def key_lf(self):
         self.handle_char('\n')
-        #self.run_indent()
 
     def key_home(self):
         try:
@@ -1452,6 +1454,13 @@ class Editor:
 
         self.t.insert(pos, text)
         self.set_pos(pos + len(text))
+
+    def replace(self, fr, to):
+        self.b.msg(f'replace {fr} {to}')
+
+        self.unmark()
+        self.ic.clear()
+        self.t.replace(fr, to)
 
     def handle_char(self, ch):
         self.insert_text(self.c, ch)
@@ -1827,6 +1836,8 @@ def editor_widget(ed, bus, w, h):
     if w < 15 or h < 5:
         return fake_widget(w, h)
 
+    msg = bus.msg
+
     mw_w = Stack()
 
     st_w = mw_w.push_raw(Collection())
@@ -1845,37 +1856,9 @@ def editor_widget(ed, bus, w, h):
             try:
                 vp_w.set_y(lineno)
             except IndexError:
-                bus.msg('index error')
+                msg('index error')
 
     ln_w = EditorLineNo(0, h - 2)
-
-    class SearchInput(TextInput):
-        def on_text_change(self):
-            bus.pub('search', self.t)
-
-        def key_ctrl_s(self):
-            bus.pub('search-next', self.t)
-
-        def on_complete(self):
-            bus.pub('popw')
-
-    ti_w = SearchInput(w - 2)
-
-    class SaveDialog(YesNo):
-        def __init__(self):
-            YesNo.__init__(self, 'save file, y/n?')
-
-        def on_complete(self):
-            raise KeyboardInterrupt()
-
-        def on_yes(self):
-            bus.pub('save')
-            self.on_complete()
-
-        def on_no(self):
-            self.on_complete()
-
-    sd_w = SaveDialog()
 
     ln_h = st_w.push(ln_w)
     vl_h = st_w.push(vl_w)
@@ -1883,9 +1866,6 @@ def editor_widget(ed, bus, w, h):
     cp_h = st_w.push(cp_w)
     pp_h = st_w.push(pp_w)
     vp_h = st_w.push(vp_w)
-
-    def on_popw():
-        mw_w.pop()
 
     def on_lineno(ln):
         ln_w.set_lineno(ln)
@@ -1907,21 +1887,62 @@ def editor_widget(ed, bus, w, h):
         ln_w.set_max(c['c'])
 
     def on_show_search_dialog():
-        bus.msg('search dialog')
-        ti_w.reset()
-        mw_w.push(ti_w).move(1, h - 1)
+        msg('search')
 
-    def on_search(t):
-        bus.msg(f'search for: {t}')
-        ed.search_context().search(t)
+        ctx = ed.search_context()
 
-    def on_search_next(t):
-        bus.msg(f'search next: {t}')
-        ed.search_context().search_next(t)
+        class SearchDialog(TextInput):
+            def on_text_change(self):
+                msg(f'search for: {self.t}')
+                ctx.search(self.t)
+
+            def key_ctrl_s(self):
+                msg(f'search next: {self.t}')
+                ctx.search_next(self.t)
+
+            def on_complete(self):
+                mw_w.pop()
+
+        mw_w.push(SearchDialog(w - 2)).move(1, h - 1)
 
     def on_show_save_dialog():
-        bus.msg('save dialog')
-        mw_w.push(sd_w).move(1, h - 1)
+        msg('save')
+
+        class SaveDialog(YesNo):
+            def on_complete(self):
+                mw_w.pop()
+
+                raise KeyboardInterrupt()
+
+            def on_yes(self):
+                bus.pub('save')
+                self.on_complete()
+
+            def on_no(self):
+                self.on_complete()
+
+        mw_w.push(SaveDialog('save file, y/n?')).move(1, h - 1)
+
+    def on_show_replace_dialog():
+        msg('replace from')
+
+        class To(TextInput):
+            def __init__(self, w, t):
+                TextInput.__init__(self, w)
+                self.fr = t
+
+            def on_complete(self):
+                mw_w.pop()
+                ed.replace(self.fr, self.t)
+
+        class From(TextInput):
+            def on_complete(self):
+                msg('replace into')
+
+                mw_w.pop()
+                mw_w.push(To(w - 2, self.t)).move(1, h - 1)
+
+        mw_w.push(From(w - 2)).move(1, h - 1)
 
     for k in list(locals()):
         if k.startswith('on_'):
@@ -2042,6 +2063,7 @@ class Main:
         cf = load_config(os.path.join(pr, 'ted.json'))
         fn = os.path.normpath(os.path.abspath(path))
 
+        self.sq = EventSequencer()
         self.db = Db(os.path.join(pr, 'ted.db'))
         self.ed = Editor(fn, self.db, self, **cf)
 
@@ -2073,7 +2095,10 @@ class Main:
         return self.wi.pixels(attrs)
 
     def dispatch(self, ev):
-        return self.wi.dispatch(ev)
+        ev = self.sq.dispatch(ev)
+
+        if ev:
+            self.wi.dispatch(ev)
 
     def test_perf_1(self):
         t = time.time()

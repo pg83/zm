@@ -13,7 +13,7 @@ dash ./configure $COFLAGS \
 
 (
     cd libobjc2
-    cat Makefile | sed -e 's/-fblocks/-fblocks -fno-objc-exceptions/' > tmp && mv tmp Makefile
+    sed -e 's/-fblocks/-fblocks -fno-objc-exceptions/' -i Makefile
     make -j $make_thrs
 )
 
