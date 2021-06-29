@@ -1,7 +1,7 @@
 $untar $src/emacs* && cd emacs*
 
-patch -p1 << EOF
-{{mix.files.p00_diff.data}}
+(base64 -d | patch -p1) << EOF
+{% include 'p00.diff#base64' %}
 EOF
 
 dash ./configure $COFLAGS \

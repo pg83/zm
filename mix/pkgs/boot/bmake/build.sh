@@ -4,7 +4,7 @@ set -x
 cd $out && $untar $src/bmake* && cd bmake
 
 (while read l; do printf "$l\n"; done) << EOF > config.h
-{{mix.files.config_h.data}}
+{% include 'config.h' %}
 EOF
 
 gcc $CPPFLAGS $CFLAGS $LDFLAGS -w -I. \

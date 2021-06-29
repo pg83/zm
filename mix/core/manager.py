@@ -1,5 +1,6 @@
 import os
 
+import core.j2 as cj
 import core.utils as cu
 import core.package as cp
 
@@ -9,6 +10,11 @@ class Manager:
         self._b = binary
         self._w = where
         self._c = {}
+        self._e = cj.Env(where)
+
+    @property
+    def env(self):
+        return self._e
 
     @property
     @cu.cached_method

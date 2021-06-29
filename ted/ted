@@ -687,8 +687,12 @@ class Handle:
 
         return self
 
+    @property
+    def width(self):
+        return self.w.width
 
-class Collection:
+
+class Set:
     def __init__(self):
         self.o = []
 
@@ -697,20 +701,36 @@ class Collection:
 
         return w
 
-    def push(self, w):
-        return self.push_raw(Handle(w))
-
     def pop(self):
         return self.o.pop()
 
     def pixels(self, attrs):
         return itt.chain.from_iterable(o.pixels(attrs) for o in self.o)
 
+    def last(self):
+        return self.o[-1]
+
     def dispatch(self, ev):
         return any(o.dispatch(ev) for o in reversed(self.o))
 
-    def last(self):
-        return self.o[-1]
+
+class Collection(Set):
+    def push(self, w):
+        return self.push_raw(Handle(w))
+
+
+class HSplit(Set):
+    @property
+    def width(self):
+        if self.o:
+            l = self.last()
+
+            return l.x + l.width
+
+        return 0
+
+    def push(self, w):
+        return self.push_raw(Handle(w).move(self.width, 0))
 
 
 def dict_update(d, **attrs):
@@ -1001,7 +1021,7 @@ class IndentContext:
         elif l.strip().split(' ')[0] in ('return', 'break', 'continue', 'raise', 'throw', 'pass'):
             s = s[4:]
 
-        if cl in ('}', ']', ')'):
+        if cl and cl[0] in ('}', ']', ')'):
             s = s[4:]
 
         return s
@@ -1621,6 +1641,10 @@ class Label:
     def dispatch(self, ev):
         return False
 
+    @property
+    def width(self):
+        return len(self.t)
+
 
 class VLine:
     def __init__(self, h):
@@ -1655,6 +1679,7 @@ class LineNo:
     def set_max(self, v):
         self.m = v
 
+    @property
     def width(self):
         return len(str(self.f))
 
@@ -1665,7 +1690,7 @@ class LineNo:
             yield x, y, Attrs(c=c, f=f)
 
     def chars(self):
-        w = self.width()
+        w = self.width
 
         for y, s in enumerate(range(self.s, self.f)):
             l = str(s)
@@ -1712,6 +1737,10 @@ class TextInput:
         self.x = 0
         self.c = 0
         self.t = ''
+
+    @property
+    def width(self):
+        return min(self.w, len(self.t))
 
     def on_text_change(self):
         pass
@@ -1886,7 +1915,7 @@ def editor_widget(ed, bus, w, h):
     def on_lineno(ln):
         ln_w.set_lineno(ln)
         ln_h.move(1, 1)
-        vl_h.move(ln_h.x + ln_w.width(), 0)
+        vl_h.move(ln_h.x + ln_w.width, 0)
         lb_h.move(1, 0)
         vp_h.move(vl_h.x + 1, 1)
         vp_w.set_width(w - 2 - vl_h.x)
@@ -1907,6 +1936,9 @@ def editor_widget(ed, bus, w, h):
             msg('break')
             mw_w.pop()
 
+    def add_dialog(d):
+        return mw_w.push(d).move(1, h - 1).w
+
     def on_show_search_dialog():
         msg('search')
 
@@ -1924,10 +1956,10 @@ def editor_widget(ed, bus, w, h):
             def on_complete(self):
                 mw_w.pop()
 
-        st_s = mw_w.push(Stack()).move(1, h - 1).w
+        d = add_dialog(HSplit())
 
-        st_s.push(Label('text: '))
-        st_s.push(SearchDialog(w - 8)).move(6, 0)
+        d.push(Label('text: '))
+        d.push(SearchDialog(w - 2 - d.width))
 
     def on_show_save_dialog():
         msg('save')
@@ -1945,7 +1977,7 @@ def editor_widget(ed, bus, w, h):
             def on_no(self):
                 self.on_complete()
 
-        mw_w.push(SaveDialog('save file, y/n?')).move(1, h - 1)
+        add_dialog(SaveDialog('save file, y/n?'))
 
     def on_show_replace_dialog():
         msg('replace')
@@ -1959,17 +1991,15 @@ def editor_widget(ed, bus, w, h):
                 mw_w.pop()
                 ed.replace(self.fr, self.t)
 
-        st_f = mw_w.push(Stack()).move(1, h - 1).w
+        d = add_dialog(HSplit())
 
         class From(Input):
             def on_complete(self):
-                p = 7 + len(self.t)
-                st_f.push(Label('to: ')).move(p, 0)
-                p += 4
-                st_f.push(To(w - p - 2, self.t)).move(p, 0)
+                d.push(Label(' to: '))
+                d.push(To(w - 2 - d.width, self.t))
 
-        st_f.push(Label('from: '))
-        st_f.push(From(w - 8)).move(6, 0)
+        d.push(Label('from: '))
+        d.push(From(w - 2 - d.width))
 
     for k in list(locals()):
         if k.startswith('on_'):

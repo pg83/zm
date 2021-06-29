@@ -2,11 +2,6 @@ import os
 import subprocess
 
 
-DATA = r'''
-{{mix.files.build_sh.data}}
-'''
-
-
 def iter_lines():
     yield 'set -e'
     yield 'set -x'
@@ -22,6 +17,7 @@ def iter_lines():
 
 p = subprocess.Popen([mix.which('dash')], stdin=subprocess.PIPE, shell=False)
 p.communicate(input=('\n'.join(iter_lines())).encode())
+
 
 if p.wait():
     raise Exception('shit happen')

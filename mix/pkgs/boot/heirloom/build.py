@@ -1,1 +1,5 @@
-{{mix.file('boot/scripts/build.py')}}
+DATA = r'''
+{% include 'build.sh' %}
+'''
+
+{% include 'boot/scripts/build.py' %}

@@ -1,7 +1,7 @@
 $untar $src/serf* && cd serf*
 
-patch -p1 << EOF
-{{mix.files.p00_patch.data}}
+(base64 -d | patch -p1) << EOF
+{% include 'p00.patch#base64' %}
 EOF
 
 scons PREFIX=$out \

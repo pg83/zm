@@ -14,13 +14,12 @@ class FileLoader:
         self._p = pkg
 
     def __getattr__(self, name):
-        path = os.path.join(self._p.where, name.replace('_', '.'))
+        fname = name.replace('_', '.')
 
-        with open(path, 'r') as f:
-            return {
-                'kind': os.path.basename(path).split('.')[-1],
-                'data': self._p.render(f.read()),
-            }
+        return {
+            'kind': fname.split('.')[-1],
+            'data': self._p.template(fname),
+        }
 
 
 def exec_mod(text, iface):
@@ -131,17 +130,21 @@ class Package:
     def __init__(self, name, mngr):
         self._n = name
         self._m = mngr
-        self._d = exec_mod(self.files.package_py['data'], self)
+        #self._d = exec_mod(self.files.package_py['data'], self)
+        self._d = exec_mod(self.template('package.py'), self)
         self._u = struct_hash([self._d, list(self.iter_env())])
 
-    def render(self, data):
-        return jinja2.Template(data, keep_trailing_newline=True).render(mix=self)
+    def template(self, name):
+        return self.render_template(self.get_template(name))
 
-    def file(self, p):
-        return self.render(self.manager.load_file(p))
+    def get_template(self, name):
+        return self.manager.env.get_template(os.path.join(self.name, name))
 
-    def package(self, p):
-        return self.manager.load_package(p)
+    def render_template(self, tmpl):
+        try:
+            return tmpl.render(mix=self)
+        except Exception as e:
+            raise Exception(f'can not render {tmpl.name}: {e}')
 
     def base64(self, data):
         return base64.b64encode(data.encode('utf-8')).decode('utf-8')
