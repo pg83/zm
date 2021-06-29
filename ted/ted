@@ -685,6 +685,8 @@ class Handle:
         self.x = x
         self.y = y
 
+        return self
+
 
 class Collection:
     def __init__(self):
@@ -706,6 +708,9 @@ class Collection:
 
     def dispatch(self, ev):
         return any(o.dispatch(ev) for o in reversed(self.o))
+
+    def last(self):
+        return self.o[-1]
 
 
 def dict_update(d, **attrs):
@@ -1714,23 +1719,28 @@ class TextInput:
     def on_complete(self):
         pass
 
+    def on_break(self):
+        self.on_complete()
+
     @property
     def cx(self):
         return self.c - self.x
 
-    def render(self):
-        yield self.c, Attrs(c=' ', f=white())
+    def render(self, focus=True, **attrs):
+        if focus:
+            yield self.c, Attrs(c=' ', f=white())
 
         for x, c in enumerate(self.t):
             yield x, Attrs(c=c)
 
-        yield self.c, ReverseAttrs()
+        if focus:
+            yield self.c, ReverseAttrs()
 
     def pixels(self, attrs):
         x1 = self.x
         x2 = x1 + self.w
 
-        for x, a in self.render():
+        for x, a in self.render(**attrs):
             if x >= x1 and x < x2:
                 yield x - x1, 0, a
 
@@ -1768,6 +1778,12 @@ class TextInput:
         self.at(p)
         self.c = p
 
+    def key_cr(self):
+        self.key_lf()
+
+    def key_lf(self):
+        self.on_complete()
+
     def key_bs(self):
         self.key_left()
         self.key_delete()
@@ -1783,7 +1799,7 @@ class TextInput:
         self.set_pos(self.c + 1)
 
     def dispatch_ev(self, ev):
-        getattr(self, 'key_' + ev.replace('-', '_'), self.on_complete)()
+        getattr(self, 'key_' + ev.replace('-', '_'), self.on_break)()
 
     def adjust(self):
         hw = self.w // 2
@@ -1886,12 +1902,17 @@ def editor_widget(ed, bus, w, h):
         cp_h.move(1, vp_h.y + c['y'])
         ln_w.set_max(c['c'])
 
+    class Input(TextInput):
+        def on_break(self):
+            msg('break')
+            mw_w.pop()
+
     def on_show_search_dialog():
         msg('search')
 
         ctx = ed.search_context()
 
-        class SearchDialog(TextInput):
+        class SearchDialog(Input):
             def on_text_change(self):
                 msg(f'search for: {self.t}')
                 ctx.search(self.t)
@@ -1903,7 +1924,10 @@ def editor_widget(ed, bus, w, h):
             def on_complete(self):
                 mw_w.pop()
 
-        mw_w.push(SearchDialog(w - 2)).move(1, h - 1)
+        st_s = mw_w.push(Stack()).move(1, h - 1).w
+
+        st_s.push(Label('text: '))
+        st_s.push(SearchDialog(w - 8)).move(6, 0)
 
     def on_show_save_dialog():
         msg('save')
@@ -1924,9 +1948,9 @@ def editor_widget(ed, bus, w, h):
         mw_w.push(SaveDialog('save file, y/n?')).move(1, h - 1)
 
     def on_show_replace_dialog():
-        msg('replace from')
+        msg('replace')
 
-        class To(TextInput):
+        class To(Input):
             def __init__(self, w, t):
                 TextInput.__init__(self, w)
                 self.fr = t
@@ -1935,14 +1959,17 @@ def editor_widget(ed, bus, w, h):
                 mw_w.pop()
                 ed.replace(self.fr, self.t)
 
-        class From(TextInput):
+        st_f = mw_w.push(Stack()).move(1, h - 1).w
+
+        class From(Input):
             def on_complete(self):
-                msg('replace into')
+                p = 7 + len(self.t)
+                st_f.push(Label('to: ')).move(p, 0)
+                p += 4
+                st_f.push(To(w - p - 2, self.t)).move(p, 0)
 
-                mw_w.pop()
-                mw_w.push(To(w - 2, self.t)).move(1, h - 1)
-
-        mw_w.push(From(w - 2)).move(1, h - 1)
+        st_f.push(Label('from: '))
+        st_f.push(From(w - 8)).move(6, 0)
 
     for k in list(locals()):
         if k.startswith('on_'):
