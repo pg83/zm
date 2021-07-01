@@ -1,9 +1,8 @@
 $untar $src/glib* && cd glib*
 
-export LDFLAGS="$LDFLAGS $LIBS"
 export CPPFLAGS=" -D_GNU_SOURCE=1 -I$(pwd)/inc $CPPFLAGS"
-export CFLAGS="$CPPFLAGS $CFLAGS"
-export CXXFLAGS="$CPPFLAGS $CXXFLAGS"
+
+setup_compiler
 
 echo 'int main() {}' > glib/tests/cxx.cpp
 echo 'int main() {}' > tests/cxx-test.cpp

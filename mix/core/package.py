@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import base64
 import jinja2
 import hashlib
 import multiprocessing
@@ -130,24 +129,16 @@ class Package:
     def __init__(self, name, mngr):
         self._n = name
         self._m = mngr
-        #self._d = exec_mod(self.files.package_py['data'], self)
         self._d = exec_mod(self.template('package.py'), self)
         self._u = struct_hash([self._d, list(self.iter_env())])
 
     def template(self, name):
-        return self.render_template(self.get_template(name))
+        path = os.path.join(self.name, name)
 
-    def get_template(self, name):
-        return self.manager.env.get_template(os.path.join(self.name, name))
-
-    def render_template(self, tmpl):
         try:
-            return tmpl.render(mix=self)
+            return self.manager.env.get_template(path).render(mix=self)
         except Exception as e:
-            raise Exception(f'can not render {tmpl.name}: {e}')
-
-    def base64(self, data):
-        return base64.b64encode(data.encode('utf-8')).decode('utf-8')
+            raise Exception(f'can not render {path}: {e}')
 
     @property
     def manager(self):

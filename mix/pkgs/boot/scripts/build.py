@@ -2,6 +2,11 @@ import os
 import subprocess
 
 
+DATA = r'''
+{% block script %}{% endblock %}
+'''
+
+
 def iter_lines():
     yield 'set -e'
     yield 'set -x'
@@ -15,9 +20,7 @@ def iter_lines():
     yield DATA
 
 
-p = subprocess.Popen([mix.which('dash')], stdin=subprocess.PIPE, shell=False)
-p.communicate(input=('\n'.join(iter_lines())).encode())
+subprocess.run([mix.which('dash')], input=('\n'.join(iter_lines())).encode(), check=True)
 
 
-if p.wait():
-    raise Exception('shit happen')
+{% block body %}{% endblock %}

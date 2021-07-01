@@ -1,5 +1,8 @@
 $untar $src/pkg* && cd pkg*
 
+ln -s $(which dash) sh
+
+export PATH="$(pwd):$PATH"
 export LDFLAGS="$LDFLAGS $LIBS"
 export GLIB_LIBS="$LIBS"
 

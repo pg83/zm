@@ -1,7 +1,8 @@
 $untar $src/pkg* && cd pkg*
 
-export LDFLAGS="$LDFLAGS $LIBS"
 export GLIB_LIBS="$LIBS"
+
+setup_compiler
 
 dash ./configure $COFLAGS --prefix=$out --enable-static --disable-shared --with-internal-glib --disable-host-tool
 

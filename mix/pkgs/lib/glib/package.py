@@ -20,6 +20,7 @@ def package(mix):
                 'dev/build/meson',
                 'dev/build/ninja',
                 'boot/pkg-config',
+                'env/compiler',
                 'stdenv',
             ],
         },

@@ -5,9 +5,10 @@ out = os.environ['out']
 sdk = '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk'
 
 data = r'''
+export MACOSX_DEPLOYMENT_TARGET=10.12
 export OSX_SDK="{sdk}"
-export CPPFLAGS="--sysroot $OSX_SDK -isystem$OSX_SDK/usr/include -F$OSX_SDK"
-export LDFLAGS="--sysroot $OSX_SDK -L$OSX_SDK/usr/lib -F$OSX_SDK -nostdlib++"
+export CPPFLAGS="--sysroot $OSX_SDK -isystem$OSX_SDK/usr/include -F$OSX_SDK -nostdlib++ -Wno-stdlibcxx-not-found"
+export LDFLAGS="--sysroot $OSX_SDK -L$OSX_SDK/usr/lib -F$OSX_SDK -nostdlib++ -Wl,-platform_version -Wl,macos -Wl,10.12 -Wl,10.12 -Wl,-no_uuid"
 '''.format(sdk=out)
 
 os.chdir(out)

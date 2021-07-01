@@ -10,11 +10,13 @@ def package(mix):
             ],
             'depends': [
                 'boot/iconv',
+                'boot/which',
                 'boot/autohell',
                 'boot/diffutils',
                 'boot/findutils',
                 'boot/coreutils',
                 'boot/bin/stdenv',
+                'env/compiler',
             ],
         },
     }

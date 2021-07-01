@@ -8,20 +8,19 @@ ln -s $(which bash) sh
 
 export PATH="$(pwd):$PATH"
 export LDFLAGS="-L$(pwd) $LDFLAGS"
-export CFLAGS="-w $CPPFLAGS $CFLAGS"
-export CXXFLAGS="$CFLAGS $CXXFLAGS"
+
+setup_compiler
 
 bash ./Configure -des \
-     -Accflags="$CFLAGS" \
-     -Aldflags="$LDFLAGS $LIBS" \
-     -Dusethreads \
-     -Duse64bitall \
-     -Dprefix=$out \
-     -Duseperlio \
-     -Uusesfio \
-     -Duseshrplib=false \
-     -Dusedl=false \
-     -Dcc="gcc -Duserelocatableinc $CFLAGS $LDFLAGS $LIBS"
+    -Dusethreads \
+    -Duse64bitall \
+    -Dprefix="$out" \
+    -Duseperlio \
+    -Uusesfio \
+    -Duseshrplib=false \
+    -Dusedl=false \
+    -Dcc=gcc \
+    -Duserelocatableinc
 
 make -j $make_thrs
 make install

@@ -2,7 +2,7 @@ import os
 
 
 data = r'''
-{{mix.files.build_sh.data}}
+{% include 'build.sh' %}
 '''
 
 with open(os.environ['out'] + '/env', 'w') as f:

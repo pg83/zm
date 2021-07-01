@@ -11,6 +11,7 @@ def package(mix):
             'depends': [
                 'dev/build/make',
                 'dev/lang/perl5',
+                'env/compiler',
                 'stdenv',
             ],
         },

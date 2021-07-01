@@ -12,7 +12,7 @@ def execute_cmd(c):
     a = c['args']
     p = subprocess.Popen(a, stdin=subprocess.PIPE, env=c.get('env', {}))
 
-    p.communicate(input=c.get('stdin', '').encode('utf-8'))
+    p.communicate(input=c.get('stdin', '').encode())
 
     if p.wait():
         raise Exception(' '.join(a) + ' failed')

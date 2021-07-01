@@ -28,7 +28,7 @@ def package(mix):
             'depends': libs + [
                 'dev/build/make',
                 'boot/pkg-config',
-                'lib/compiler_rt',
+                'env/compiler',
                 'stdenv',
             ],
         },

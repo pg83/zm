@@ -1,4 +1,4 @@
-$unzip $src/236* && cd cctools* && cd cctools
+$unzip $src/*.zip && cd cctools* && cd cctools
 
 export CPPFLAGS="-D__crashreporter_info__=__crashreporter_info_ld__ $CPPFLAGS"
 export LDFLAGS="-L$(pwd)/libobjc2/.libs $LDFLAGS"
@@ -9,7 +9,7 @@ dash ./configure $COFLAGS \
      --enable-static \
      --disable-shared \
      --enable-tapi-support \
-     --with-libtapi=$boot_cctools_libtapi
+     --with-libtapi=$(dirname $(which tapi))
 
 (
     cd libobjc2

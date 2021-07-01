@@ -1,12 +1,12 @@
 setup_compiler() {
 cat << EOF > clang
 #!$(which dash)
-$(which clang) $CPPFLAGS $CFLAGS $LDFLAGS -w \$@
+$(which clang) $CPPFLAGS $CFLAGS $LDFLAGS -w "\$@"
 EOF
 
 cat << EOF > clang++
 #!$(which dash)
-$(which clang++) $CPPFLAGS $CFLAGS $LDFLAGS -w \$@
+$(which clang++) $CPPFLAGS $CFLAGS $LDFLAGS -w "\$@"
 EOF
 
 chmod +x clang clang++

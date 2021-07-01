@@ -1,7 +1,9 @@
 $untar $src/openssl* && cd openssl*
 
-export CC=gcc
+export AR=ar
 export RANLIB=ranlib
+
+setup_compiler
 
 perl ./Configure \
      darwin64-x86_64-cc \
@@ -11,10 +13,8 @@ perl ./Configure \
      no-dso \
      no-hw \
      no-tests \
-     --prefix=$out \
-     --openssldir=$out \
-     -w -std=c99 \
-     $CFLAGS $LDFLAGS $LIBS
+     --prefix="$out" \
+     --openssldir="$out"
 
 make -j $make_thrs
 make install

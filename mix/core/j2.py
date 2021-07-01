@@ -13,17 +13,19 @@ class Env(jinja2.Environment, jinja2.BaseLoader):
         self.where = where
 
     def get_source(self, env, name):
-        if name.endswith('#base64'):
-            rname = name[:-7]
-            d, n, f = self.get_source(env, rname)
+        if name.startswith('//'):
+            return self.get_source(env, name[2:])
 
-            return b64(d), rname, f
+        if name.endswith('/base64'):
+            d, n, f = self.get_source(env, name[:-7])
+
+            return b64(d), n, f
 
         with open(os.path.join(self.where, name)) as f:
             return f.read(), name, lambda: True
 
     def join_path(self, tmpl, parent):
-        if '/' in tmpl:
+        if tmpl.startswith('//'):
             return tmpl
 
         return os.path.join(os.path.dirname(parent), tmpl)

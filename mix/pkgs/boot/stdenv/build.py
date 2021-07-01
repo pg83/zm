@@ -1,1 +1,1 @@
-{% include 'boot/bin/stdenv/build.py' %}
+{% include '//boot/bin/stdenv/build.py' %}

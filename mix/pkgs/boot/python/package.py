@@ -9,10 +9,12 @@ def package(mix):
                 },
             ],
             'depends': [
+                'boot/which',
                 'boot/autohell',
                 'boot/coreutils',
                 'boot/bin/stdenv',
                 'boot/compiler_rt',
+                'env/compiler',
             ],
         },
     }

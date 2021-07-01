@@ -10,10 +10,12 @@ def package(mix):
             ],
             'depends': [
                 'boot/sed',
+                'boot/which',
                 'boot/python',
                 'boot/libcxx',
                 'boot/coreutils',
                 'boot/bin/stdenv',
+                'env/compiler',
             ],
         },
     }

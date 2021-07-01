@@ -10,8 +10,10 @@ def package(mix):
             ],
             'depends': [
                 'boot/make',
+                'boot/which',
                 'boot/heirloom',
                 'boot/bin/stdenv',
+                'env/compiler',
             ],
         },
     }

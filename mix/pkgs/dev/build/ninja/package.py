@@ -11,6 +11,7 @@ def package(mix):
             'depends': [
                 'lib/cxx',
                 'dev/lang/python3',
+                'env/compiler',
                 'stdenv',
             ],
         },

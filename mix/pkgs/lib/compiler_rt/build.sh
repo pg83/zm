@@ -1,1 +1,1 @@
-{% include 'boot/compiler_rt/build.sh' %}
+{% include '//boot/compiler_rt/build.sh' %}

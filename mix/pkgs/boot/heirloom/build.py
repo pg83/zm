@@ -1,5 +1,5 @@
-DATA = r'''
-{% include 'build.sh' %}
-'''
+{% extends '//boot/scripts/build.py' %}
 
-{% include 'boot/scripts/build.py' %}
+{% block script %}
+{% include 'build.sh' %}
+{% endblock %}

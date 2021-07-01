@@ -1,6 +1,3 @@
-set -e
-set -x
-
 cd $out && $untar $src/bmake* && cd bmake
 
 (while read l; do printf "$l\n"; done) << EOF > config.h

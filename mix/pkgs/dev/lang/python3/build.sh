@@ -1,14 +1,12 @@
 $untar $src/Python* && cd Python*
 
 base64 -d << EOF > fix.py
-{% include 'fix.py#base64' %}
+{% include 'fix.py/base64' %}
 EOF
 
-export MACOSX_DEPLOYMENT_TARGET=10.6
-export CFLAGS="$CPPFLAGS $CFLAGS"
-export CXXFLAGS="$CPPFLAGS $CXXFLAGS"
-export FCOFLAGS=$(echo "$COFLAGS" | tr ' ' '\n' | grep -v 'with-system-ffi' | tr '\n' ' ')
-export COFLAGS="--with-system-ffi $FCOFLAGS"
+setup_compiler
+
+export COFLAGS=$(echo "$COFLAGS" | tr ' ' '\n' | grep -v 'with-system-ffi' | tr '\n' ' ')
 
 dash ./configure $COFLAGS \
      --prefix=$out \
@@ -16,7 +14,8 @@ dash ./configure $COFLAGS \
      --disable-shared \
      --with-ensurepip=no \
      --with-system-libmpdec \
-     --with-system-expat
+     --with-system-expat \
+     --with-system-ffi
 
 make -j $make_thrs
 

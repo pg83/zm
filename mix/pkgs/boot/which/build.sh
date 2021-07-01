@@ -1,5 +1,5 @@
-$untar $src/which* && cd which*
+cat << EOF > which.c
+{% include 'which.c' %}
+EOF
 
-dash ./configure --prefix=$out
-make -j $make_thrs
-make install
+mkdir $out/bin && gcc $CPPFLAGS $CFLAGS $LDFLAGS which.c -o $out/bin/which
