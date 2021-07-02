@@ -52,6 +52,11 @@ class Parser:
         k['build']['fetch'][-1]['md5'] = v
 
     def on_build_depends(self, k, v):
+        for x in v.split(','):
+            for y in x.split(' '):
+                self.on_build_depend(k, y.strip())
+
+    def on_build_depend(self, k, v):
         if 'build' not in k:
             k['build'] = {}
 

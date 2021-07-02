@@ -1,5 +1,5 @@
-# url https://ftp.gnu.org/gnu/diffutils/diffutils-3.7.tar.xz
-# md5 4824adc0e95dbbf11dfbdfaad6a1e461
+# url https://ftp.gnu.org/gnu/findutils/findutils-4.8.0.tar.xz
+# md5 eeefe2e6380931a77dfa6d9350b43186
 # build-depends boot/autohell boot/coreutils boot/bin/stdenv
 
 build() {
