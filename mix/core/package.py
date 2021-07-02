@@ -151,6 +151,10 @@ class Package:
             raise Exception(f'can not render {path}: {e}')
 
     @property
+    def descr(self):
+        return self._d
+
+    @property
     def manager(self):
         return self._m
 

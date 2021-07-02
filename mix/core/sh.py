@@ -1,3 +1,8 @@
+import os
+
+import core.manager as cm
+
+
 def tokens(s):
     for x in s.split(','):
         for y in x.split(' '):
@@ -107,3 +112,85 @@ class Parser:
 
 def parse(s):
     return Parser().parse(s)
+
+
+def gen_sh(p):
+    d = p.descr
+
+    fetch = []
+    lib = []
+    dep = []
+    run = []
+    script = ''
+
+    if 'build' in d:
+        b = d['build']
+
+        if 'script' in b:
+            script = b['script']['data']
+
+        if 'fetch' in b:
+            fetch.extend(b['fetch'])
+
+        if 'depends' in b:
+            dep.extend(b['depends'])
+
+    if 'runtime' in d:
+        r = d['runtime']
+
+        if 'depends' in r:
+            run.extend(r['depends'])
+
+    common = frozenset(dep) & frozenset(run)
+
+    def iter_lib():
+        for d in dep:
+            if d in common:
+                yield d
+
+    lib = list(iter_lib())
+
+    def iter_dep():
+        for d in dep:
+            if d not in common:
+                yield d
+
+    dep = list(iter_dep())
+
+    def iter_run():
+        for d in run:
+            if d not in common:
+                yield d
+
+    run = list(iter_run())
+
+    def iter_lines():
+        for f in fetch:
+            yield '# url ' + f['url']
+            yield '# md5 ' + f['md5']
+
+        if lib:
+            yield '# lib ' + ' '.join(lib)
+
+        if dep:
+            yield '# dep ' + ' '.join(dep)
+
+        if run:
+            yield '# run ' + ' '.join(run)
+
+        if script:
+            yield ''
+
+            yield 'build() {'
+            yield script
+            yield '}'
+
+    return '\n'.join(iter_lines()) + '\n'
+
+
+def cli_sh(ctx):
+    args = ctx['args']
+    binary = ctx['binary']
+    where = os.path.join(os.path.dirname(binary), 'pkgs')
+
+    print(gen_sh(cm.Manager(binary, where).load_package(args[0])))
