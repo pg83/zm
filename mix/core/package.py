@@ -5,6 +5,7 @@ import jinja2
 import hashlib
 import multiprocessing
 
+import core.sh as cs
 import core.utils as cu
 
 
@@ -125,11 +126,20 @@ rm $tmp
 '''.strip()
 
 
+def compile_sh(script):
+    return cs.parse(script)
+
+
 class Package:
     def __init__(self, name, mngr):
         self._n = name
         self._m = mngr
-        self._d = exec_mod(self.template('package.py'), self)
+
+        try:
+            self._d = exec_mod(self.template('package.py'), self)
+        except Exception:
+            self._d = compile_sh(self.template('package.sh'))
+
         self._u = struct_hash([self._d, list(self.iter_env())])
 
     def template(self, name):

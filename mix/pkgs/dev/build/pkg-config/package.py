@@ -13,6 +13,7 @@ def package(mix):
                 'lib/iconv',
                 'dev/build/make',
                 'boot/pkg-config',
+                'env/compiler',
                 'stdenv',
             ],
         },

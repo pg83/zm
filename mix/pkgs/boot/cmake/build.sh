@@ -1,8 +1,6 @@
 $untar $src/cmake* && cd cmake*
 
-export CFLAGS="-w $CPPFLAGS $CFLAGS $LDFLAGS $LIBS"
-export CXXFLAGS="-w $CPPFLAGS $CXXFLAGS $LDFLAGS $LIBS"
-
+setup_compiler
 build_cmake_ps
 
 dash ./bootstrap --prefix=$out --parallel=$make_thrs -- -DCMAKE_USE_OPENSSL=OFF -Dfortran=OFF -DBUILD_TESTING=OFF

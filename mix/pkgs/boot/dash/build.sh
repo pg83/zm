@@ -1,6 +1,6 @@
 $untar $src/dash-* && cd dash-*
 
-export CFLAGS_FOR_BUILD="$CPPFLAGS $CFLAGS $LDFLAGS $LIBS"
+setup_compiler
 
 dash ./configure --prefix=$out
 make -j $make_thrs

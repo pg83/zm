@@ -4,7 +4,5 @@ export CPPFLAGS="-w -I./glob -Dglob=make_glob -Dglobfree=make_globfree -Dfnmatch
 export ACCEPT_INFERIOR_RM_PROGRAM=yes
 
 dash ./configure --prefix=$out --disable-load --disable-dependency-tracking
-dash ./build.sh && mv ./make ./newmake
-./newmake clean
-./newmake -j $make_thrs
-./make install
+bmake -j $make_thrs
+bmake install

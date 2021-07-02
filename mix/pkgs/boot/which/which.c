@@ -2,18 +2,35 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// memory leaks here, but who care?
 int main(int argc, char** argv) {
-    char buf[1000000];
-    char* token;
-    char* string;
+    char* token = 0;
+    char* string = 0;
+    char* buf = 0;
 
     if (argc < 2) {
         return 0;
     }
 
-    string = strdup(getenv("PATH"));
+    string = getenv("PATH");
+
+    if (!string) {
+        return 1;
+    }
+
+    string = strdup(string);
+
+    if (!string) {
+        abort();
+    }
 
     while ((token = strsep(&string, ":")) != NULL) {
+        buf = realloc(buf, strlen(token) + strlen(argv[1]) + 100);
+
+        if (!buf) {
+            abort();
+        }
+
         sprintf(buf, "%s/%s", token, argv[1]);
 
         if (fopen(buf, "r")) {
