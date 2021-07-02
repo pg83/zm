@@ -2,6 +2,6 @@
 # md5 022042695b7d5bcf1a93559a9735e668
 # dep boot/make boot/which boot/heirloom boot/bin/stdenv env/compiler
 
-build () {
+build() {
     {% include 'build.sh' %}
 }

@@ -2,6 +2,6 @@
 # md5 c7016b513f701d88c70b3082eb183581
 # dep boot/which boot/autohell boot/coreutils boot/bin/stdenv env/compiler
 
-build () {
+build() {
     {% include 'build.sh' %}
 }

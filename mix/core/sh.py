@@ -1,3 +1,12 @@
+def tokens(s):
+    for x in s.split(','):
+        for y in x.split(' '):
+            y = y.strip()
+
+            if y:
+                yield y
+
+
 class Parser:
     def __init__(self):
         pass
@@ -14,7 +23,7 @@ class Parser:
             else:
                 body = l + '\n'
 
-        if body.strip():
+        if 'build()' in body:
             keys['build']['script'] = {
                 'data': body + '\nbuild',
                 'kind': 'sh',
@@ -55,9 +64,8 @@ class Parser:
         self.on_build_depends(k, v)
 
     def on_build_depends(self, k, v):
-        for x in v.split(','):
-            for y in x.split(' '):
-                self.on_build_depend(k, y.strip())
+        for t in tokens(v):
+            self.on_build_depend(k, t)
 
     def on_build_depend(self, k, v):
         if 'build' not in k:
@@ -72,7 +80,14 @@ class Parser:
 
         k.append(v)
 
+    def on_run(self, k, v):
+        self.on_runtime_depends(k, v)
+
     def on_runtime_depends(self, k, v):
+        for t in tokens(v):
+            self.on_runtime_depend(k, t)
+
+    def on_runtime_depend(self, k, v):
         if 'runtime' not in k:
             k['runtime'] = {}
 
