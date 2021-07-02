@@ -51,6 +51,9 @@ class Parser:
     def on_md5(self, k, v):
         k['build']['fetch'][-1]['md5'] = v
 
+    def on_dep(self, k, v):
+        self.on_build_depends(k, v)
+
     def on_build_depends(self, k, v):
         for x in v.split(','):
             for y in x.split(' '):
