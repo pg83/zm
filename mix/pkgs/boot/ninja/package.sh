@@ -3,5 +3,5 @@
 # dep boot/sed boot/which boot/python boot/libcxx boot/coreutils boot/bin/stdenv env/compiler
 
 build() {
-    {% include 'build.sh' %}
+    {% include '//dev/build/ninja/build.sh' %}
 }

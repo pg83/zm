@@ -3,5 +3,11 @@
 # dep boot/which boot/autohell boot/coreutils boot/bin/stdenv env/compiler
 
 build() {
-    {% include 'build.sh' %}
+    $untar $src/dash-* && cd dash-*
+
+    setup_compiler
+
+    dash ./configure --prefix=$out
+    make -j $make_thrs
+    make install
 }

@@ -3,5 +3,9 @@
 # dep boot/sed boot/make boot/coreutils boot/heirloom boot/bin/stdenv
 
 build() {
-    {% include 'build.sh' %}
+    $untar $src/grep-* && cd grep-*
+
+    dash ./configure --prefix=$out
+    make -j $make_thrs
+    make install
 }

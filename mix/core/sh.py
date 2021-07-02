@@ -100,6 +100,10 @@ class Parser:
 
         k.append(v)
 
+    def on_lib(self, k, v):
+        self.on_dep(k, v)
+        self.on_run(k, v)
+
 
 def parse(s):
     return Parser().parse(s)
