@@ -193,4 +193,14 @@ def cli_sh(ctx):
     binary = ctx['binary']
     where = os.path.join(os.path.dirname(binary), 'pkgs')
 
-    print(gen_sh(cm.Manager(binary, where).load_package(args[0])))
+    if len(args) > 0:
+        pkg = args[0]
+    else:
+        pkg = os.getcwd()
+
+        if pkg.startswith(where):
+            pkg = pkg[len(where) + 1:]
+        else:
+            raise Exception('should run from pkg dir')
+
+    print(gen_sh(cm.Manager(binary, where).load_package(pkg)))
