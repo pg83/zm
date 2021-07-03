@@ -144,9 +144,10 @@ class Package:
 
     def template(self, name):
         path = os.path.join(self.name, name)
+        tmpl = self.manager.env.get_template(path)
 
         try:
-            return self.manager.env.get_template(path).render(mix=self)
+            return tmpl.render(mix=self)
         except Exception as e:
             raise Exception(f'can not render {path}: {e}')
 

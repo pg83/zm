@@ -182,10 +182,10 @@ def gen_sh(p):
             yield ''
 
             yield 'build() {'
-            yield script
+            yield script.strip()
             yield '}'
 
-    return '\n'.join(iter_lines()) + '\n'
+    return '\n'.join(iter_lines())
 
 
 def cli_sh(ctx):
