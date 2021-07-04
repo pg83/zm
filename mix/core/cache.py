@@ -37,7 +37,7 @@ def cli_cache(ctx):
     in_cache = set(list_cache())
 
     for el in iter_urls():
-        print(f'process {el}')
+        print(f'process {el["url"]}')
 
         if 'md5' not in el:
             print(f'no md5 in {el}, skip')
