@@ -9,13 +9,10 @@ def execute_cmd(c):
     if 'func' in c:
         return c['func']()
 
-    a = c['args']
-    p = subprocess.Popen(a, stdin=subprocess.PIPE, env=c.get('env', {}))
-
-    p.communicate(input=c.get('stdin', '').encode())
-
-    if p.wait():
-        raise Exception(' '.join(a) + ' failed')
+    try:
+        subprocess.run(c['args'], input=c.get('stdin', '').encode(), env=c.get('env', {}), check=True)
+    except Exception as e:
+        raise Exception(f'while build {c}: {e}')
 
 
 def iter_in(c):

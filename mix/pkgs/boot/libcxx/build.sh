@@ -1,4 +1,4 @@
-$untar $src/libcxx* && cd libcxx*
+$untar $src/llvm* && cd llvm* && cd libcxx
 
 CXXFLAGS="$CPPFLAGS -DNDEBUG -D_LIBCPP_BUILDING_LIBRARY -D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER -iquote src -I$out/include -DLIBCXXRT -std=c++14 -nostdinc++ -fvisibility-inlines-hidden $CXXFLAGS"
 

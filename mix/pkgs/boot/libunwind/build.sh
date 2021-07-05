@@ -1,4 +1,4 @@
-$untar $src/libunwind* && cd libunwind*
+$untar $src/llvm* && cd llvm* && cd libunwind
 
 COMMON="-I./src -I./include -D_LIBUNWIND_HAS_COMMENT_LIB_PRAGMA -funwind-tables -nostdinc++ -D_DEBUG -D_LIBUNWIND_IS_NATIVE_ONLY $CPPFLAGS"
 CXXFLAGS="$COMMON -std=c++11 -fstrict-aliasing -fno-exceptions -fno-rtti $CXXFLAGS"

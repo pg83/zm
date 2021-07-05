@@ -1,6 +1,19 @@
 cd $out && $untar $src/bmake* && cd bmake
 
-(while read l; do printf "$l\n"; done) << EOF > config.h
+gcc $CPPFLAGS $CFLAGS $LDFLAGS -o cat -x c - << EOF
+#include <stdio.h>
+
+int main() {
+    char buf[1024];
+    ssize_t n;
+
+    while ((n = fread(buf, 1, sizeof(buf), stdin)) > 0) {
+        fwrite(buf, 1, n, stdout);
+    }
+}
+EOF
+
+./cat << EOF > config.h
 {% include 'config.h' %}
 EOF
 
