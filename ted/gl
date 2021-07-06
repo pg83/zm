@@ -46,7 +46,7 @@ class Font:
             #assert bm.rows > 0
             #assert len(bm.buffer) == bm.width * bm.rows
 
-            b[idx] = Glyph(bm.width, bm.rows, gf.bitmap_left, gf.bitmap_top, bm.buffer)
+            b[idx] = Glyph(bm.width, bm.rows, gf.bitmap_left, gf.bitmap_top, [x for x in bm.buffer])
 
         self.b = b
         self.c = c
