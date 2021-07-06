@@ -3,6 +3,7 @@ import subprocess
 
 import core.build as cb
 import core.manager as cm
+import core.cmd_line as cc
 
 
 def execute_cmd(c):
@@ -88,8 +89,6 @@ def execute(g):
 
 
 def cli_build(ctx):
-    args = ctx['args']
-    binary = ctx['binary']
-    where = os.path.join(os.path.dirname(binary), 'pkgs')
+    binary, where, pkgs = cc.parse_pkgs(ctx)
 
-    cb.execute(cm.Manager(binary, where).build_graph(args))
+    cb.execute(cm.Manager(binary, where).build_graph(pkgs))

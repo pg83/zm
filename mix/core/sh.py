@@ -1,6 +1,7 @@
 import os
 
 import core.manager as cm
+import core.cmd_line as cc
 
 
 def tokens(s):
@@ -189,18 +190,7 @@ def gen_sh(p):
 
 
 def cli_sh(ctx):
-    args = ctx['args']
-    binary = ctx['binary']
-    where = os.path.join(os.path.dirname(binary), 'pkgs')
+    binary, where, pkgs = cc.parse_pkgs(ctx)
 
-    if len(args) > 0:
-        pkg = args[0]
-    else:
-        pkg = os.getcwd()
-
-        if pkg.startswith(where):
-            pkg = pkg[len(where) + 1:]
-        else:
-            raise Exception('should run from pkg dir')
-
-    print(gen_sh(cm.Manager(binary, where).load_package(pkg)))
+    for p in pkgs:
+        print(gen_sh(cm.Manager(binary, where).load_package(p)))
