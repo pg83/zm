@@ -1,14 +1,9 @@
 def package(mix):
-    deps = [
-        'dev/lang/clang',
-    ]
-
     return {
-        'build': {
-            'script': mix.files.build_py,
-            'depends': deps,
-        },
         'runtime': {
-            'depends': deps,
+            'depends': [
+                'stdenv/c/nort',
+                'lib/compiler_rt',
+            ],
         },
     }

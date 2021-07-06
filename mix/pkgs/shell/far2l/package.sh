@@ -1,4 +1,4 @@
-# url https://github.com/elfmz/far2l/archive/cfb97146424e739966d8fc53ee832a4a1cc0e685.zip
+# url https://github.com/elfmz/far2l/archive/b246b95118c0d7c6d10b4e94ec9b3bc7e24c3a7c.zip
 # md5 26e676988fa5b47ed211281e6140d371
 # dep lib/ssh lib/pcre lib/spdlog lib/archive lib/xerces-c lib/uchardet dev/build/pkg-config dev/build/cmake dev/lang/m4 stdenv
 

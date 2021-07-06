@@ -13,7 +13,6 @@ def package(mix):
         'lib/openssl',
         'lib/readline',
         'lib/mpdecimal',
-        'lib/compiler_rt',
     ]
 
     return {

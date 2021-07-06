@@ -2,6 +2,8 @@
 
 import sys
 
+import freetype
+
 import OpenGL
 
 OpenGL.ERROR_CHECKING = False
@@ -9,6 +11,88 @@ OpenGL.ERROR_CHECKING = False
 import OpenGL.GL as gl
 import OpenGL.GLU as glu
 import OpenGL.GLUT as glut
+
+
+class Glyph:
+    def __init__(self, w, h, l, t, b):
+        self.w = w
+        self.h = h
+        self.l = l
+        self.t = t
+        self.b = b
+
+
+class Font:
+    def __init__(self, path, size):
+        fn = freetype.Face(path)
+
+        fn.set_pixel_sizes(0, size)
+
+        b = {}
+        c = {}
+
+        for ch, idx in fn.get_chars():
+            c[ch] = idx
+
+        for idx in sorted(frozenset(c.values())):
+            fn.load_glyph(idx, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_CROP_BITMAP | freetype.FT_LOAD_FORCE_AUTOHINT)
+
+            gf = fn.glyph
+            bm = gf.bitmap
+
+            print(idx)
+
+            #assert bm.width > 0
+            #assert bm.rows > 0
+            #assert len(bm.buffer) == bm.width * bm.rows
+
+            b[idx] = Glyph(bm.width, bm.rows, gf.bitmap_left, gf.bitmap_top, bm.buffer)
+
+        self.b = b
+        self.c = c
+        self.w = b[c[0x2500]].w
+        self.h = b[c[0x2502]].h
+
+
+class FontTexture:
+    def __init__(self, f):
+        t = {}
+
+        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+
+        for idx, b in f.b.items():
+            t[idx] = gl.glGenTextures(1)
+
+            gl.glBindTexture(gl.GL_TEXTURE_2D, t[idx])
+            gl.glTexImage2D(
+                gl.GL_TEXTURE_2D,
+                0,
+                1,
+                b.w,
+                b.h,
+                0,
+                gl.GL_RED,
+                gl.GL_UNSIGNED_BYTE,
+                b.b,
+            )
+
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
+            gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MAG_FILTER, gl.GL_NEAREST)
+
+        gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+        self.f = f
+        self.t = t
+
+    def texture_id(self, ch):
+        return self.t[self.f.c[ord(ch)]]
+
+    def char_glyph(self, ch):
+        return self.f.b[self.f.c[ord(ch)]]
+
+
+def load_font_texture(path, size):
+    return FontTexture(Font(path, size))
 
 
 class Ted(dict):
@@ -37,10 +121,10 @@ class Window:
         self.w = w
         self.h = h
 
-        gl.glViewport(0, 0, w, h)
+        gl.glViewport(0, 0, self.w, self.h)
         gl.glMatrixMode(gl.GL_PROJECTION)
         gl.glLoadIdentity()
-        glu.gluOrtho2D(0, w, 0, h)
+        glu.gluOrtho2D(0, self.w, 0, self.h)
         gl.glMatrixMode(gl.GL_MODELVIEW)
         gl.glLoadIdentity()
 
@@ -49,6 +133,8 @@ class Window:
     def display(self):
         print('display')
 
+        gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glClearColor(0.0, 0.0, 0.0, 0.0)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
         self.on_render()
         glut.glutSwapBuffers()
@@ -65,19 +151,23 @@ class Window:
 
 class Display(Window):
     def __init__(self, w):
-        Window.__init__(self, 1000, 600, 'display')
+        self.ft = load_font_texture('/Users/pg83/input.ttf', 24)
         self.widget = w
+        Window.__init__(self, 1000, 600, 'display')
 
     def on_reshape(self):
         self.widget.reshape(self)
 
     def on_render(self):
-        gl.glBegin(gl.GL_QUADS)
+        #gl.glColor3f(1.0, 1.0, 1.0)
 
         s = {}
 
         dx = self.dx
         dy = self.dy
+
+        fw = self.ft.w
+        fh = self.ft.h
 
         for x, y, a in self.widget.pixels(dict(focus=True)):
             k = (dy - y - 1, x)
@@ -88,31 +178,43 @@ class Display(Window):
                 s[k] = a
 
         for k in sorted(s):
-            y, x = k
             a = s[k]
 
+            ch = a.t[0]
+
+            if ch == ' ':
+                continue
+
+            y, x = k
             r, g, b = a.t[2].rgb()
 
-            x1 = x * 10
-            y1 = y * 25
-            x2 = x1 + 10
-            y2 = y1 + 25
+            tid = self.ft.texture_id(ch)
+            glf = self.ft.char_glyph(ch)
 
-            gl.glColor3f(r / 255.0, g / 255.0, b / 255.0)
+            x1 = x * fw + glf.l
+            x2 = x1 + glf.w
+            y2 = y * fh + glf.t
+            y1 = y2 - glf.h
+
+            #gl.glBindTexture(gl.GL_TEXTURE_2D, tid)
+            gl.glBegin(gl.GL_QUADS)
+            #gl.glTexCoord(0.0, 1.0)
             gl.glVertex2i(x1, y1)
+            #gl.glTexCoord(1.0, 1.0)
             gl.glVertex2i(x2, y1)
+            #gl.glTexCoord(1.0, 0.0)
             gl.glVertex2i(x2, y2)
+            #gl.glTexCoord(0.0, 0.0)
             gl.glVertex2i(x1, y2)
-
-        gl.glEnd()
+            gl.glEnd()
 
     @property
     def dx(self):
-        return self.w // 10
+        return self.w // self.ft.w
 
     @property
     def dy(self):
-        return self.h // 25
+        return self.h // self.ft.h
 
 
 class EventLoop:

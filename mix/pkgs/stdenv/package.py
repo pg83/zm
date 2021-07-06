@@ -10,6 +10,7 @@ def package(mix):
                 'tool/compress/bzip2',
                 'tool/compress/unzip',
                 'tool/compress/bsdtar',
+                'stdenv/c',
                 'stdenv/tiny', # todo: remove env/bootstrap
             ],
         },
