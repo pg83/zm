@@ -5,6 +5,7 @@ def package(mix):
             'depends': [
                 'lib/bzip2',
                 'stdenv/tiny',
+                'stdenv/c',
             ],
         },
     }

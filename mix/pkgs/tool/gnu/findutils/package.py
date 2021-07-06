@@ -9,9 +9,10 @@ def package(mix):
                 },
             ],
             'depends': [
+                'stdenv/c',
                 'lib/iconv',
                 'boot/make',
-                'stdenv/mini',
+                'boot/stdenv',
             ],
         },
     }

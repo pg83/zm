@@ -13,7 +13,8 @@ def package(mix):
                 'lib/iconv',
                 'lib/sigsegv',
                 'dev/build/make',
-                'stdenv/mini',
+                'stdenv/c',
+                'boot/stdenv',
             ],
         },
     }

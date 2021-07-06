@@ -1,6 +1,6 @@
 # url https://github.com/google/brotli/archive/refs/tags/v1.0.9.tar.gz
 # md5 c2274f0c7af8470ad514637c35bcee7d
-# dep dev/build/make stdenv/tiny
+# dep dev/build/make stdenv/tiny stdenv/c
 
 build() {
     $untar $src/v* && cd brotli*

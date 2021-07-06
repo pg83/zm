@@ -18,6 +18,7 @@ def package(mix):
                 'dev/build/make',
                 'tool/text/gnu/patch',
                 'stdenv/tiny',
+                'stdenv/c',
             ],
         },
     }

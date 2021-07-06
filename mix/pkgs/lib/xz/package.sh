@@ -1,6 +1,6 @@
 # url https://tukaani.org/xz/xz-5.2.5.tar.xz
 # md5 aa1621ec7013a19abab52a8aff04fe5b
-# dep lib/intl lib/iconv dev/build/make stdenv/tiny
+# dep lib/intl lib/iconv dev/build/make stdenv/tiny stdenv/c
 
 build() {
     $untar $src/xz* && cd xz*

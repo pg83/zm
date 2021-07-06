@@ -5,6 +5,7 @@ def package(mix):
             'depends': [
                 'lib/archive',
                 'stdenv/tiny',
+                'stdenv/c',
             ],
         },
     }

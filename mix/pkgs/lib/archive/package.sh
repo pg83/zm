@@ -1,7 +1,7 @@
 # url https://libarchive.org/downloads/libarchive-3.5.1.tar.xz
 # md5 1f8c29149832baff8bae232fd2f9b0ec
 # lib lib/z lib/xz lib/lz4 lib/intl lib/zstd lib/bzip2 lib/iconv lib/expat
-# dep dev/build/make stdenv/tiny
+# dep dev/build/make stdenv/tiny stdenv/c
 
 build() {
     $untar $src/lib* && cd lib*

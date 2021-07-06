@@ -1,6 +1,6 @@
 # url https://sourceware.org/ftp/libffi/libffi-3.3.tar.gz
 # md5 6313289e32f1d38a9df4770b014a2ca7
-# dep dev/build/make tool/text/gnu/sed stdenv/tiny
+# dep dev/build/make tool/text/gnu/sed stdenv/tiny stdenv/c
 
 build() {
     $untar $src/lib* && cd lib*

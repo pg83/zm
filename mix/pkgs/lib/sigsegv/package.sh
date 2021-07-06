@@ -1,6 +1,6 @@
 # url https://ftp.gnu.org/gnu/libsigsegv/libsigsegv-2.13.tar.gz
 # md5 cf4a5fdc95e5494eaa190825af11f3be
-# dep dev/build/make stdenv/mini
+# dep dev/build/make stdenv/c boot/stdenv
 
 build() {
     $untar $src/lib* && cd lib*

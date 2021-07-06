@@ -12,7 +12,8 @@ def package(mix):
                 'lib/intl',
                 'lib/iconv',
                 'dev/build/make',
-                'stdenv/mini',
+                'stdenv/c',
+                'boot/stdenv',
             ],
         },
     }

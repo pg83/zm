@@ -1,6 +1,6 @@
 # url http://zlib.net/zlib-1.2.11.tar.xz
 # md5 85adef240c5f370b308da8c938951a68
-# dep dev/build/make stdenv/tiny env/compiler
+# dep dev/build/make stdenv/tiny env/compiler stdenv/c
 
 build() {
     $untar $src/zlib* && cd zlib*

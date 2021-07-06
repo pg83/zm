@@ -12,7 +12,6 @@ def package(mix):
                 'tool/text/gnu/patch',
                 'tool/text/gnu/diffutils',
                 'shell/dash/minimal',
-                'stdenv/comp',
                 'env/bootstrap',
             ],
         },

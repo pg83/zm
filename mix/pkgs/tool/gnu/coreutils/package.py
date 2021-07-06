@@ -9,11 +9,12 @@ def package(mix):
                 },
             ],
             'depends': [
+                'stdenv/c',
                 'lib/intl',
                 'lib/iconv',
                 'lib/sigsegv',
                 'dev/build/make',
-                'stdenv/mini',
+                'boot/stdenv',
             ],
         },
     }

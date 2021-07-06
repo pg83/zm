@@ -1,7 +1,7 @@
 # url https://ftp.gnu.org/pub/gnu/gettext/gettext-0.21.tar.gz
 # md5 28b1cd4c94a74428723ed966c38cf479
 # lib lib/iconv lib/unistring
-# dep tool/compress/gzip tool/gnu/findutils boot/make stdenv/mini
+# dep tool/compress/gzip tool/gnu/findutils boot/make stdenv/c boot/stdenv
 
 build() {
     $untar $src/gettext* && cd gettext*
