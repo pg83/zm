@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import string
 
 import freetype
 
@@ -40,12 +41,6 @@ class Font:
             gf = fn.glyph
             bm = gf.bitmap
 
-            print(idx)
-
-            #assert bm.width > 0
-            #assert bm.rows > 0
-            #assert len(bm.buffer) == bm.width * bm.rows
-
             b[idx] = Glyph(bm.width, bm.rows, gf.bitmap_left, gf.bitmap_top, [x for x in bm.buffer])
 
         self.b = b
@@ -58,22 +53,30 @@ class FontTexture:
     def __init__(self, f):
         t = {}
 
-        gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
+        #gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
 
         for idx, b in f.b.items():
             t[idx] = gl.glGenTextures(1)
 
             gl.glBindTexture(gl.GL_TEXTURE_2D, t[idx])
+
+            def iter_pixels():
+                for x in b.b:
+                    yield 255
+                    yield 255
+                    yield 255
+                    yield x
+
             gl.glTexImage2D(
                 gl.GL_TEXTURE_2D,
                 0,
-                1,
+                4,
                 b.w,
                 b.h,
                 0,
-                gl.GL_RED,
+                gl.GL_RGBA,
                 gl.GL_UNSIGNED_BYTE,
-                b.b,
+                list(iter_pixels()),
             )
 
             gl.glTexParameteri(gl.GL_TEXTURE_2D, gl.GL_TEXTURE_MIN_FILTER, gl.GL_NEAREST)
@@ -89,10 +92,6 @@ class FontTexture:
 
     def char_glyph(self, ch):
         return self.f.b[self.f.c[ord(ch)]]
-
-
-def load_font_texture(path, size):
-    return FontTexture(Font(path, size))
 
 
 class Ted(dict):
@@ -114,10 +113,16 @@ class Window:
         self.c = glut.glutCreateWindow(t)
         glut.glutReshapeFunc(self.reshape)
         glut.glutDisplayFunc(self.display)
+        glut.glutKeyboardFunc(self.keyboard)
+        glut.glutSpecialFunc(self.special)
+
+    def keyboard(self, k, x, y):
+        self.on_keyboard(k, x, y)
+
+    def special(self, k, x, y):
+        self.on_special(k, x, y)
 
     def reshape(self, w, h):
-        print(f'reshape {w} {h}')
-
         self.w = w
         self.h = h
 
@@ -131,9 +136,9 @@ class Window:
         self.on_reshape()
 
     def display(self):
-        print('display')
-
+        gl.glEnable(gl.GL_BLEND)
         gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glClearColor(0.0, 0.0, 0.0, 0.0)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
         self.on_render()
@@ -145,15 +150,98 @@ class Window:
     def on_render(self):
         pass
 
+    def on_keyboard(self, k, x, y):
+        pass
+
+    def on_special(self, k, x, y):
+        pass
+
     def title(self, t):
         pass
 
 
+KEYS = {
+    glut.GLUT_KEY_RIGHT: 'right',
+    glut.GLUT_KEY_DOWN: 'down',
+    glut.GLUT_KEY_LEFT: 'left',
+    glut.GLUT_KEY_END: 'end',
+    glut.GLUT_KEY_UP: 'up',
+    glut.GLUT_KEY_F1: 'f1',
+    glut.GLUT_KEY_F2: 'f2',
+    glut.GLUT_KEY_F3: 'f3',
+    glut.GLUT_KEY_F4: 'f4',
+    glut.GLUT_KEY_F5: 'f5',
+    glut.GLUT_KEY_F6: 'f6',
+    glut.GLUT_KEY_F7: 'f7',
+    glut.GLUT_KEY_F8: 'f8',
+    glut.GLUT_KEY_F9: 'f9',
+    glut.GLUT_KEY_F10: 'f10',
+    glut.GLUT_KEY_F11: 'f11',
+    glut.GLUT_KEY_F12: 'f12',
+    glut.GLUT_KEY_HOME: 'home',
+    glut.GLUT_KEY_INSERT: 'insert',
+    glut.GLUT_KEY_PAGE_UP: 'pageup',
+    glut.GLUT_KEY_PAGE_DOWN: 'pagedown',
+}
+
+
+ASCII = dict(
+    [(n + 1, f'ctrl-{ch}') for n, ch in enumerate(string.ascii_lowercase)] + [
+        (0,   'ctrl-space'),
+        (8,   'bs'),
+        (9,   'tab'),
+        (10,  'lf'),
+        (13,  'cr'),
+        (27,  'escape'),
+        (127, 'bs'),
+    ]
+)
+
+
 class Display(Window):
     def __init__(self, w):
-        self.ft = load_font_texture('/Users/pg83/input.ttf', 24)
+        self.font = Font('/Users/pg83/input.ttf', 25)
+        Window.__init__(self, self.fw * 80, self.fh * 24, 'display')
+        self.ft = FontTexture(self.font)
         self.widget = w
-        Window.__init__(self, 1000, 600, 'display')
+        self.keybuf = []
+
+    def on_key(self, k):
+        mod = glut.glutGetModifiers()
+
+        if len(k) == 1:
+            k = ASCII.get(ord(k), k)
+
+        if mod & glut.GLUT_ACTIVE_CTRL:
+            k = 'ctrl-' + k
+
+        if mod & glut.GLUT_ACTIVE_ALT:
+            k = 'alt-' + k
+
+        k = k.replace('ctrl-ctrl', 'ctrl')
+
+        try:
+            if len(k) > 1:
+                self.widget.dispatch({'t': 'k', 'v': k})
+            else:
+                self.widget.dispatch({'t': 'c', 'v': k})
+        except KeyboardInterrupt:
+            sys.exit(0)
+
+        glut.glutPostRedisplay()
+
+    def on_keyboard(self, k, x, y):
+        for x in k:
+            self.keybuf.append(x)
+
+            try:
+                self.on_key(bytes(self.keybuf).decode())
+                self.keybuf = []
+            except UnicodeError:
+                pass
+
+    def on_special(self, k, x, y):
+        self.on_key(KEYS[k])
 
     def on_reshape(self):
         self.widget.reshape(self)
@@ -166,9 +254,6 @@ class Display(Window):
         dx = self.dx
         dy = self.dy
 
-        fw = self.ft.w
-        fh = self.ft.h
-
         for x, y, a in self.widget.pixels(dict(focus=True)):
             k = (dy - y - 1, x)
 
@@ -177,44 +262,87 @@ class Display(Window):
             else:
                 s[k] = a
 
+        fw = self.fw
+        fh = self.fh
+
+        ox = self.ox
+        oy = self.oy
+
         for k in sorted(s):
             a = s[k]
 
             ch = a.t[0]
+            r, g, b = a.t[1].rgb()
 
             if ch == ' ':
-                continue
+                if r == 0 and g == 0 and b == 0:
+                    continue
 
             y, x = k
-            r, g, b = a.t[2].rgb()
 
             tid = self.ft.texture_id(ch)
             glf = self.ft.char_glyph(ch)
 
-            x1 = x * fw + glf.l
-            x2 = x1 + glf.w
-            y2 = y * fh + glf.t
-            y1 = y2 - glf.h
+            x1 = ox + x * fw
+            x2 = x1 + fw
+            y1 = oy + y * fh
+            y2 = y1 + fh
 
-            #gl.glBindTexture(gl.GL_TEXTURE_2D, tid)
             gl.glBegin(gl.GL_QUADS)
-            #gl.glTexCoord(0.0, 1.0)
+            gl.glColor3f(r / 255.0, g / 255.0, b / 255.0)
             gl.glVertex2i(x1, y1)
-            #gl.glTexCoord(1.0, 1.0)
             gl.glVertex2i(x2, y1)
-            #gl.glTexCoord(1.0, 0.0)
             gl.glVertex2i(x2, y2)
-            #gl.glTexCoord(0.0, 0.0)
             gl.glVertex2i(x1, y2)
             gl.glEnd()
 
+            x1 = ox + x * fw + glf.l
+            x2 = x1 + glf.w
+            y2 = oy + y * fh + glf.t
+            y1 = y2 - glf.h
+
+            gl.glBindTexture(gl.GL_TEXTURE_2D, tid)
+            gl.glBegin(gl.GL_QUADS)
+
+            tr, tg, tb = a.t[2].rgb()
+
+            gl.glColor3f(tr / 255.0, tg / 255.0, tb / 255.0)
+            gl.glTexCoord(0.0, 1.0)
+            gl.glVertex2i(x1, y1)
+            gl.glTexCoord(1.0, 1.0)
+            gl.glVertex2i(x2, y1)
+            gl.glTexCoord(1.0, 0.0)
+            gl.glVertex2i(x2, y2)
+            gl.glTexCoord(0.0, 0.0)
+            gl.glVertex2i(x1, y2)
+            gl.glEnd()
+            gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
+
+    @property
+    def fw(self):
+        return self.font.w - 2
+
+    @property
+    def fh(self):
+        return self.font.h
+
     @property
     def dx(self):
-        return self.w // self.ft.w
+        return self.w // self.fw
 
     @property
     def dy(self):
-        return self.h // self.ft.h
+        return self.h // self.fh
+
+    @property
+    def ox(self):
+        return (self.w % self.fw) // 2
+
+    @property
+    def oy(self):
+        fh = self.fh
+
+        return (self.h % fh + fh) // 2
 
 
 class EventLoop:

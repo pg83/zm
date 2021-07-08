@@ -252,7 +252,6 @@ KMAP = [
     ('[21~', 'f10'),
     ('[23~', 'f11'),
     ('[24~', 'f12'),
-    ('[33~', 'f19'),
 ] + [(x, f'alt-{x}') for x in (string.ascii_lowercase + string.digits)]
 
 
@@ -422,6 +421,46 @@ TBL8BG = [csim(48, 5, n) for n in range(0, 256)]
 TBL8FG = [csim(38, 5, n) for n in range(0, 256)]
 
 
+def iter_4():
+    yield 0, 0, 0
+    yield 170, 0, 0
+    yield 0, 170, 0
+    yield 170, 85, 0
+    yield 0, 0, 170
+    yield 170, 0, 170
+    yield 0, 170, 170
+    yield 170, 170, 170
+    yield 85, 85, 85
+    yield 255, 85, 85
+    yield 85, 255, 85
+    yield 255, 255, 85
+    yield 85, 85, 255
+    yield 255, 85, 255
+    yield 85, 255, 255
+    yield 255, 255, 255
+
+
+def iter_8():
+    yield from iter_4()
+
+    scale = 255.0 / 5.0
+
+    for r in range(0, 6):
+        for g in range(0, 6):
+            for b in range(0, 6):
+                yield int(r * scale), int(g * scale), int(b * scale)
+
+    scale = 255.0 / 23.0
+
+    for i in range(0, 24):
+        x = int(i * scale)
+
+        yield x, x, x
+
+
+RGB8 = list(iter_8())
+
+
 class Color8:
     __slots__ = 'n'
 
@@ -438,11 +477,12 @@ class Color8:
         return {'t': '8', 'n': self.n}
 
     def rgb(self):
-        return (self.n, self.n, self.n)
+        return RGB8[self.n]
 
 
 TBL4BG = [csim(40 + n if n < 8 else 92 + n) for n in range(0, 16)]
 TBL4FG = [csim(30 + n if n < 8 else 82 + n) for n in range(0, 16)]
+
 
 
 class Color4:
@@ -461,7 +501,7 @@ class Color4:
         return {'t': '4', 'n': self.n}
 
     def rgb(self):
-        return (self.n * 16, self.n * 16, self.n * 16)
+        return RGB8[self.n]
 
 
 class DefaultColor:
