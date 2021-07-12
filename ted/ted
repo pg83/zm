@@ -1760,7 +1760,7 @@ class HGrad:
 
     def pixels(self, attrs):
         for i in range(0, self.w):
-            v = math.pow(i / self.w, 0.8)
+            v = math.pow(i / self.w, 1.5)
 
             yield i, 0, Attrs(b=gray24(int(32 - v * 32)))
 
@@ -1927,7 +1927,7 @@ def editor_widget(ed, bus, w, h):
 
     st_w = mw_w.push_raw(Collection())
 
-    st_w.push_raw(Panel(w, h, Attrs(c=' ', b=DefaultColor(), f=DefaultColor())))
+    st_w.push_raw(Panel(w, h, Attrs(c=' ', b=DefaultColor(), f=white())))
     st_w.push_raw(Rect(w, h))
 
     vl_w = VLine(h)
@@ -2115,7 +2115,6 @@ class EventLoop:
 
             try:
                 for ev in i.next_bulk(32):
-                    w.msg(f'got {describe_event(ev)}')
                     w.dispatch(ev)
             except SigWinch:
                 raise
@@ -2195,6 +2194,7 @@ class Main:
         ev = self.sq.dispatch(ev)
 
         if ev:
+            self.msg(f'got {describe_event(ev)}')
             self.wi.dispatch(ev)
 
     def test_perf_1(self):

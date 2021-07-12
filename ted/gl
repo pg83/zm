@@ -22,6 +22,41 @@ class Glyph:
         self.t = t
         self.b = b
 
+        print(len(b), w, h)
+        assert len(b) == w * h
+
+    def scale(self, scale):
+        #return self
+
+        b = []
+
+        y = 0
+
+        def idx(x, y):
+            if x >= self.w:
+                return 0
+
+            if y >= self.h:
+                return 0
+
+            return self.b[x + y * self.w]
+
+        for y in range(0, self.h, scale):
+            for x in range(0, self.w, scale):
+                s = 0
+                c = 0
+
+                for j in range(0, scale):
+                    for i in range(0, scale):
+                        if idx(x + i, y + j) > 0:
+                            s += 1
+
+                        c += 1
+
+                b.append(s / c)
+
+        return Glyph((scale - 1 + self.w) // scale, (scale - 1 + self.h) // scale, self.l / scale, self.t / scale, b)
+
 
 class Font:
     def __init__(self, path, size):
@@ -36,12 +71,12 @@ class Font:
             c[ch] = idx
 
         for idx in sorted(frozenset(c.values())):
-            fn.load_glyph(idx, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_CROP_BITMAP | freetype.FT_LOAD_FORCE_AUTOHINT)
+            fn.load_glyph(idx, freetype.FT_LOAD_RENDER)
 
             gf = fn.glyph
             bm = gf.bitmap
 
-            b[idx] = Glyph(bm.width, bm.rows, gf.bitmap_left, gf.bitmap_top, [x for x in bm.buffer])
+            b[idx] = Glyph(bm.width, bm.rows, gf.bitmap_left, gf.bitmap_top, [x / 255.0 for x in bm.buffer])
 
         self.b = b
         self.c = c
@@ -53,8 +88,6 @@ class FontTexture:
     def __init__(self, f):
         t = {}
 
-        #gl.glPixelStorei(gl.GL_UNPACK_ALIGNMENT, 1)
-
         for idx, b in f.b.items():
             t[idx] = gl.glGenTextures(1)
 
@@ -62,9 +95,9 @@ class FontTexture:
 
             def iter_pixels():
                 for x in b.b:
-                    yield 255
-                    yield 255
-                    yield 255
+                    yield 1.0
+                    yield 1.0
+                    yield 1.0
                     yield x
 
             gl.glTexImage2D(
@@ -75,7 +108,7 @@ class FontTexture:
                 b.h,
                 0,
                 gl.GL_RGBA,
-                gl.GL_UNSIGNED_BYTE,
+                gl.GL_FLOAT,
                 list(iter_pixels()),
             )
 
@@ -138,6 +171,7 @@ class Window:
     def display(self):
         gl.glEnable(gl.GL_BLEND)
         gl.glEnable(gl.GL_TEXTURE_2D)
+        gl.glEnable(gl.GL_MULTISAMPLE)
         gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE_MINUS_SRC_ALPHA)
         gl.glClearColor(0.0, 0.0, 0.0, 0.0)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT)
@@ -290,10 +324,10 @@ class Display(Window):
 
             gl.glBegin(gl.GL_QUADS)
             gl.glColor3f(r / 255.0, g / 255.0, b / 255.0)
-            gl.glVertex2i(x1, y1)
-            gl.glVertex2i(x2, y1)
-            gl.glVertex2i(x2, y2)
-            gl.glVertex2i(x1, y2)
+            gl.glVertex2f(x1, y1)
+            gl.glVertex2f(x2, y1)
+            gl.glVertex2f(x2, y2)
+            gl.glVertex2f(x1, y2)
             gl.glEnd()
 
             x1 = ox + x * fw + glf.l
@@ -308,13 +342,13 @@ class Display(Window):
 
             gl.glColor3f(tr / 255.0, tg / 255.0, tb / 255.0)
             gl.glTexCoord(0.0, 1.0)
-            gl.glVertex2i(x1, y1)
+            gl.glVertex2f(x1, y1)
             gl.glTexCoord(1.0, 1.0)
-            gl.glVertex2i(x2, y1)
+            gl.glVertex2f(x2, y1)
             gl.glTexCoord(1.0, 0.0)
-            gl.glVertex2i(x2, y2)
+            gl.glVertex2f(x2, y2)
             gl.glTexCoord(0.0, 0.0)
-            gl.glVertex2i(x1, y2)
+            gl.glVertex2f(x1, y2)
             gl.glEnd()
             gl.glBindTexture(gl.GL_TEXTURE_2D, 0)
 
